@@ -60,11 +60,15 @@ const s = {
   subjectEmoji: { fontSize: 22, display: 'block', marginBottom: 4 },
   subjectName: (active) => ({ fontSize: 13, fontWeight: 500, color: active ? '#085041' : TEXT }),
   generateBtn: (disabled) => ({ height: 42, padding: '0 20px', background: disabled ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: "'DM Sans', sans-serif" }),
-  ideaCard: { background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0.75rem 1rem', marginBottom: 8 },
-  ideaTitle: { fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 4 },
-  ideaDesc: { fontSize: 13, color: MUTED, lineHeight: 1.5 },
   subjectResultCard: { background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, marginBottom: 12, overflow: 'hidden' },
   subjectResultHeader: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG },
+  ideaRow: (checked) => ({ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '0.75rem 1rem', borderRadius: 8, background: checked ? '#F0FAF6' : PAGE_BG, border: `0.5px solid ${checked ? GREEN : BORDER}`, marginBottom: 8, cursor: 'pointer', transition: 'all 0.15s' }),
+  ideaCheckbox: (checked) => ({ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? GREEN : BORDER}`, background: checked ? GREEN : BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }),
+  ideaTitle: { fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 3 },
+  ideaDesc: { fontSize: 13, color: MUTED, lineHeight: 1.5 },
+  refreshBtn: { background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 14, padding: '2px 4px', borderRadius: 4, flexShrink: 0, marginTop: 1, lineHeight: 1 },
+  proceedBar: { position: 'sticky', bottom: 16, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', marginTop: 8 },
+  proceedBtn: (disabled) => ({ height: 40, padding: '0 20px', background: disabled ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: "'DM Sans', sans-serif" }),
 }
 
 const CHIPS = [
@@ -76,25 +80,15 @@ const CHIPS = [
   { label: 'class discussion', value: 'promotes discussion and debate in class' },
   { label: 'supports EAL learners', value: 'supports EAL learners' },
 ]
-
 const CONTENT_TYPES = ['Any', 'Fiction', 'Non-fiction']
 const BOOK_TYPES = ['Any', 'Picture book', 'Chapter book', 'Reference', 'Activity book']
 const READING_LEVELS = ['Any', 'Below year group', 'At year group', 'Above year group']
 const STAR_OPTIONS = [{ label: 'Any', val: 0 }, { label: '1+', val: 1 }, { label: '2+', val: 2 }, { label: '3+', val: 3 }, { label: '4+', val: 4 }, { label: '5 only', val: 5 }]
-
 const SUBJECTS = [
-  { name: 'Literacy', emoji: '✏️' },
-  { name: 'Art', emoji: '🎨' },
-  { name: 'Geography', emoji: '🌍' },
-  { name: 'History', emoji: '🏛️' },
-  { name: 'Science', emoji: '🔬' },
-  { name: 'Maths', emoji: '📐' },
-  { name: 'PSHE', emoji: '💛' },
-  { name: 'RE', emoji: '🕊️' },
-  { name: 'Music', emoji: '🎵' },
-  { name: 'PE', emoji: '⚽' },
-  { name: 'DT', emoji: '🔧' },
-  { name: 'Computing', emoji: '💻' },
+  { name: 'Literacy', emoji: '✏️' }, { name: 'Art', emoji: '🎨' }, { name: 'Geography', emoji: '🌍' },
+  { name: 'History', emoji: '🏛️' }, { name: 'Science', emoji: '🔬' }, { name: 'Maths', emoji: '📐' },
+  { name: 'PSHE', emoji: '💛' }, { name: 'RE', emoji: '🕊️' }, { name: 'Music', emoji: '🎵' },
+  { name: 'PE', emoji: '⚽' }, { name: 'DT', emoji: '🔧' }, { name: 'Computing', emoji: '💻' },
 ]
 
 async function fetchBookDetails(title, author) {
@@ -117,14 +111,30 @@ async function fetchBookDetails(title, author) {
   } catch { return null }
 }
 
-// ── Book Detail Page ─────────────────────────────────────────────────────────
+async function callAPI(prompt, raw = false) {
+  const res = await fetch('/api/recommend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, raw }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Request failed')
+  return raw ? data.result : data.books
+}
+
+// ── Book Detail Page ──────────────────────────────────────────────────────────
 function BookDetailPage({ book, yearGroup, onBack }) {
   const [details, setDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
   const [coverError, setCoverError] = useState(false)
   const [selectedSubjects, setSelectedSubjects] = useState([])
+  // lessonIdeas: { Subject: [{ title, description }, ...] }
   const [lessonIdeas, setLessonIdeas] = useState({})
   const [generatingIdeas, setGeneratingIdeas] = useState(false)
+  // checkedIdeas: Set of "Subject::index" strings
+  const [checkedIdeas, setCheckedIdeas] = useState(new Set())
+  // refreshing: Set of "Subject::index" strings currently refreshing
+  const [refreshing, setRefreshing] = useState(new Set())
 
   useState(() => {
     fetchBookDetails(book.title, book.author)
@@ -133,44 +143,36 @@ function BookDetailPage({ book, yearGroup, onBack }) {
   }, [])
 
   function toggleSubject(name) {
-    setSelectedSubjects(prev =>
-      prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
-    )
+    setSelectedSubjects(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name])
+  }
+
+  function toggleCheck(key) {
+    setCheckedIdeas(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
   }
 
   async function generateIdeas() {
     if (selectedSubjects.length === 0) return
     setGeneratingIdeas(true)
+    setCheckedIdeas(new Set())
     const prompt = `You are a UK primary school teacher assistant. The class is studying the book "${book.title}" by ${book.author}${yearGroup ? ` with ${yearGroup} students` : ''}.
 
 Generate lesson ideas for each of these subjects: ${selectedSubjects.join(', ')}.
 
-For each subject, provide exactly 3 lesson ideas that are directly inspired by or connected to this book.
+For each subject, provide exactly 3 lesson ideas directly inspired by or connected to this book.
 
-Return ONLY a valid JSON object with no extra text or markdown fences. The keys are subject names and each value is an array of 3 objects with:
-- "title": short lesson title (e.g. "Draw a Viking longship")
+Return ONLY a valid JSON object with no extra text or markdown fences. Keys are subject names, values are arrays of 3 objects with:
+- "title": short lesson title
 - "description": 1-2 sentences describing the activity and how it connects to the book
 
-Example format:
-{"Literacy":[{"title":"...","description":"..."}]}`
+Example: {"Literacy":[{"title":"...","description":"..."}]}`
 
     try {
-      const res = await fetch('/api/recommend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      const text = data.books ? null : data
-      // reuse recommend endpoint — parse raw response
-      const raw = await fetch('/api/recommend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, raw: true }),
-      })
-      const rawData = await raw.json()
-      setLessonIdeas(rawData.result || {})
+      const result = await callAPI(prompt, true)
+      setLessonIdeas(result || {})
     } catch {
       setLessonIdeas({ error: true })
     } finally {
@@ -178,7 +180,41 @@ Example format:
     }
   }
 
+  async function refreshIdea(subject, index) {
+    const key = `${subject}::${index}`
+    setRefreshing(prev => new Set(prev).add(key))
+    const existingTitles = (lessonIdeas[subject] || []).map(i => i.title).join(', ')
+    const prompt = `You are a UK primary school teacher assistant. The class is studying "${book.title}" by ${book.author}${yearGroup ? ` with ${yearGroup} students` : ''}.
+
+Give me 1 new ${subject} lesson idea inspired by this book. Do not repeat any of these existing ideas: ${existingTitles}.
+
+Return ONLY a valid JSON object with no extra text or markdown fences:
+{"title":"...","description":"..."}`
+
+    try {
+      const result = await callAPI(prompt, true)
+      setLessonIdeas(prev => {
+        const updated = [...(prev[subject] || [])]
+        updated[index] = result
+        return { ...prev, [subject]: updated }
+      })
+      // uncheck refreshed idea since it's new
+      setCheckedIdeas(prev => { const next = new Set(prev); next.delete(key); return next })
+    } catch {
+      // silently fail on refresh
+    } finally {
+      setRefreshing(prev => { const next = new Set(prev); next.delete(key); return next })
+    }
+  }
+
+  const selectedIdeas = Array.from(checkedIdeas).map(key => {
+    const [subject, idx] = key.split('::')
+    const idea = lessonIdeas[subject]?.[parseInt(idx)]
+    return idea ? { subject, ...idea } : null
+  }).filter(Boolean)
+
   const cover = details?.coverUrl && !coverError ? details.coverUrl : null
+  const hasIdeas = Object.keys(lessonIdeas).length > 0 && !lessonIdeas.error
 
   return (
     <div style={s.page}>
@@ -238,20 +274,14 @@ Example format:
             <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT, marginBottom: 4 }}>Generate lesson ideas</div>
             <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>Select the subjects you'd like lesson ideas for, based on <em>{book.title}</em>.</p>
           </div>
-
           <div style={s.subjectGrid}>
             {SUBJECTS.map(sub => (
-              <div
-                key={sub.name}
-                style={s.subjectTile(selectedSubjects.includes(sub.name))}
-                onClick={() => toggleSubject(sub.name)}
-              >
+              <div key={sub.name} style={s.subjectTile(selectedSubjects.includes(sub.name))} onClick={() => toggleSubject(sub.name)}>
                 <span style={s.subjectEmoji}>{sub.emoji}</span>
                 <span style={s.subjectName(selectedSubjects.includes(sub.name))}>{sub.name}</span>
               </div>
             ))}
           </div>
-
           <button
             style={s.generateBtn(generatingIdeas || selectedSubjects.length === 0)}
             onClick={generateIdeas}
@@ -261,10 +291,12 @@ Example format:
           </button>
         </div>
 
-        {/* Lesson ideas results */}
-        {Object.keys(lessonIdeas).length > 0 && !lessonIdeas.error && (
+        {/* Lesson ideas with checkboxes + refresh */}
+        {hasIdeas && (
           <div>
-            <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT, marginBottom: 12 }}>Lesson ideas</div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT, marginBottom: 4 }}>Lesson ideas</div>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Select the ideas you'd like to create resources for, or refresh any idea to get a new one.</p>
+
             {Object.entries(lessonIdeas).map(([subject, ideas]) => {
               const subjectMeta = SUBJECTS.find(sub => sub.name === subject)
               return (
@@ -274,16 +306,58 @@ Example format:
                     <span style={{ fontWeight: 500, fontSize: 14, color: TEXT }}>{subject}</span>
                   </div>
                   <div style={{ padding: '10px 14px' }}>
-                    {Array.isArray(ideas) && ideas.map((idea, i) => (
-                      <div key={i} style={{ ...s.ideaCard, marginBottom: i < ideas.length - 1 ? 8 : 0 }}>
-                        <div style={s.ideaTitle}>{idea.title}</div>
-                        <div style={s.ideaDesc}>{idea.description}</div>
-                      </div>
-                    ))}
+                    {Array.isArray(ideas) && ideas.map((idea, i) => {
+                      const key = `${subject}::${i}`
+                      const checked = checkedIdeas.has(key)
+                      const isRefreshing = refreshing.has(key)
+                      return (
+                        <div key={i} style={s.ideaRow(checked)} onClick={() => !isRefreshing && toggleCheck(key)}>
+                          {/* Checkbox */}
+                          <div style={s.ideaCheckbox(checked)}>
+                            {checked && <span style={{ color: BG, fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                          </div>
+                          {/* Content */}
+                          <div style={{ flex: 1 }}>
+                            {isRefreshing ? (
+                              <p style={{ fontSize: 13, color: MUTED }}>Getting a new idea...</p>
+                            ) : (
+                              <>
+                                <div style={s.ideaTitle}>{idea.title}</div>
+                                <div style={s.ideaDesc}>{idea.description}</div>
+                              </>
+                            )}
+                          </div>
+                          {/* Refresh button */}
+                          <button
+                            style={s.refreshBtn}
+                            title="Get a new idea"
+                            onClick={e => { e.stopPropagation(); refreshIdea(subject, i) }}
+                            disabled={isRefreshing}
+                          >
+                            {isRefreshing ? '⏳' : '↻'}
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
             })}
+
+            {/* Sticky proceed bar */}
+            <div style={s.proceedBar}>
+              <span style={{ fontSize: 13, color: MUTED }}>
+                {checkedIdeas.size === 0
+                  ? 'Select ideas above to create resources'
+                  : `${checkedIdeas.size} idea${checkedIdeas.size > 1 ? 's' : ''} selected`}
+              </span>
+              <button
+                style={s.proceedBtn(checkedIdeas.size === 0)}
+                disabled={checkedIdeas.size === 0}
+              >
+                Create resources →
+              </button>
+            </div>
           </div>
         )}
 
@@ -297,19 +371,16 @@ Example format:
           <span style={{ flexShrink: 0 }}>⚠️</span>
           <span>Book details are sourced from Open Library and may not be complete. Always verify before ordering.</span>
         </div>
-
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
     </div>
   )
 }
 
-// ── Search Page ──────────────────────────────────────────────────────────────
+// ── Search Page ───────────────────────────────────────────────────────────────
 function SearchPage({ onSelectBook, searchState, setSearchState }) {
   const { subject, topic, yearGroup, focus, accordionOpen, contentType, bookType, readingLevel, starRating, books, loading, loadingMore, error, searched, searchMeta } = searchState
-
   const set = (key, val) => setSearchState(prev => ({ ...prev, [key]: val }))
-
   const activeFilterCount = [contentType !== 'Any', bookType !== 'Any', readingLevel !== 'Any', starRating > 0].filter(Boolean).length
 
   async function fetchBooks(loadMore = false) {
@@ -329,25 +400,19 @@ function SearchPage({ onSelectBook, searchState, setSearchState }) {
 
     const prompt = `You are a UK primary school teacher assistant. Recommend exactly ${count} books for ${yearGroup} students studying ${topic} in ${subject}.
 ${focusLine}${contentLine}${bookTypeLine}${levelLine}${exclusions}
-
-IMPORTANT: Only recommend books you are certain exist. Every title and author must be a real, published book that can be verified and purchased. Do not invent or guess titles.
-
+IMPORTANT: Only recommend books you are certain exist. Every title and author must be a real, published book. Do not invent or guess titles.
 Return ONLY a valid JSON array with no extra text or markdown fences. Each object must have:
 - "title": string
 - "author": string
 - "reason": string (1-2 sentences)`
 
     try {
-      const res = await fetch('/api/recommend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Request failed')
+      const newBooks = await callAPI(prompt)
       setSearchState(prev => ({
         ...prev,
-        books: isLoadMore ? [...prev.books, ...data.books] : data.books,
+        books: isLoadMore ? [...prev.books, ...newBooks] : newBooks,
         searchMeta: { subject, topic, yearGroup, focus, contentType, bookType, readingLevel },
-        searched: true,
-        loading: false,
-        loadingMore: false,
+        searched: true, loading: false, loadingMore: false,
       }))
     } catch {
       setSearchState(prev => ({ ...prev, error: 'Something went wrong. Please try again.', loading: false, loadingMore: false }))
@@ -378,17 +443,13 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
               </select>
             </div>
           </div>
-
           <div>
             <label style={s.label}>Specific focus <span style={s.labelOpt}>— optional</span></label>
             <textarea style={s.textarea} placeholder="Add any specific aspect of the topic..." value={focus} onChange={e => set('focus', e.target.value)} />
             <div style={s.chipsBar}>
-              {CHIPS.map(chip => (
-                <span key={chip.value} style={s.chip} onClick={() => set('focus', chip.value)}>⚡ {chip.label}</span>
-              ))}
+              {CHIPS.map(chip => <span key={chip.value} style={s.chip} onClick={() => set('focus', chip.value)}>⚡ {chip.label}</span>)}
             </div>
           </div>
-
           <div style={s.accordion}>
             <div style={s.accordionHeader} onClick={() => set('accordionOpen', !accordionOpen)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -434,7 +495,6 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
               </div>
             )}
           </div>
-
           <button style={s.submitBtn(loading)} onClick={() => fetchBooks(false)} disabled={loading}>
             {loading ? '⏳ Finding books...' : '✨ Find books'}
           </button>
@@ -485,7 +545,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
   )
 }
 
-// ── Root ─────────────────────────────────────────────────────────────────────
+// ── Root ──────────────────────────────────────────────────────────────────────
 const initialSearchState = {
   subject: '', topic: '', yearGroup: '', focus: '',
   accordionOpen: false, contentType: 'Any', bookType: 'Any', readingLevel: 'Any', starRating: 0,
@@ -497,19 +557,7 @@ export default function App() {
   const [searchState, setSearchState] = useState(initialSearchState)
 
   if (selectedBook) {
-    return (
-      <BookDetailPage
-        book={selectedBook}
-        yearGroup={searchState.yearGroup}
-        onBack={() => setSelectedBook(null)}
-      />
-    )
+    return <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setSelectedBook(null)} />
   }
-  return (
-    <SearchPage
-      onSelectBook={setSelectedBook}
-      searchState={searchState}
-      setSearchState={setSearchState}
-    />
-  )
+  return <SearchPage onSelectBook={setSelectedBook} searchState={searchState} setSearchState={setSearchState} />
 }
