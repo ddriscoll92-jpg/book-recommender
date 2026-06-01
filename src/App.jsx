@@ -1,7 +1,6 @@
 import { useState } from 'react'
 
 const GREEN = '#1D9E75'
-const DARK_GREEN = '#0F6E56'
 const LIGHT_GREEN = '#E1F5EE'
 const TEXT = '#2C2C2A'
 const MUTED = '#5F5E5A'
@@ -45,11 +44,12 @@ const styles = {
   resultsHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: `0.5px solid ${BORDER}` },
   resultsTitle: { fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: MUTED },
   badge: { background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20 },
-  bookCard: { background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 10, display: 'flex', gap: 14, alignItems: 'flex-start' },
+  bookCard: { background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 10, display: 'flex', gap: 14, alignItems: 'flex-start', cursor: 'pointer', transition: 'box-shadow 0.15s' },
   bookNum: { width: 26, height: 26, background: LIGHT_GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, color: '#085041', flexShrink: 0, marginTop: 2 },
   bookTitle: { fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 2 },
   bookAuthor: { fontSize: 12, color: GREEN, marginBottom: 6, fontStyle: 'italic' },
   bookReason: { fontSize: 13, color: MUTED, lineHeight: 1.5 },
+  viewBtn: { marginTop: 8, fontSize: 12, color: GREEN, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 },
   loadMoreBtn: (disabled) => ({ width: '100%', height: 42, background: 'transparent', border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 14, color: TEXT, cursor: disabled ? 'not-allowed' : 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: disabled ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }),
   loadingBox: { textAlign: 'center', padding: '2.5rem', color: MUTED, fontSize: 14 },
   footer: { textAlign: 'center', fontSize: 12, color: '#B4B2A9', marginTop: '2rem', paddingTop: '1rem', borderTop: `0.5px solid ${BORDER}` },
@@ -77,7 +77,143 @@ const STAR_OPTIONS = [
   { label: '5 only', val: 5 },
 ]
 
-export default function App() {
+// Fetch book details from Open Library
+async function fetchBookDetails(title, author) {
+  const query = encodeURIComponent(`${title} ${author}`)
+  const res = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=1`)
+  const data = await res.json()
+  if (!data.docs || data.docs.length === 0) return null
+  const book = data.docs[0]
+  const coverId = book.cover_i
+  return {
+    title: book.title || title,
+    author: book.author_name ? book.author_name.join(', ') : author,
+    illustrator: book.contributor ? book.contributor.find(c => c.toLowerCase().includes('illustrat')) || null : null,
+    publisher: book.publisher ? book.publisher[0] : null,
+    firstPublished: book.first_publish_year || null,
+    pages: book.number_of_pages_median || null,
+    subjects: book.subject ? book.subject.slice(0, 5) : [],
+    coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null,
+    openLibraryKey: book.key || null,
+  }
+}
+
+// Book Detail Page
+function BookDetailPage({ book, onBack }) {
+  const [details, setDetails] = useState(null)
+  const [loadingDetails, setLoadingDetails] = useState(true)
+  const [coverError, setCoverError] = useState(false)
+
+  useState(() => {
+    fetchBookDetails(book.title, book.author)
+      .then(d => setDetails(d))
+      .finally(() => setLoadingDetails(false))
+  }, [])
+
+  const cover = details?.coverUrl && !coverError ? details.coverUrl : null
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.container}>
+
+        {/* Back button */}
+        <button
+          onClick={onBack}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 13, marginBottom: '1.5rem', padding: 0, fontFamily: "'DM Sans', sans-serif" }}
+        >
+          ← Back to results
+        </button>
+
+        {/* Book hero card */}
+        <div style={{ ...styles.card, padding: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+
+            {/* Cover image */}
+            <div style={{ flexShrink: 0 }}>
+              {loadingDetails ? (
+                <div style={{ width: 120, height: 170, background: PAGE_BG, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>📚</div>
+              ) : cover ? (
+                <img
+                  src={cover}
+                  alt={`Cover of ${book.title}`}
+                  onError={() => setCoverError(true)}
+                  style={{ width: 120, height: 'auto', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', display: 'block' }}
+                />
+              ) : (
+                <div style={{ width: 120, height: 170, background: LIGHT_GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>📖</div>
+              )}
+            </div>
+
+            {/* Book info */}
+            <div style={{ flex: 1 }}>
+              <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, color: TEXT, marginBottom: 6, lineHeight: 1.3 }}>{book.title}</h2>
+              <p style={{ fontSize: 14, color: GREEN, fontStyle: 'italic', marginBottom: 12 }}>{book.author}</p>
+
+              {loadingDetails ? (
+                <p style={{ fontSize: 13, color: MUTED }}>Loading book details...</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {details?.illustrator && (
+                    <div style={{ fontSize: 13, color: MUTED }}>
+                      <span style={{ fontWeight: 500, color: TEXT }}>Illustrator:</span> {details.illustrator}
+                    </div>
+                  )}
+                  {details?.publisher && (
+                    <div style={{ fontSize: 13, color: MUTED }}>
+                      <span style={{ fontWeight: 500, color: TEXT }}>Publisher:</span> {details.publisher}
+                    </div>
+                  )}
+                  {details?.firstPublished && (
+                    <div style={{ fontSize: 13, color: MUTED }}>
+                      <span style={{ fontWeight: 500, color: TEXT }}>First published:</span> {details.firstPublished}
+                    </div>
+                  )}
+                  {details?.pages && (
+                    <div style={{ fontSize: 13, color: MUTED }}>
+                      <span style={{ fontWeight: 500, color: TEXT }}>Pages:</span> {details.pages}
+                    </div>
+                  )}
+                  {!details && (
+                    <p style={{ fontSize: 13, color: MUTED }}>No additional details found in Open Library.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Subjects / tags */}
+          {details?.subjects?.length > 0 && (
+            <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: `0.5px solid ${BORDER}` }}>
+              <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Subjects</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {details.subjects.map(s => (
+                  <span key={s} style={{ padding: '3px 10px', borderRadius: 20, border: `0.5px solid ${BORDER}`, fontSize: 12, color: MUTED, background: PAGE_BG }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Why recommended */}
+        <div style={styles.card}>
+          <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Why this book was recommended</div>
+          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.6 }}>{book.reason}</p>
+        </div>
+
+        {/* Disclaimer */}
+        <div style={styles.disclaimer}>
+          <span style={{ flexShrink: 0 }}>⚠️</span>
+          <span>Book details are sourced from Open Library and may not be complete. Always verify before ordering.</span>
+        </div>
+
+        <div style={styles.footer}>Book Recommender · For UK primary school teachers</div>
+      </div>
+    </div>
+  )
+}
+
+// Main Search Page
+function SearchPage({ onSelectBook }) {
   const [subject, setSubject] = useState('')
   const [topic, setTopic] = useState('')
   const [yearGroup, setYearGroup] = useState('')
@@ -95,10 +231,7 @@ export default function App() {
   const [searchMeta, setSearchMeta] = useState({})
 
   const activeFilterCount = [
-    contentType !== 'Any',
-    bookType !== 'Any',
-    readingLevel !== 'Any',
-    starRating > 0,
+    contentType !== 'Any', bookType !== 'Any', readingLevel !== 'Any', starRating > 0,
   ].filter(Boolean).length
 
   async function fetchBooks(loadMore = false) {
@@ -185,7 +318,7 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
 
           <div>
             <label style={styles.label}>
-              Specific focus <span style={styles.labelOptional}>— optional, e.g. "clothing and dress"</span>
+              Specific focus <span style={styles.labelOptional}>— optional</span>
             </label>
             <textarea
               style={styles.textarea}
@@ -195,11 +328,7 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
             />
             <div style={styles.chipsBar}>
               {CHIPS.map(chip => (
-                <span
-                  key={chip.value}
-                  style={styles.chip}
-                  onClick={() => setFocus(chip.value)}
-                >
+                <span key={chip.value} style={styles.chip} onClick={() => setFocus(chip.value)}>
                   ⚡ {chip.label}
                 </span>
               ))}
@@ -216,39 +345,30 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {activeFilterCount > 0 && (
-                  <span style={styles.accordionBadge}>{activeFilterCount} active</span>
-                )}
-                <span style={{ fontSize: 14, color: MUTED, transition: 'transform 0.2s', display: 'inline-block', transform: accordionOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                {activeFilterCount > 0 && <span style={styles.accordionBadge}>{activeFilterCount} active</span>}
+                <span style={{ fontSize: 14, color: MUTED, display: 'inline-block', transform: accordionOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
               </div>
             </div>
-
             {accordionOpen && (
               <div style={styles.accordionBody}>
                 <div style={{ marginBottom: 14 }}>
                   <div style={styles.filterLabel}>Content type</div>
                   <div style={styles.pillGroup}>
-                    {CONTENT_TYPES.map(t => (
-                      <span key={t} style={styles.pill(contentType === t)} onClick={() => setContentType(t)}>{t}</span>
-                    ))}
+                    {CONTENT_TYPES.map(t => <span key={t} style={styles.pill(contentType === t)} onClick={() => setContentType(t)}>{t}</span>)}
                   </div>
                 </div>
                 <hr style={styles.filterDivider} />
                 <div style={{ marginBottom: 14 }}>
                   <div style={styles.filterLabel}>Book type</div>
                   <div style={styles.pillGroup}>
-                    {BOOK_TYPES.map(t => (
-                      <span key={t} style={styles.pill(bookType === t)} onClick={() => setBookType(t)}>{t}</span>
-                    ))}
+                    {BOOK_TYPES.map(t => <span key={t} style={styles.pill(bookType === t)} onClick={() => setBookType(t)}>{t}</span>)}
                   </div>
                 </div>
                 <hr style={styles.filterDivider} />
                 <div style={{ marginBottom: 14 }}>
                   <div style={styles.filterLabel}>Reading level</div>
                   <div style={styles.pillGroup}>
-                    {READING_LEVELS.map(t => (
-                      <span key={t} style={styles.pill(readingLevel === t)} onClick={() => setReadingLevel(t)}>{t}</span>
-                    ))}
+                    {READING_LEVELS.map(t => <span key={t} style={styles.pill(readingLevel === t)} onClick={() => setReadingLevel(t)}>{t}</span>)}
                   </div>
                 </div>
                 <hr style={styles.filterDivider} />
@@ -301,12 +421,19 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
               <span style={styles.badge}>{books.length} results</span>
             </div>
             {books.map((book, i) => (
-              <div key={i} style={styles.bookCard}>
+              <div
+                key={i}
+                style={styles.bookCard}
+                onClick={() => onSelectBook(book)}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+              >
                 <div style={styles.bookNum}>{i + 1}</div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={styles.bookTitle}>{book.title}</div>
                   <div style={styles.bookAuthor}>{book.author}</div>
                   <div style={styles.bookReason}>{book.reason}</div>
+                  <div style={styles.viewBtn}>View book details →</div>
                 </div>
               </div>
             ))}
@@ -320,4 +447,13 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
       </div>
     </div>
   )
+}
+
+export default function App() {
+  const [selectedBook, setSelectedBook] = useState(null)
+
+  if (selectedBook) {
+    return <BookDetailPage book={selectedBook} onBack={() => setSelectedBook(null)} />
+  }
+  return <SearchPage onSelectBook={setSelectedBook} />
 }
