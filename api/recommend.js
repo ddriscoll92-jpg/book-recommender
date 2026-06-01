@@ -13,9 +13,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured — check environment variables in Vercel' })
   }
 
-  console.log('API key found, length:', apiKey.length)
-  console.log('API key starts with:', apiKey.substring(0, 10))
-
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -32,11 +29,9 @@ export default async function handler(req, res) {
     })
 
     const data = await response.json()
-    console.log('Anthropic response status:', response.status)
-    console.log('Anthropic response:', JSON.stringify(data))
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error', detail: data })
+      return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error' })
     }
 
     const text = data.content.map(b => b.text || '').join('')
@@ -45,7 +40,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ books })
   } catch (err) {
-    console.log('Caught error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 }
