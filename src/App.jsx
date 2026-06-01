@@ -270,6 +270,8 @@ export default function App() {
 ${focusLine}
 ${exclusions}
 
+IMPORTANT: Only recommend books you are certain exist. Every title and author must be a real, published book that can be verified and purchased. Do not invent or guess titles. If you are not confident a book exists, do not include it.
+
 Return ONLY a valid JSON array with no extra text, preamble or markdown fences. Each object must have these exact keys:
 - "title": string
 - "author": string
@@ -361,6 +363,21 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
 
         {searched && books.length > 0 && (
           <div>
+            <div style={{
+              background: '#FAEEDA',
+              border: '0.5px solid #EF9F27',
+              borderRadius: 8,
+              padding: '0.75rem 1rem',
+              marginBottom: 16,
+              fontSize: 13,
+              color: '#633806',
+              display: 'flex',
+              gap: 8,
+              alignItems: 'flex-start',
+            }}>
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <span>AI recommendations can occasionally include inaccurate titles. Please verify each book exists before ordering — we suggest checking Amazon or your school library catalogue.</span>
+            </div>
             <div style={styles.resultsHeader}>
               <p style={styles.resultsTitle}>
                 Books for <span style={styles.resultsTitleSpan}>
