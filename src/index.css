@@ -1,0 +1,12 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #f5f4f0;
+  color: #2C2C2A;
+  min-height: 100vh;
+}
+
+input, select, textarea, button {
+  font-family: 'DM Sans', sans-serif;
+}
