@@ -8,239 +8,85 @@ const MUTED = '#5F5E5A'
 const BORDER = '#D3D1C7'
 const BG = '#FFFFFF'
 const PAGE_BG = '#f5f4f0'
+const AMBER = '#EF9F27'
+const AMBER_BG = '#FAEEDA'
+const AMBER_TEXT = '#633806'
 
 const styles = {
-  page: {
-    minHeight: '100vh',
-    background: PAGE_BG,
-    padding: '2rem 1rem',
-  },
-  container: {
-    maxWidth: 680,
-    margin: '0 auto',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: '2rem',
-  },
-  headerIcon: {
-    width: 52,
-    height: 52,
-    background: GREEN,
-    borderRadius: 12,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    fontSize: 26,
-  },
-  h1: {
-    fontFamily: "'Lora', serif",
-    fontSize: 24,
-    fontWeight: 500,
-    color: TEXT,
-    lineHeight: 1.2,
-  },
-  headerSub: {
-    fontSize: 13,
-    color: MUTED,
-    marginTop: 3,
-  },
-  card: {
-    background: BG,
-    border: `0.5px solid ${BORDER}`,
-    borderRadius: 12,
-    padding: '1.25rem',
-    marginBottom: 12,
-  },
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
-    gap: 12,
-    marginBottom: 12,
-  },
-  label: {
-    display: 'block',
-    fontSize: 11,
-    fontWeight: 500,
-    color: MUTED,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    marginBottom: 6,
-  },
-  labelOptional: {
-    fontWeight: 400,
-    textTransform: 'none',
-    letterSpacing: 0,
-    fontSize: 11,
-    color: '#888780',
-  },
-  input: {
-    width: '100%',
-    height: 38,
-    border: `0.5px solid ${BORDER}`,
-    borderRadius: 8,
-    padding: '0 10px',
-    fontSize: 14,
-    color: TEXT,
-    background: BG,
-    outline: 'none',
-  },
-  select: {
-    width: '100%',
-    height: 38,
-    border: `0.5px solid ${BORDER}`,
-    borderRadius: 8,
-    padding: '0 10px',
-    fontSize: 14,
-    color: TEXT,
-    background: BG,
-    outline: 'none',
-    cursor: 'pointer',
-  },
-  textarea: {
-    width: '100%',
-    height: 72,
-    border: `0.5px solid ${BORDER}`,
-    borderRadius: 8,
-    padding: '8px 10px',
-    fontSize: 14,
-    color: TEXT,
-    background: BG,
-    outline: 'none',
-    resize: 'none',
-    lineHeight: 1.5,
-  },
-  submitBtn: {
-    width: '100%',
-    height: 44,
-    background: GREEN,
-    color: LIGHT_GREEN,
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 15,
-    fontWeight: 500,
-    cursor: 'pointer',
-    marginTop: 12,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    transition: 'background 0.15s',
-  },
-  errorBox: {
-    background: '#FCEBEB',
-    color: '#A32D2D',
-    borderRadius: 8,
-    padding: '0.75rem 1rem',
-    fontSize: 13,
-    marginTop: 12,
-  },
-  resultsHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '1rem',
-    paddingBottom: '0.75rem',
-    borderBottom: `0.5px solid ${BORDER}`,
-  },
-  resultsTitle: {
-    fontFamily: "'Lora', serif",
-    fontSize: 16,
-    fontWeight: 500,
-    color: MUTED,
-  },
-  resultsTitleSpan: {
-    color: TEXT,
-  },
-  badge: {
-    background: LIGHT_GREEN,
-    color: '#085041',
-    fontSize: 11,
-    fontWeight: 500,
-    padding: '3px 10px',
-    borderRadius: 20,
-  },
-  bookCard: {
-    background: BG,
-    border: `0.5px solid ${BORDER}`,
-    borderRadius: 12,
-    padding: '1rem 1.25rem',
-    marginBottom: 10,
-    display: 'flex',
-    gap: 14,
-    alignItems: 'flex-start',
-  },
-  bookNum: {
-    width: 26,
-    height: 26,
-    background: LIGHT_GREEN,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 11,
-    fontWeight: 500,
-    color: '#085041',
-    flexShrink: 0,
-    marginTop: 2,
-  },
-  bookTitle: {
-    fontFamily: "'Lora', serif",
-    fontSize: 15,
-    fontWeight: 500,
-    color: TEXT,
-    marginBottom: 2,
-  },
-  bookAuthor: {
-    fontSize: 12,
-    color: GREEN,
-    marginBottom: 6,
-    fontStyle: 'italic',
-  },
-  bookReason: {
-    fontSize: 13,
-    color: MUTED,
-    lineHeight: 1.5,
-  },
-  loadMoreBtn: {
-    width: '100%',
-    height: 42,
-    background: 'transparent',
-    border: `0.5px solid ${BORDER}`,
-    borderRadius: 8,
-    fontSize: 14,
-    color: TEXT,
-    cursor: 'pointer',
-    marginTop: 4,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loadingBox: {
-    textAlign: 'center',
-    padding: '2.5rem',
-    color: MUTED,
-    fontSize: 14,
-  },
-  footer: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#B4B2A9',
-    marginTop: '2rem',
-    paddingTop: '1rem',
-    borderTop: `0.5px solid ${BORDER}`,
-  },
+  page: { minHeight: '100vh', background: PAGE_BG, padding: '2rem 1rem' },
+  container: { maxWidth: 680, margin: '0 auto' },
+  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: '2rem' },
+  headerIcon: { width: 52, height: 52, background: GREEN, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 26 },
+  h1: { fontFamily: "'Lora', serif", fontSize: 24, fontWeight: 500, color: TEXT, lineHeight: 1.2 },
+  headerSub: { fontSize: 13, color: MUTED, marginTop: 3 },
+  card: { background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem', marginBottom: 12 },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 },
+  label: { display: 'block', fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 },
+  labelOptional: { fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11, color: '#888780' },
+  input: { width: '100%', height: 38, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 10px', fontSize: 14, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" },
+  select: { width: '100%', height: 38, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 10px', fontSize: 14, color: TEXT, background: BG, outline: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  textarea: { width: '100%', height: 68, border: `0.5px solid ${BORDER}`, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: 'none', padding: '8px 10px', fontSize: 14, color: TEXT, background: BG, outline: 'none', resize: 'none', lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" },
+  chipsBar: { border: `0.5px solid ${BORDER}`, borderTop: `0.5px solid #ebebeb`, borderBottomLeftRadius: 8, borderBottomRightRadius: 8, padding: '8px 10px', display: 'flex', flexWrap: 'wrap', gap: 6, background: PAGE_BG, marginBottom: 12 },
+  chip: { padding: '3px 10px', borderRadius: 20, border: `0.5px solid ${BORDER}`, fontSize: 12, color: MUTED, cursor: 'pointer', background: BG, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 },
+  accordion: { border: `0.5px solid ${BORDER}`, borderRadius: 8, marginBottom: 12, overflow: 'hidden' },
+  accordionHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer', background: PAGE_BG, userSelect: 'none' },
+  accordionTitle: { fontSize: 13, fontWeight: 500, color: TEXT },
+  accordionSubtitle: { fontSize: 12, color: MUTED },
+  accordionBadge: { background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 },
+  accordionBody: { borderTop: `0.5px solid ${BORDER}`, padding: 14 },
+  filterLabel: { fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 },
+  pillGroup: { display: 'flex', flexWrap: 'wrap', gap: 6 },
+  pill: (active) => ({ padding: '5px 12px', borderRadius: 20, border: `0.5px solid ${active ? GREEN : BORDER}`, fontSize: 13, color: active ? '#085041' : MUTED, cursor: 'pointer', background: active ? LIGHT_GREEN : BG, fontWeight: active ? 500 : 400 }),
+  starPill: (active) => ({ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, border: `0.5px solid ${active ? AMBER : BORDER}`, fontSize: 13, color: active ? AMBER_TEXT : MUTED, cursor: 'pointer', background: active ? AMBER_BG : BG, fontWeight: active ? 500 : 400 }),
+  filterDivider: { border: 'none', borderTop: `0.5px solid ${BORDER}`, margin: '14px 0' },
+  starNote: { fontSize: 11, color: '#888780', marginTop: 6 },
+  submitBtn: (disabled) => ({ width: '100%', height: 44, background: disabled ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'DM Sans', sans-serif" }),
+  disclaimer: { background: AMBER_BG, border: `0.5px solid ${AMBER}`, borderRadius: 8, padding: '0.75rem 1rem', marginBottom: 16, fontSize: 13, color: AMBER_TEXT, display: 'flex', gap: 8, alignItems: 'flex-start' },
+  resultsHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: `0.5px solid ${BORDER}` },
+  resultsTitle: { fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: MUTED },
+  badge: { background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20 },
+  bookCard: { background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 10, display: 'flex', gap: 14, alignItems: 'flex-start' },
+  bookNum: { width: 26, height: 26, background: LIGHT_GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, color: '#085041', flexShrink: 0, marginTop: 2 },
+  bookTitle: { fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 2 },
+  bookAuthor: { fontSize: 12, color: GREEN, marginBottom: 6, fontStyle: 'italic' },
+  bookReason: { fontSize: 13, color: MUTED, lineHeight: 1.5 },
+  loadMoreBtn: (disabled) => ({ width: '100%', height: 42, background: 'transparent', border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 14, color: TEXT, cursor: disabled ? 'not-allowed' : 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: disabled ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }),
+  loadingBox: { textAlign: 'center', padding: '2.5rem', color: MUTED, fontSize: 14 },
+  footer: { textAlign: 'center', fontSize: 12, color: '#B4B2A9', marginTop: '2rem', paddingTop: '1rem', borderTop: `0.5px solid ${BORDER}` },
 }
+
+const CHIPS = [
+  { label: 'shared reading aloud', value: 'supports shared reading aloud' },
+  { label: 'independent reading', value: 'supports independent reading' },
+  { label: 'inspires creative writing', value: 'inspires creative writing' },
+  { label: 'supports SEND learners', value: 'supports SEND learners' },
+  { label: 'guided reading', value: 'suitable for guided reading groups' },
+  { label: 'class discussion', value: 'promotes discussion and debate in class' },
+  { label: 'supports EAL learners', value: 'supports EAL learners' },
+]
+
+const CONTENT_TYPES = ['Any', 'Fiction', 'Non-fiction']
+const BOOK_TYPES = ['Any', 'Picture book', 'Chapter book', 'Reference', 'Activity book']
+const READING_LEVELS = ['Any', 'Below year group', 'At year group', 'Above year group']
+const STAR_OPTIONS = [
+  { label: 'Any', val: 0 },
+  { label: '1+', val: 1 },
+  { label: '2+', val: 2 },
+  { label: '3+', val: 3 },
+  { label: '4+', val: 4 },
+  { label: '5 only', val: 5 },
+]
 
 export default function App() {
   const [subject, setSubject] = useState('')
   const [topic, setTopic] = useState('')
   const [yearGroup, setYearGroup] = useState('')
   const [focus, setFocus] = useState('')
+  const [accordionOpen, setAccordionOpen] = useState(false)
+  const [contentType, setContentType] = useState('Any')
+  const [bookType, setBookType] = useState('Any')
+  const [readingLevel, setReadingLevel] = useState('Any')
+  const [starRating, setStarRating] = useState(0)
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -248,26 +94,36 @@ export default function App() {
   const [searched, setSearched] = useState(false)
   const [searchMeta, setSearchMeta] = useState({})
 
+  const activeFilterCount = [
+    contentType !== 'Any',
+    bookType !== 'Any',
+    readingLevel !== 'Any',
+    starRating > 0,
+  ].filter(Boolean).length
+
   async function fetchBooks(loadMore = false) {
     if (!subject.trim() || !topic.trim() || !yearGroup) {
       setError('Please fill in subject, topic and year group before searching.')
       return
     }
     setError('')
-
     const isLoadMore = loadMore && books.length > 0
     if (isLoadMore) setLoadingMore(true)
     else { setLoading(true); setBooks([]); setSearched(false) }
 
     const count = isLoadMore ? 5 : 10
     const excludeList = books.map(b => b.title)
-    const exclusions = excludeList.length > 0
-      ? `Do not repeat any of these already recommended books: ${excludeList.join(', ')}.` : ''
-    const focusLine = focus.trim()
-      ? `The teacher wants to specifically focus on: ${focus.trim()}.` : ''
+    const exclusions = excludeList.length > 0 ? `Do not repeat any of these already recommended books: ${excludeList.join(', ')}.` : ''
+    const focusLine = focus.trim() ? `The teacher wants to specifically focus on: ${focus.trim()}.` : ''
+    const contentLine = contentType !== 'Any' ? `Content type: ${contentType} only.` : ''
+    const bookTypeLine = bookType !== 'Any' ? `Book type: ${bookType} only.` : ''
+    const levelLine = readingLevel !== 'Any' ? `Reading level: ${readingLevel}.` : ''
 
     const prompt = `You are a UK primary school teacher assistant. Recommend exactly ${count} books for ${yearGroup} students studying ${topic} in ${subject}.
 ${focusLine}
+${contentLine}
+${bookTypeLine}
+${levelLine}
 ${exclusions}
 
 IMPORTANT: Only recommend books you are certain exist. Every title and author must be a real, published book that can be verified and purchased. Do not invent or guess titles. If you are not confident a book exists, do not include it.
@@ -285,9 +141,8 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Request failed')
-      const newBooks = data.books
-      setBooks(prev => isLoadMore ? [...prev, ...newBooks] : newBooks)
-      setSearchMeta({ subject, topic, yearGroup, focus })
+      setBooks(prev => isLoadMore ? [...prev, ...data.books] : data.books)
+      setSearchMeta({ subject, topic, yearGroup, focus, contentType, bookType, readingLevel })
       setSearched(true)
     } catch (err) {
       setError('Something went wrong. Please try again.')
@@ -322,12 +177,8 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
               <label style={styles.label}>Year group</label>
               <select style={styles.select} value={yearGroup} onChange={e => setYearGroup(e.target.value)}>
                 <option value="">Select...</option>
-                <option>Year 1</option>
-                <option>Year 2</option>
-                <option>Year 3</option>
-                <option>Year 4</option>
-                <option>Year 5</option>
-                <option>Year 6</option>
+                <option>Year 1</option><option>Year 2</option><option>Year 3</option>
+                <option>Year 4</option><option>Year 5</option><option>Year 6</option>
               </select>
             </div>
           </div>
@@ -342,52 +193,113 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
               value={focus}
               onChange={e => setFocus(e.target.value)}
             />
+            <div style={styles.chipsBar}>
+              {CHIPS.map(chip => (
+                <span
+                  key={chip.value}
+                  style={styles.chip}
+                  onClick={() => setFocus(chip.value)}
+                >
+                  ⚡ {chip.label}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <button
-            style={{ ...styles.submitBtn, background: loading ? '#888780' : GREEN }}
-            onClick={() => fetchBooks(false)}
-            disabled={loading}
-          >
+          <div style={styles.accordion}>
+            <div style={styles.accordionHeader} onClick={() => setAccordionOpen(o => !o)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>⚙️</span>
+                <div>
+                  <div style={styles.accordionTitle}>Refine results</div>
+                  {activeFilterCount === 0 && <div style={styles.accordionSubtitle}>Filter by type, content and reading level</div>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {activeFilterCount > 0 && (
+                  <span style={styles.accordionBadge}>{activeFilterCount} active</span>
+                )}
+                <span style={{ fontSize: 14, color: MUTED, transition: 'transform 0.2s', display: 'inline-block', transform: accordionOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+              </div>
+            </div>
+
+            {accordionOpen && (
+              <div style={styles.accordionBody}>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={styles.filterLabel}>Content type</div>
+                  <div style={styles.pillGroup}>
+                    {CONTENT_TYPES.map(t => (
+                      <span key={t} style={styles.pill(contentType === t)} onClick={() => setContentType(t)}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <hr style={styles.filterDivider} />
+                <div style={{ marginBottom: 14 }}>
+                  <div style={styles.filterLabel}>Book type</div>
+                  <div style={styles.pillGroup}>
+                    {BOOK_TYPES.map(t => (
+                      <span key={t} style={styles.pill(bookType === t)} onClick={() => setBookType(t)}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <hr style={styles.filterDivider} />
+                <div style={{ marginBottom: 14 }}>
+                  <div style={styles.filterLabel}>Reading level</div>
+                  <div style={styles.pillGroup}>
+                    {READING_LEVELS.map(t => (
+                      <span key={t} style={styles.pill(readingLevel === t)} onClick={() => setReadingLevel(t)}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <hr style={styles.filterDivider} />
+                <div>
+                  <div style={styles.filterLabel}>
+                    Minimum star rating <span style={{ fontSize: 11, color: '#888780', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>— coming soon</span>
+                  </div>
+                  <div style={styles.pillGroup}>
+                    {STAR_OPTIONS.map(s => (
+                      <span key={s.val} style={styles.starPill(starRating === s.val)} onClick={() => setStarRating(s.val)}>
+                        {s.val > 0 && '⭐'.repeat(s.val) + ' '}{s.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={styles.starNote}>Star ratings will be based on community reviews from teachers. This feature is coming soon.</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button style={styles.submitBtn(loading)} onClick={() => fetchBooks(false)} disabled={loading}>
             {loading ? '⏳ Finding books...' : '✨ Find books'}
           </button>
 
-          {error && <div style={styles.errorBox}>{error}</div>}
+          {error && (
+            <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13, marginTop: 12 }}>
+              {error}
+            </div>
+          )}
         </div>
 
-        {loading && (
-          <div style={styles.loadingBox}>
-            Finding the best books for {yearGroup} {subject}...
-          </div>
-        )}
+        {loading && <div style={styles.loadingBox}>Finding the best books for {yearGroup} {subject}...</div>}
 
         {searched && books.length > 0 && (
           <div>
-            <div style={{
-              background: '#FAEEDA',
-              border: '0.5px solid #EF9F27',
-              borderRadius: 8,
-              padding: '0.75rem 1rem',
-              marginBottom: 16,
-              fontSize: 13,
-              color: '#633806',
-              display: 'flex',
-              gap: 8,
-              alignItems: 'flex-start',
-            }}>
+            <div style={styles.disclaimer}>
               <span style={{ flexShrink: 0 }}>⚠️</span>
               <span>AI recommendations can occasionally include inaccurate titles. Please verify each book exists before ordering — we suggest checking Amazon or your school library catalogue.</span>
             </div>
             <div style={styles.resultsHeader}>
               <p style={styles.resultsTitle}>
-                Books for <span style={styles.resultsTitleSpan}>
+                Books for <span style={{ color: TEXT }}>
                   {searchMeta.yearGroup} · {searchMeta.subject} · {searchMeta.topic}
                   {searchMeta.focus ? ` · ${searchMeta.focus}` : ''}
+                  {searchMeta.contentType !== 'Any' ? ` · ${searchMeta.contentType}` : ''}
+                  {searchMeta.bookType !== 'Any' ? ` · ${searchMeta.bookType}` : ''}
+                  {searchMeta.readingLevel !== 'Any' ? ` · ${searchMeta.readingLevel}` : ''}
                 </span>
               </p>
               <span style={styles.badge}>{books.length} results</span>
             </div>
-
             {books.map((book, i) => (
               <div key={i} style={styles.bookCard}>
                 <div style={styles.bookNum}>{i + 1}</div>
@@ -398,12 +310,7 @@ Return ONLY a valid JSON array with no extra text, preamble or markdown fences. 
                 </div>
               </div>
             ))}
-
-            <button
-              style={{ ...styles.loadMoreBtn, opacity: loadingMore ? 0.5 : 1 }}
-              onClick={() => fetchBooks(true)}
-              disabled={loadingMore}
-            >
+            <button style={styles.loadMoreBtn(loadingMore)} onClick={() => fetchBooks(true)} disabled={loadingMore}>
               {loadingMore ? 'Loading...' : '↻ Load more recommendations'}
             </button>
           </div>
