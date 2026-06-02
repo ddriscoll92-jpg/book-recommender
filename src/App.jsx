@@ -123,7 +123,7 @@ async function callAPI(prompt, raw = false) {
 }
 
 // ── Book Detail Page ──────────────────────────────────────────────────────────
-function BookDetailPage({ book, yearGroup, onBack }) {
+function BookDetailPage({ book, yearGroup, onBack, onCreateResources }) {
   const [details, setDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
   const [coverError, setCoverError] = useState(false)
@@ -354,6 +354,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
               <button
                 style={s.proceedBtn(checkedIdeas.size === 0)}
                 disabled={checkedIdeas.size === 0}
+                onClick={() => onCreateResources && onCreateResources(selectedIdeas)}
               >
                 Create resources →
               </button>
@@ -545,6 +546,191 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
   )
 }
 
+// ── Resource Page ─────────────────────────────────────────────────────────────
+function ResourcePage({ book, yearGroup, ideas, onBack }) {
+  const [plans, setPlans] = useState({})
+  const [generating, setGenerating] = useState({})
+
+  async function generatePlan(idea) {
+    const key = idea.title
+    setGenerating(prev => ({ ...prev, [key]: true }))
+    const prompt = `You are an expert UK primary school teacher creating a detailed lesson plan.
+
+Book: "${book.title}" by ${book.author}
+Year group: ${yearGroup || 'Primary'}
+Subject: ${idea.subject}
+Lesson idea: ${idea.title}
+Description: ${idea.description}
+
+Generate a complete lesson resource. Return ONLY a valid JSON object with no extra text or markdown fences with these exact keys:
+
+{
+  "lessonOverview": "2-3 sentence summary of the lesson",
+  "learningIntentions": ["We are learning to...", "We are learning to...", "We are learning to..."],
+  "successCriteria": ["I can...", "I can...", "I can..."],
+  "keySkills": [
+    { "skill": "skill name", "curriculumLink": "exact NC reference" }
+  ],
+  "sendAdaptations": {
+    "lower": ["adaptation 1", "adaptation 2"],
+    "higher": ["adaptation 1", "adaptation 2"],
+    "eal": ["adaptation 1", "adaptation 2"]
+  },
+  "modelExample": {
+    "title": "title of the model example",
+    "description": "brief description of what this template shows",
+    "sections": [
+      { "label": "section label e.g. Opening", "placeholder": "guidance on what pupils should include here", "example": "a strong example of what this section should contain" }
+    ]
+  }
+}`
+
+    try {
+      const result = await callAPI(prompt, true)
+      setPlans(prev => ({ ...prev, [key]: result }))
+    } catch {
+      setPlans(prev => ({ ...prev, [key]: { error: true } }))
+    } finally {
+      setGenerating(prev => ({ ...prev, [key]: false }))
+    }
+  }
+
+  useState(() => { ideas.forEach(idea => generatePlan(idea)) }, [])
+
+  return (
+    <div style={s.page}>
+      <div style={s.container}>
+        <button style={s.backBtn} onClick={onBack}>← Back to book</button>
+
+        <div style={s.header}>
+          <div style={s.headerIcon}>📝</div>
+          <div>
+            <h1 style={s.h1}>Lesson Resources</h1>
+            <p style={s.headerSub}>{book.title} · {yearGroup}</p>
+          </div>
+        </div>
+
+        {ideas.map((idea, ideaIdx) => {
+          const plan = plans[idea.title]
+          const isGenerating = generating[idea.title]
+          const sm = SUBJECTS.find(sub => sub.name === idea.subject)
+
+          return (
+            <div key={ideaIdx} style={{ marginBottom: 32 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 36, height: 36, background: LIGHT_GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{sm?.emoji || "📚"}</div>
+                <div>
+                  <div style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: TEXT }}>{idea.title}</div>
+                  <div style={{ fontSize: 12, color: MUTED }}>{idea.subject}</div>
+                </div>
+              </div>
+
+              {isGenerating && (
+                <div style={{ ...s.card, textAlign: "center", padding: "2rem", color: MUTED, fontSize: 14 }}>
+                  ⏳ Generating lesson plan for <em>{idea.title}</em>...
+                </div>
+              )}
+
+              {plan?.error && (
+                <div style={{ background: "#FCEBEB", color: "#A32D2D", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
+                  Something went wrong. <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => generatePlan(idea)}>Try again</span>
+                </div>
+              )}
+
+              {plan && !plan.error && (
+                <div>
+                  <div style={s.card}>
+                    <div style={s.sectionTitle}>Lesson overview</div>
+                    <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 16 }}>{plan.lessonOverview}</p>
+
+                    <div style={s.sectionTitle}>Learning intentions</div>
+                    <ul style={{ paddingLeft: 0, listStyle: "none", marginBottom: 16 }}>
+                      {plan.learningIntentions?.map((li, i) => (
+                        <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                          <span style={{ width: 20, height: 20, background: LIGHT_GREEN, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#085041", flexShrink: 0, marginTop: 1 }}>✦</span>
+                          <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{li}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div style={s.sectionTitle}>Success criteria</div>
+                    <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+                      {plan.successCriteria?.map((sc, i) => (
+                        <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                          <span style={{ fontSize: 14, color: GREEN, flexShrink: 0, marginTop: 1 }}>✓</span>
+                          <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{sc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div style={s.card}>
+                    <div style={s.sectionTitle}>Key skills — National Curriculum</div>
+                    {plan.keySkills?.map((ks, i) => (
+                      <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < plan.keySkills.length - 1 ? `0.5px solid ${BORDER}` : "none" }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{ks.skill}</div>
+                        <div style={{ fontSize: 12, color: MUTED }}>{ks.curriculumLink}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={s.card}>
+                    <div style={s.sectionTitle}>SEND adaptations</div>
+                    {[
+                      { key: "lower", label: "Support / lower attaining", emoji: "🤝" },
+                      { key: "higher", label: "Extension / higher attaining", emoji: "🚀" },
+                      { key: "eal", label: "EAL learners", emoji: "🌍" },
+                    ].map(group => (
+                      <div key={group.key} style={{ marginBottom: 14 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                          <span>{group.emoji}</span>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: TEXT }}>{group.label}</span>
+                        </div>
+                        <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+                          {plan.sendAdaptations?.[group.key]?.map((item, i) => (
+                            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
+                              <span style={{ color: MUTED, fontSize: 14, flexShrink: 0 }}>•</span>
+                              <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={s.card}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <div style={s.sectionTitle}>Model example</div>
+                      <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20, marginBottom: 8 }}>What a strong piece looks like</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: MUTED, marginBottom: 14 }}>{plan.modelExample?.description}</p>
+                    <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 12 }}>{plan.modelExample?.title}</div>
+                    {plan.modelExample?.sections?.map((section, i) => (
+                      <div key={i} style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{section.label}</div>
+                        <div style={{ background: "#F0FAF6", border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
+                          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 8 }}>{section.example}</p>
+                          <p style={{ fontSize: 12, color: MUTED, fontStyle: "italic", borderTop: `0.5px solid ${BORDER}`, paddingTop: 8 }}>📌 {section.placeholder}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {ideaIdx < ideas.length - 1 && (
+                <hr style={{ border: "none", borderTop: `2px dashed ${BORDER}`, margin: "24px 0" }} />
+              )}
+            </div>
+          )
+        })}
+
+        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+      </div>
+    </div>
+  )
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 const initialSearchState = {
   subject: '', topic: '', yearGroup: '', focus: '',
@@ -553,11 +739,36 @@ const initialSearchState = {
 }
 
 export default function App() {
+  const [page, setPage] = useState('search')
   const [selectedBook, setSelectedBook] = useState(null)
+  const [selectedIdeas, setSelectedIdeas] = useState([])
   const [searchState, setSearchState] = useState(initialSearchState)
 
-  if (selectedBook) {
-    return <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setSelectedBook(null)} />
+  if (page === 'resources') {
+    return (
+      <ResourcePage
+        book={selectedBook}
+        yearGroup={searchState.yearGroup}
+        ideas={selectedIdeas}
+        onBack={() => setPage('book')}
+      />
+    )
   }
-  return <SearchPage onSelectBook={setSelectedBook} searchState={searchState} setSearchState={setSearchState} />
+  if (page === 'book') {
+    return (
+      <BookDetailPage
+        book={selectedBook}
+        yearGroup={searchState.yearGroup}
+        onBack={() => setPage('search')}
+        onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('resources') }}
+      />
+    )
+  }
+  return (
+    <SearchPage
+      onSelectBook={(book) => { setSelectedBook(book); setPage('book') }}
+      searchState={searchState}
+      setSearchState={setSearchState}
+    />
+  )
 }
