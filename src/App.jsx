@@ -10,9 +10,12 @@ const PAGE_BG = '#f5f4f0'
 const AMBER = '#EF9F27'
 const AMBER_BG = '#FAEEDA'
 const AMBER_TEXT = '#633806'
+const NAVY = '#1E2433'
+const NAVY_LIGHT = '#2C3547'
+const NAVY_MUTED = '#8B93A7'
 
 const s = {
-  page: { minHeight: '100vh', background: PAGE_BG, padding: '2rem 1rem' },
+  page: { minHeight: '100vh', background: PAGE_BG, padding: '2rem 1rem', paddingTop: '5rem' },
   container: { maxWidth: 680, margin: '0 auto' },
   header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: '2rem' },
   headerIcon: { width: 52, height: 52, background: GREEN, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 26 },
@@ -120,6 +123,95 @@ async function callAPI(prompt, raw = false) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Request failed')
   return raw ? data.result : data.books
+}
+
+// ── Nav Bar ───────────────────────────────────────────────────────────────────
+function NavBar({ currentPage, onNavigate }) {
+  const [profileOpen, setProfileOpen] = useState(false)
+
+  const navItems = [
+    { id: 'search', label: 'Book Recommender', active: true },
+    { id: 'plans', label: 'My Plans', active: false },
+    { id: 'books', label: 'My Books', active: false },
+    { id: 'resources', label: 'Resources', active: false },
+  ]
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: NAVY, borderBottom: `1px solid ${NAVY_LIGHT}`, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', fontFamily: "'DM Sans', sans-serif" }}>
+
+      {/* Logo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ width: 28, height: 28, background: GREEN, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📚</div>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em' }}>TeachReads</span>
+      </div>
+
+      {/* Nav links */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {navItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => item.active ? onNavigate(item.id) : null}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 7,
+              border: 'none',
+              background: currentPage === item.id ? NAVY_LIGHT : 'transparent',
+              color: item.active ? (currentPage === item.id ? '#FFFFFF' : NAVY_MUTED) : NAVY_LIGHT,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: item.active ? 'pointer' : 'default',
+              fontFamily: "'DM Sans', sans-serif",
+              position: 'relative',
+            }}
+          >
+            {item.label}
+            {!item.active && (
+              <span style={{ marginLeft: 5, fontSize: 9, background: NAVY_LIGHT, color: NAVY_MUTED, padding: '1px 5px', borderRadius: 10, verticalAlign: 'middle', fontWeight: 500 }}>Soon</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Profile */}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div
+          onClick={() => setProfileOpen(o => !o)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, background: profileOpen ? NAVY_LIGHT : 'transparent' }}
+        >
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>T</div>
+          <div style={{ lineHeight: 1.2 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>Teacher</div>
+            <div style={{ fontSize: 11, color: NAVY_MUTED }}>Free plan</div>
+          </div>
+          <span style={{ fontSize: 11, color: NAVY_MUTED, marginLeft: 2 }}>▼</span>
+        </div>
+
+        {/* Dropdown */}
+        {profileOpen && (
+          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
+            <div style={{ padding: '12px 14px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>Teacher</div>
+              <div style={{ fontSize: 12, color: MUTED }}>teacher@school.co.uk</div>
+            </div>
+            {[
+              { label: '👤  My Profile', note: '' },
+              { label: '⚙️  Settings', note: '' },
+              { label: '💳  Upgrade Plan', note: 'Coming soon' },
+              { label: '🚪  Sign Out', note: '' },
+            ].map((item, i) => (
+              <div key={i} style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                {item.label}
+                {item.note && <span style={{ fontSize: 10, color: MUTED, background: PAGE_BG, padding: '2px 6px', borderRadius: 10 }}>{item.note}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // ── Book Detail Page ──────────────────────────────────────────────────────────
@@ -779,31 +871,39 @@ export default function App() {
   const [selectedIdeas, setSelectedIdeas] = useState([])
   const [searchState, setSearchState] = useState(initialSearchState)
 
-  if (page === 'resources') {
-    return (
-      <ResourcePage
-        book={selectedBook}
-        yearGroup={searchState.yearGroup}
-        ideas={selectedIdeas}
-        onBack={() => setPage('book')}
-      />
-    )
+  function handleNavigate(dest) {
+    if (dest === 'search') { setSelectedBook(null); setPage('search') }
   }
-  if (page === 'book') {
-    return (
-      <BookDetailPage
-        book={selectedBook}
-        yearGroup={searchState.yearGroup}
-        onBack={() => setPage('search')}
-        onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('resources') }}
-      />
-    )
-  }
+
+  // map internal page names to nav highlight
+  const navPage = page === 'book' || page === 'resources' ? 'search' : page
+
   return (
-    <SearchPage
-      onSelectBook={(book) => { setSelectedBook(book); setPage('book') }}
-      searchState={searchState}
-      setSearchState={setSearchState}
-    />
+    <div>
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} />
+      {page === 'resources' && (
+        <ResourcePage
+          book={selectedBook}
+          yearGroup={searchState.yearGroup}
+          ideas={selectedIdeas}
+          onBack={() => setPage('book')}
+        />
+      )}
+      {page === 'book' && (
+        <BookDetailPage
+          book={selectedBook}
+          yearGroup={searchState.yearGroup}
+          onBack={() => setPage('search')}
+          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('resources') }}
+        />
+      )}
+      {page === 'search' && (
+        <SearchPage
+          onSelectBook={(book) => { setSelectedBook(book); setPage('book') }}
+          searchState={searchState}
+          setSearchState={setSearchState}
+        />
+      )}
+    </div>
   )
 }
