@@ -126,6 +126,18 @@ async function callAPI(prompt, raw = false) {
 }
 
 // ── Download Utilities ────────────────────────────────────────────────────────
+// ── Script loader helper ──────────────────────────────────────────────────────
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
+    const script = document.createElement('script')
+    script.src = src
+    script.onload = resolve
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+
 function buildPlanText(book, yearGroup, idea, plan) {
   const lines = []
   lines.push(`LESSON PLAN`)
@@ -188,7 +200,8 @@ function downloadTxt(book, yearGroup, idea, plan) {
 }
 
 async function downloadPdf(book, yearGroup, idea, plan) {
-  const { jsPDF } = await import('jspdf')
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const GREEN_RGB = [29, 158, 117]
   const NAVY_RGB = [30, 36, 51]
@@ -344,8 +357,10 @@ async function downloadPdf(book, yearGroup, idea, plan) {
 }
 
 async function downloadDocx(book, yearGroup, idea, plan) {
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType } = await import('docx')
-  const { saveAs } = await import('file-saver')
+  await loadScript('https://unpkg.com/docx@8.5.0/build/index.js')
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType } = window.docx
+  const { saveAs } = window
 
   const greenColor = '1D9E75'
   const navyColor = '1E2433'
