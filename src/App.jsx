@@ -550,6 +550,16 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
 function ResourcePage({ book, yearGroup, ideas, onBack }) {
   const [plans, setPlans] = useState({})
   const [generating, setGenerating] = useState({})
+  // first accordion open by default, rest closed
+  const [openAccordions, setOpenAccordions] = useState(() => {
+    const init = {}
+    ideas.forEach((idea, i) => { init[idea.title] = i === 0 })
+    return init
+  })
+
+  function toggleAccordion(key) {
+    setOpenAccordions(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   async function generatePlan(idea) {
     const key = idea.title
@@ -613,113 +623,138 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
         {ideas.map((idea, ideaIdx) => {
           const plan = plans[idea.title]
           const isGenerating = generating[idea.title]
+          const isOpen = openAccordions[idea.title]
           const sm = SUBJECTS.find(sub => sub.name === idea.subject)
 
           return (
-            <div key={ideaIdx} style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 36, height: 36, background: LIGHT_GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{sm?.emoji || "📚"}</div>
-                <div>
-                  <div style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: TEXT }}>{idea.title}</div>
-                  <div style={{ fontSize: 12, color: MUTED }}>{idea.subject}</div>
+            <div key={ideaIdx} style={{ marginBottom: 12 }}>
+
+              {/* Accordion header */}
+              <div
+                onClick={() => toggleAccordion(idea.title)}
+                style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: isOpen ? "12px 12px 0 0" : 12, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 34, height: 34, background: LIGHT_GREEN, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{sm?.emoji || "📚"}</div>
+                  <div>
+                    <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT }}>{idea.title}</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginTop: 1 }}>
+                      {idea.subject}
+                      {isGenerating && <span style={{ marginLeft: 8, color: AMBER }}>⏳ Generating...</span>}
+                      {plan && !plan.error && !isGenerating && <span style={{ marginLeft: 8, color: GREEN }}>✓ Ready</span>}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {/* Download button — placeholder for future PDF */}
+                  <button
+                    onClick={e => { e.stopPropagation(); alert("PDF download coming soon — you'll be able to download this lesson plan as a formatted document.") }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 20, border: `0.5px solid ${BORDER}`, background: PAGE_BG, fontSize: 12, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+                    title="Download lesson plan"
+                  >
+                    ⬇ Download plan
+                  </button>
+                  <span style={{ fontSize: 13, color: MUTED, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
                 </div>
               </div>
 
-              {isGenerating && (
-                <div style={{ ...s.card, textAlign: "center", padding: "2rem", color: MUTED, fontSize: 14 }}>
-                  ⏳ Generating lesson plan for <em>{idea.title}</em>...
-                </div>
-              )}
+              {/* Accordion body */}
+              {isOpen && (
+                <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "16px", background: PAGE_BG }}>
 
-              {plan?.error && (
-                <div style={{ background: "#FCEBEB", color: "#A32D2D", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
-                  Something went wrong. <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => generatePlan(idea)}>Try again</span>
-                </div>
-              )}
+                  {isGenerating && (
+                    <div style={{ ...s.card, textAlign: "center", padding: "2rem", color: MUTED, fontSize: 14 }}>
+                      ⏳ Generating lesson plan for <em>{idea.title}</em>...
+                    </div>
+                  )}
 
-              {plan && !plan.error && (
-                <div>
-                  <div style={s.card}>
-                    <div style={s.sectionTitle}>Lesson overview</div>
-                    <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 16 }}>{plan.lessonOverview}</p>
+                  {plan?.error && (
+                    <div style={{ background: "#FCEBEB", color: "#A32D2D", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
+                      Something went wrong. <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => generatePlan(idea)}>Try again</span>
+                    </div>
+                  )}
 
-                    <div style={s.sectionTitle}>Learning intentions</div>
-                    <ul style={{ paddingLeft: 0, listStyle: "none", marginBottom: 16 }}>
-                      {plan.learningIntentions?.map((li, i) => (
-                        <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                          <span style={{ width: 20, height: 20, background: LIGHT_GREEN, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#085041", flexShrink: 0, marginTop: 1 }}>✦</span>
-                          <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{li}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  {plan && !plan.error && (
+                    <div>
+                      <div style={s.card}>
+                        <div style={s.sectionTitle}>Lesson overview</div>
+                        <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 16 }}>{plan.lessonOverview}</p>
 
-                    <div style={s.sectionTitle}>Success criteria</div>
-                    <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                      {plan.successCriteria?.map((sc, i) => (
-                        <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                          <span style={{ fontSize: 14, color: GREEN, flexShrink: 0, marginTop: 1 }}>✓</span>
-                          <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{sc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                        <div style={s.sectionTitle}>Learning intentions</div>
+                        <ul style={{ paddingLeft: 0, listStyle: "none", marginBottom: 16 }}>
+                          {plan.learningIntentions?.map((li, i) => (
+                            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                              <span style={{ width: 20, height: 20, background: LIGHT_GREEN, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#085041", flexShrink: 0, marginTop: 1 }}>✦</span>
+                              <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{li}</span>
+                            </li>
+                          ))}
+                        </ul>
 
-                  <div style={s.card}>
-                    <div style={s.sectionTitle}>Key skills — National Curriculum</div>
-                    {plan.keySkills?.map((ks, i) => (
-                      <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < plan.keySkills.length - 1 ? `0.5px solid ${BORDER}` : "none" }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{ks.skill}</div>
-                        <div style={{ fontSize: 12, color: MUTED }}>{ks.curriculumLink}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={s.card}>
-                    <div style={s.sectionTitle}>SEND adaptations</div>
-                    {[
-                      { key: "lower", label: "Support / lower attaining", emoji: "🤝" },
-                      { key: "higher", label: "Extension / higher attaining", emoji: "🚀" },
-                      { key: "eal", label: "EAL learners", emoji: "🌍" },
-                    ].map(group => (
-                      <div key={group.key} style={{ marginBottom: 14 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                          <span>{group.emoji}</span>
-                          <span style={{ fontSize: 12, fontWeight: 500, color: TEXT }}>{group.label}</span>
-                        </div>
+                        <div style={s.sectionTitle}>Success criteria</div>
                         <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                          {plan.sendAdaptations?.[group.key]?.map((item, i) => (
-                            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
-                              <span style={{ color: MUTED, fontSize: 14, flexShrink: 0 }}>•</span>
-                              <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+                          {plan.successCriteria?.map((sc, i) => (
+                            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                              <span style={{ fontSize: 14, color: GREEN, flexShrink: 0, marginTop: 1 }}>✓</span>
+                              <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{sc}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
-                    ))}
-                  </div>
 
-                  <div style={s.card}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <div style={s.sectionTitle}>Model example</div>
-                      <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20, marginBottom: 8 }}>What a strong piece looks like</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: MUTED, marginBottom: 14 }}>{plan.modelExample?.description}</p>
-                    <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 12 }}>{plan.modelExample?.title}</div>
-                    {plan.modelExample?.sections?.map((section, i) => (
-                      <div key={i} style={{ marginBottom: 14 }}>
-                        <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{section.label}</div>
-                        <div style={{ background: "#F0FAF6", border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
-                          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 8 }}>{section.example}</p>
-                          <p style={{ fontSize: 12, color: MUTED, fontStyle: "italic", borderTop: `0.5px solid ${BORDER}`, paddingTop: 8 }}>📌 {section.placeholder}</p>
-                        </div>
+                      <div style={s.card}>
+                        <div style={s.sectionTitle}>Key skills — National Curriculum</div>
+                        {plan.keySkills?.map((ks, i) => (
+                          <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < plan.keySkills.length - 1 ? `0.5px solid ${BORDER}` : "none" }}>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{ks.skill}</div>
+                            <div style={{ fontSize: 12, color: MUTED }}>{ks.curriculumLink}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {ideaIdx < ideas.length - 1 && (
-                <hr style={{ border: "none", borderTop: `2px dashed ${BORDER}`, margin: "24px 0" }} />
+                      <div style={s.card}>
+                        <div style={s.sectionTitle}>SEND adaptations</div>
+                        {[
+                          { key: "lower", label: "Support / lower attaining", emoji: "🤝" },
+                          { key: "higher", label: "Extension / higher attaining", emoji: "🚀" },
+                          { key: "eal", label: "EAL learners", emoji: "🌍" },
+                        ].map(group => (
+                          <div key={group.key} style={{ marginBottom: 14 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                              <span>{group.emoji}</span>
+                              <span style={{ fontSize: 12, fontWeight: 500, color: TEXT }}>{group.label}</span>
+                            </div>
+                            <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+                              {plan.sendAdaptations?.[group.key]?.map((item, i) => (
+                                <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
+                                  <span style={{ color: MUTED, fontSize: 14, flexShrink: 0 }}>•</span>
+                                  <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={s.card}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <div style={s.sectionTitle}>Model example</div>
+                          <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20, marginBottom: 8 }}>What a strong piece looks like</span>
+                        </div>
+                        <p style={{ fontSize: 13, color: MUTED, marginBottom: 14 }}>{plan.modelExample?.description}</p>
+                        <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 12 }}>{plan.modelExample?.title}</div>
+                        {plan.modelExample?.sections?.map((section, i) => (
+                          <div key={i} style={{ marginBottom: 14 }}>
+                            <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{section.label}</div>
+                            <div style={{ background: "#F0FAF6", border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
+                              <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 8 }}>{section.example}</p>
+                              <p style={{ fontSize: 12, color: MUTED, fontStyle: "italic", borderTop: `0.5px solid ${BORDER}`, paddingTop: 8 }}>📌 {section.placeholder}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )
