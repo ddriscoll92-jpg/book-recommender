@@ -1039,48 +1039,184 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
 }
 
 // ── Resource Page ─────────────────────────────────────────────────────────────
+function LessonTab({ lesson, lessonIdx, total }) {
+  const lessonTypes = {
+    explore: { label: 'Explore', color: '#7C5CBF', bg: '#F3EEFF' },
+    analyse: { label: 'Analyse', color: '#1D6FA8', bg: '#E8F4FF' },
+    teach: { label: 'Teach', color: '#1D9E75', bg: '#E1F5EE' },
+    practise: { label: 'Practise', color: '#D97706', bg: '#FEF3C7' },
+    apply: { label: 'Apply', color: '#DC6B3A', bg: '#FEF0E8' },
+    create: { label: 'Create', color: '#B91C78', bg: '#FCE7F3' },
+  }
+  const lt = lessonTypes[lesson.type?.toLowerCase()] || lessonTypes.teach
+
+  return (
+    <div>
+      {/* Lesson type badge + nav indicator */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: lt.color, background: lt.bg, padding: "3px 10px", borderRadius: 20 }}>{lt.label}</span>
+        <span style={{ fontSize: 12, color: MUTED }}>Lesson {lessonIdx + 1} of {total}</span>
+      </div>
+
+      {/* Overview + learning intentions */}
+      <div style={s.card}>
+        <div style={s.sectionTitle}>Lesson overview</div>
+        <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 16 }}>{lesson.lessonOverview}</p>
+
+        <div style={s.sectionTitle}>Learning intention</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 16, padding: "10px 12px", background: LIGHT_GREEN, borderRadius: 8 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>✦</span>
+          <span style={{ fontSize: 14, color: "#085041", lineHeight: 1.5, fontWeight: 500 }}>{lesson.learningIntention}</span>
+        </div>
+
+        <div style={s.sectionTitle}>Success criteria</div>
+        <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+          {lesson.successCriteria?.map((sc, i) => (
+            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+              <span style={{ fontSize: 14, color: GREEN, flexShrink: 0, marginTop: 1 }}>✓</span>
+              <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{sc}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Main activity */}
+      <div style={s.card}>
+        <div style={s.sectionTitle}>Main activity</div>
+        <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 12 }}>{lesson.mainActivity}</p>
+        {lesson.teacherNotes && (
+          <div style={{ background: AMBER_BG, border: `0.5px solid ${AMBER}`, borderRadius: 8, padding: "10px 12px" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: AMBER_TEXT, textTransform: "uppercase", letterSpacing: "0.06em" }}>Teacher note  </span>
+            <span style={{ fontSize: 13, color: AMBER_TEXT, lineHeight: 1.5 }}>{lesson.teacherNotes}</span>
+          </div>
+        )}
+      </div>
+
+      {/* NC links */}
+      <div style={s.card}>
+        <div style={s.sectionTitle}>National Curriculum links</div>
+        {lesson.ncLinks?.map((nc, i) => (
+          <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < lesson.ncLinks.length - 1 ? `0.5px solid ${BORDER}` : "none" }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{nc.skill}</div>
+            <div style={{ fontSize: 12, color: MUTED }}>{nc.curriculumLink}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* SEND */}
+      <div style={s.card}>
+        <div style={s.sectionTitle}>SEND adaptations</div>
+        {[
+          { key: "lower", label: "Support / lower attaining", emoji: "🤝" },
+          { key: "higher", label: "Extension / higher attaining", emoji: "🚀" },
+          { key: "eal", label: "EAL learners", emoji: "🌍" },
+        ].map(group => (
+          <div key={group.key} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <span>{group.emoji}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: TEXT }}>{group.label}</span>
+            </div>
+            <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+              {lesson.sendAdaptations?.[group.key]?.map((item, i) => (
+                <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
+                  <span style={{ color: MUTED, fontSize: 14, flexShrink: 0 }}>•</span>
+                  <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ModelExampleTab({ modelExample }) {
+  return (
+    <div>
+      <div style={s.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <div style={s.sectionTitle}>Model example</div>
+          <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20, marginBottom: 8 }}>End goal — what pupils work towards</span>
+        </div>
+        <p style={{ fontSize: 13, color: MUTED, marginBottom: 14 }}>{modelExample?.description}</p>
+        <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 12 }}>{modelExample?.title}</div>
+        {modelExample?.sections?.map((section, i) => (
+          <div key={i} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{section.label}</div>
+            <div style={{ background: "#F0FAF6", border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
+              <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 8 }}>{section.example}</p>
+              <p style={{ fontSize: 12, color: MUTED, fontStyle: "italic", borderTop: `0.5px solid ${BORDER}`, paddingTop: 8 }}>📌 {section.placeholder}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ResourcePage({ book, yearGroup, ideas, onBack }) {
   const [plans, setPlans] = useState({})
   const [generating, setGenerating] = useState({})
-  // first accordion open by default, rest closed
   const [openAccordions, setOpenAccordions] = useState(() => {
     const init = {}
     ideas.forEach((idea, i) => { init[idea.title] = i === 0 })
     return init
   })
+  // active tab per idea: 0..n-1 = lesson index, "model" = model example
+  const [activeTabs, setActiveTabs] = useState({})
 
   function toggleAccordion(key) {
     setOpenAccordions(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
+  function setTab(ideaTitle, tab) {
+    setActiveTabs(prev => ({ ...prev, [ideaTitle]: tab }))
+  }
+
   async function generatePlan(idea) {
     const key = idea.title
     setGenerating(prev => ({ ...prev, [key]: true }))
-    const prompt = `You are an expert UK primary school teacher creating a detailed lesson plan.
+    const prompt = `You are an expert UK primary school teacher creating a detailed unit of work broken into individual lessons.
 
 Book: "${book.title}" by ${book.author}
 Year group: ${yearGroup || 'Primary'}
 Subject: ${idea.subject}
-Lesson idea: ${idea.title}
+Unit title: ${idea.title}
 Description: ${idea.description}
 
-Generate a complete lesson resource. Return ONLY a valid JSON object with no extra text or markdown fences with these exact keys:
+Decide how many lessons this unit needs (typically 4-6 depending on complexity). Structure the lessons in a logical teaching sequence, for example:
+- Lesson 1: Explore/analyse the topic or text features
+- Middle lessons: Teach specific skills, then practise them
+- Final lesson: Apply and create (the culminating piece)
+
+Return ONLY a valid JSON object with no extra text or markdown fences:
 
 {
-  "lessonOverview": "2-3 sentence summary of the lesson",
-  "learningIntentions": ["We are learning to...", "We are learning to...", "We are learning to..."],
-  "successCriteria": ["I can...", "I can...", "I can..."],
-  "keySkills": [
-    { "skill": "skill name", "curriculumLink": "exact NC reference" }
+  "unitOverview": "2-3 sentences summarising the whole unit and its purpose",
+  "lessons": [
+    {
+      "lessonNumber": 1,
+      "title": "short lesson title e.g. Features of a diary entry",
+      "type": "one of: explore, analyse, teach, practise, apply, create",
+      "lessonOverview": "1-2 sentences describing what happens in this lesson",
+      "learningIntention": "We are learning to... (single, specific intention for this lesson)",
+      "successCriteria": ["I can...", "I can...", "I can..."],
+      "mainActivity": "2-3 sentences describing the main teaching activity and what pupils do",
+      "teacherNotes": "1 sentence of useful classroom tip or resource suggestion (optional)",
+      "ncLinks": [
+        { "skill": "skill name", "curriculumLink": "exact NC reference" }
+      ],
+      "sendAdaptations": {
+        "lower": ["adaptation 1", "adaptation 2"],
+        "higher": ["adaptation 1", "adaptation 2"],
+        "eal": ["adaptation 1"]
+      }
+    }
   ],
-  "sendAdaptations": {
-    "lower": ["adaptation 1", "adaptation 2"],
-    "higher": ["adaptation 1", "adaptation 2"],
-    "eal": ["adaptation 1", "adaptation 2"]
-  },
   "modelExample": {
     "title": "title of the model example",
-    "description": "brief description of what this template shows",
+    "description": "brief description — this is the end goal pupils work towards across the unit",
     "sections": [
       { "label": "section label e.g. Opening", "placeholder": "guidance on what pupils should include here", "example": "a strong example of what this section should contain" }
     ]
@@ -1090,6 +1226,7 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
     try {
       const result = await callAPI(prompt, true)
       setPlans(prev => ({ ...prev, [key]: result }))
+      setActiveTabs(prev => ({ ...prev, [key]: 0 }))
     } catch {
       setPlans(prev => ({ ...prev, [key]: { error: true } }))
     } finally {
@@ -1117,6 +1254,8 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
           const isGenerating = generating[idea.title]
           const isOpen = openAccordions[idea.title]
           const sm = SUBJECTS.find(sub => sub.name === idea.subject)
+          const activeTab = activeTabs[idea.title] ?? 0
+          const lessons = plan?.lessons || []
 
           return (
             <div key={ideaIdx} style={{ marginBottom: 12 }}>
@@ -1133,7 +1272,7 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 1 }}>
                       {idea.subject}
                       {isGenerating && <span style={{ marginLeft: 8, color: AMBER }}>⏳ Generating...</span>}
-                      {plan && !plan.error && !isGenerating && <span style={{ marginLeft: 8, color: GREEN }}>✓ Ready</span>}
+                      {plan && !plan.error && !isGenerating && <span style={{ marginLeft: 8, color: GREEN }}>✓ {lessons.length} lessons ready</span>}
                     </div>
                   </div>
                 </div>
@@ -1145,97 +1284,56 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
 
               {/* Accordion body */}
               {isOpen && (
-                <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "16px", background: PAGE_BG }}>
+                <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", background: PAGE_BG }}>
 
                   {isGenerating && (
-                    <div style={{ ...s.card, textAlign: "center", padding: "2rem", color: MUTED, fontSize: 14 }}>
-                      ⏳ Generating lesson plan for <em>{idea.title}</em>...
+                    <div style={{ padding: "2rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
+                      ⏳ Building lesson sequence for <em>{idea.title}</em>...
                     </div>
                   )}
 
                   {plan?.error && (
-                    <div style={{ background: "#FCEBEB", color: "#A32D2D", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
+                    <div style={{ margin: 16, background: "#FCEBEB", color: "#A32D2D", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13 }}>
                       Something went wrong. <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => generatePlan(idea)}>Try again</span>
                     </div>
                   )}
 
                   {plan && !plan.error && (
                     <div>
-                      <div style={s.card}>
-                        <div style={s.sectionTitle}>Lesson overview</div>
-                        <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 16 }}>{plan.lessonOverview}</p>
-
-                        <div style={s.sectionTitle}>Learning intentions</div>
-                        <ul style={{ paddingLeft: 0, listStyle: "none", marginBottom: 16 }}>
-                          {plan.learningIntentions?.map((li, i) => (
-                            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                              <span style={{ width: 20, height: 20, background: LIGHT_GREEN, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#085041", flexShrink: 0, marginTop: 1 }}>✦</span>
-                              <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{li}</span>
-                            </li>
-                          ))}
-                        </ul>
-
-                        <div style={s.sectionTitle}>Success criteria</div>
-                        <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                          {plan.successCriteria?.map((sc, i) => (
-                            <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                              <span style={{ fontSize: 14, color: GREEN, flexShrink: 0, marginTop: 1 }}>✓</span>
-                              <span style={{ fontSize: 14, color: TEXT, lineHeight: 1.5 }}>{sc}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      {/* Unit overview banner */}
+                      <div style={{ padding: "14px 16px", borderBottom: `0.5px solid ${BORDER}`, background: BG }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Unit overview</div>
+                        <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>{plan.unitOverview}</p>
                       </div>
 
-                      <div style={s.card}>
-                        <div style={s.sectionTitle}>Key skills — National Curriculum</div>
-                        {plan.keySkills?.map((ks, i) => (
-                          <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < plan.keySkills.length - 1 ? `0.5px solid ${BORDER}` : "none" }}>
-                            <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{ks.skill}</div>
-                            <div style={{ fontSize: 12, color: MUTED }}>{ks.curriculumLink}</div>
-                          </div>
+                      {/* Tab bar */}
+                      <div style={{ display: "flex", overflowX: "auto", borderBottom: `0.5px solid ${BORDER}`, background: BG, padding: "0 16px", gap: 2 }}>
+                        {lessons.map((lesson, li) => (
+                          <button
+                            key={li}
+                            onClick={() => setTab(idea.title, li)}
+                            style={{ padding: "10px 14px", border: "none", borderBottom: activeTab === li ? `2px solid ${GREEN}` : "2px solid transparent", background: "transparent", cursor: "pointer", fontSize: 13, fontWeight: activeTab === li ? 600 : 400, color: activeTab === li ? GREEN : MUTED, whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif", marginBottom: -1 }}
+                          >
+                            L{li + 1} · {lesson.title}
+                          </button>
                         ))}
+                        <button
+                          onClick={() => setTab(idea.title, "model")}
+                          style={{ padding: "10px 14px", border: "none", borderBottom: activeTab === "model" ? `2px solid ${AMBER}` : "2px solid transparent", background: "transparent", cursor: "pointer", fontSize: 13, fontWeight: activeTab === "model" ? 600 : 400, color: activeTab === "model" ? AMBER_TEXT : MUTED, whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif", marginBottom: -1 }}
+                        >
+                          ⭐ Model example
+                        </button>
                       </div>
 
-                      <div style={s.card}>
-                        <div style={s.sectionTitle}>SEND adaptations</div>
-                        {[
-                          { key: "lower", label: "Support / lower attaining", emoji: "🤝" },
-                          { key: "higher", label: "Extension / higher attaining", emoji: "🚀" },
-                          { key: "eal", label: "EAL learners", emoji: "🌍" },
-                        ].map(group => (
-                          <div key={group.key} style={{ marginBottom: 14 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                              <span>{group.emoji}</span>
-                              <span style={{ fontSize: 12, fontWeight: 500, color: TEXT }}>{group.label}</span>
-                            </div>
-                            <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                              {plan.sendAdaptations?.[group.key]?.map((item, i) => (
-                                <li key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
-                                  <span style={{ color: MUTED, fontSize: 14, flexShrink: 0 }}>•</span>
-                                  <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{item}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={s.card}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                          <div style={s.sectionTitle}>Model example</div>
-                          <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20, marginBottom: 8 }}>What a strong piece looks like</span>
-                        </div>
-                        <p style={{ fontSize: 13, color: MUTED, marginBottom: 14 }}>{plan.modelExample?.description}</p>
-                        <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 12 }}>{plan.modelExample?.title}</div>
-                        {plan.modelExample?.sections?.map((section, i) => (
-                          <div key={i} style={{ marginBottom: 14 }}>
-                            <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{section.label}</div>
-                            <div style={{ background: "#F0FAF6", border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
-                              <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, marginBottom: 8 }}>{section.example}</p>
-                              <p style={{ fontSize: 12, color: MUTED, fontStyle: "italic", borderTop: `0.5px solid ${BORDER}`, paddingTop: 8 }}>📌 {section.placeholder}</p>
-                            </div>
-                          </div>
-                        ))}
+                      {/* Tab content */}
+                      <div style={{ padding: 16 }}>
+                        {activeTab === "model" ? (
+                          <ModelExampleTab modelExample={plan.modelExample} />
+                        ) : (
+                          lessons[activeTab] && (
+                            <LessonTab lesson={lessons[activeTab]} lessonIdx={activeTab} total={lessons.length} />
+                          )
+                        )}
                       </div>
                     </div>
                   )}
