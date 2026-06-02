@@ -132,7 +132,7 @@ function NavBar({ currentPage, onNavigate }) {
   const navItems = [
     { id: 'search', label: 'Book Recommender', active: true },
     { id: 'plans', label: 'My Plans', active: false },
-    { id: 'books', label: 'My Books', active: false },
+    { id: 'books', label: 'My Books', active: true },
     { id: 'resources', label: 'Resources', active: false },
   ]
 
@@ -858,6 +858,237 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
   )
 }
 
+// ── My Books Page ─────────────────────────────────────────────────────────────
+const DUMMY_FAVOURITES = [
+  {
+    title: "Horrible Histories: Ruthless Romans",
+    author: "Terry Deary",
+    subject: "History",
+    yearGroup: "Year 4",
+    lastUsed: "28 May 2025",
+    lastAccessed: "1 Jun 2025",
+    hasPlans: true,
+    coverUrl: null,
+    emoji: "🏛️",
+  },
+  {
+    title: "The Iron Man",
+    author: "Ted Hughes",
+    subject: "Literacy",
+    yearGroup: "Year 5",
+    lastUsed: "12 Apr 2025",
+    lastAccessed: "20 May 2025",
+    hasPlans: true,
+    coverUrl: null,
+    emoji: "✏️",
+  },
+  {
+    title: "Fantastic Mr Fox",
+    author: "Roald Dahl",
+    subject: "Literacy",
+    yearGroup: "Year 3",
+    lastUsed: "3 Mar 2025",
+    lastAccessed: "3 Mar 2025",
+    hasPlans: false,
+    coverUrl: null,
+    emoji: "✏️",
+  },
+]
+
+const DUMMY_RECENT = [
+  {
+    title: "DK Eyewitness: Ancient Rome",
+    author: "DK",
+    subject: "History",
+    yearGroup: "Year 4",
+    lastUsed: "31 May 2025",
+    lastAccessed: "1 Jun 2025",
+    hasPlans: true,
+    coverUrl: null,
+    emoji: "🏛️",
+  },
+  {
+    title: "Escape from Pompeii",
+    author: "Christina Balit",
+    subject: "History",
+    yearGroup: "Year 4",
+    lastUsed: "28 May 2025",
+    lastAccessed: "29 May 2025",
+    hasPlans: false,
+    coverUrl: null,
+    emoji: "🏛️",
+  },
+  {
+    title: "See Inside the Roman Empire",
+    author: "Rob Lloyd Jones",
+    subject: "History",
+    yearGroup: "Year 4",
+    lastUsed: "20 May 2025",
+    lastAccessed: "22 May 2025",
+    hasPlans: true,
+    coverUrl: null,
+    emoji: "🏛️",
+  },
+  {
+    title: "The Selfish Giant",
+    author: "Oscar Wilde",
+    subject: "PSHE",
+    yearGroup: "Year 2",
+    lastUsed: "4 Apr 2025",
+    lastAccessed: "10 Apr 2025",
+    hasPlans: false,
+    coverUrl: null,
+    emoji: "💛",
+  },
+]
+
+function BookGridCard({ book, isFavourite, onToggleFavourite }) {
+  const [hovered, setHovered] = useState(false)
+  const subjectMeta = SUBJECTS.find(s => s.name === book.subject)
+
+  return (
+    <div
+      style={{ background: BG, border: `0.5px solid ${hovered ? GREEN : BORDER}`, borderRadius: 12, overflow: "hidden", transition: "all 0.15s", boxShadow: hovered ? "0 4px 16px rgba(0,0,0,0.08)" : "none", display: "flex", flexDirection: "column" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Cover area */}
+      <div style={{ background: LIGHT_GREEN, height: 110, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", fontSize: 42 }}>
+        {subjectMeta?.emoji || "📚"}
+        {/* Favourite star */}
+        <button
+          onClick={() => onToggleFavourite(book.title)}
+          style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
+          title={isFavourite ? "Remove from favourites" : "Add to favourites"}
+        >
+          {isFavourite ? "⭐" : "☆"}
+        </button>
+        {/* Has plans badge */}
+        {book.hasPlans && (
+          <div style={{ position: "absolute", bottom: 8, left: 8, background: GREEN, color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20 }}>
+            📝 Has plans
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div style={{ padding: "12px 12px 10px", flex: 1, display: "flex", flexDirection: "column" }}>
+        <div style={{ fontFamily: "'Lora', serif", fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, marginBottom: 3 }}>{book.title}</div>
+        <div style={{ fontSize: 11, color: GREEN, fontStyle: "italic", marginBottom: 8 }}>{book.author}</div>
+
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 500, background: LIGHT_GREEN, color: "#085041", padding: "2px 7px", borderRadius: 20 }}>{book.subject}</span>
+          <span style={{ fontSize: 10, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: "2px 7px", borderRadius: 20 }}>{book.yearGroup}</span>
+        </div>
+
+        <div style={{ marginTop: "auto", paddingTop: 8, borderTop: `0.5px solid ${BORDER}` }}>
+          <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>
+            <span style={{ fontWeight: 500, color: TEXT }}>Last used:</span> {book.lastUsed}
+          </div>
+          <div style={{ fontSize: 11, color: MUTED }}>
+            <span style={{ fontWeight: 500, color: TEXT }}>Last accessed:</span> {book.lastAccessed}
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: "8px 12px 12px", display: "flex", gap: 6 }}>
+        <button style={{ flex: 1, height: 30, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+          View book
+        </button>
+        <button style={{ flex: 1, height: 30, background: book.hasPlans ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${book.hasPlans ? GREEN : BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: book.hasPlans ? "#085041" : MUTED, cursor: book.hasPlans ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif" }}>
+          {book.hasPlans ? "View plans" : "No plans yet"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MyBooksPage({ onNavigate }) {
+  const [favourites, setFavourites] = useState(DUMMY_FAVOURITES.map(b => b.title))
+
+  function toggleFavourite(title) {
+    setFavourites(prev => prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title])
+  }
+
+  const allBooks = [...DUMMY_FAVOURITES, ...DUMMY_RECENT.filter(b => !DUMMY_FAVOURITES.find(f => f.title === b.title))]
+  const favouriteBooks = allBooks.filter(b => favourites.includes(b.title))
+  const recentBooks = allBooks.filter(b => !favourites.includes(b.title))
+
+  return (
+    <div style={{ ...s.page, maxWidth: "100%" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 1rem" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>📖</div>
+            <div>
+              <h1 style={s.h1}>My Books</h1>
+              <p style={s.headerSub}>Your favourited and recently used books</p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate("search")}
+            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            + Find more books
+          </button>
+        </div>
+
+        {/* Favourites section */}
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 16 }}>⭐</span>
+            <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Favourites</span>
+            <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>{favouriteBooks.length}</span>
+          </div>
+
+          {favouriteBooks.length === 0 ? (
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "2rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>☆</div>
+              Star a book to add it to your favourites
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {favouriteBooks.map(book => (
+                <BookGridCard key={book.title} book={book} isFavourite={true} onToggleFavourite={toggleFavourite} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Divider */}
+        <hr style={{ border: "none", borderTop: `0.5px solid ${BORDER}`, marginBottom: "2rem" }} />
+
+        {/* Recently used section */}
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 16 }}>🕐</span>
+            <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Recently used</span>
+            <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>{recentBooks.length}</span>
+          </div>
+
+          {recentBooks.length === 0 ? (
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "2rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>
+              Books you search and use will appear here
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {recentBooks.map(book => (
+                <BookGridCard key={book.title} book={book} isFavourite={false} onToggleFavourite={toggleFavourite} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+      </div>
+    </div>
+  )
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 const initialSearchState = {
   subject: '', topic: '', yearGroup: '', focus: '',
@@ -873,10 +1104,11 @@ export default function App() {
 
   function handleNavigate(dest) {
     if (dest === 'search') { setSelectedBook(null); setPage('search') }
+    if (dest === 'books') { setPage('books') }
   }
 
   // map internal page names to nav highlight
-  const navPage = page === 'book' || page === 'resources' ? 'search' : page
+  const navPage = page === 'book' || page === 'resources' ? 'search' : page === 'books' ? 'books' : page
 
   return (
     <div>
@@ -896,6 +1128,9 @@ export default function App() {
           onBack={() => setPage('search')}
           onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('resources') }}
         />
+      )}
+      {page === 'books' && (
+        <MyBooksPage onNavigate={handleNavigate} />
       )}
       {page === 'search' && (
         <SearchPage
