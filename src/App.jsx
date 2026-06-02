@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const GREEN = '#1D9E75'
 const LIGHT_GREEN = '#E1F5EE'
@@ -123,6 +123,391 @@ async function callAPI(prompt, raw = false) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Request failed')
   return raw ? data.result : data.books
+}
+
+// ── Download Utilities ────────────────────────────────────────────────────────
+function buildPlanText(book, yearGroup, idea, plan) {
+  const lines = []
+  lines.push(`LESSON PLAN`)
+  lines.push(`${'='.repeat(60)}`)
+  lines.push(`Book: ${book.title} by ${book.author}`)
+  lines.push(`Year Group: ${yearGroup || 'Primary'}`)
+  lines.push(`Subject: ${idea.subject}`)
+  lines.push(`Lesson: ${idea.title}`)
+  lines.push(``)
+  lines.push(`LESSON OVERVIEW`)
+  lines.push(`${'-'.repeat(40)}`)
+  lines.push(plan.lessonOverview)
+  lines.push(``)
+  lines.push(`LEARNING INTENTIONS`)
+  lines.push(`${'-'.repeat(40)}`)
+  plan.learningIntentions?.forEach(li => lines.push(`• ${li}`))
+  lines.push(``)
+  lines.push(`SUCCESS CRITERIA`)
+  lines.push(`${'-'.repeat(40)}`)
+  plan.successCriteria?.forEach(sc => lines.push(`✓ ${sc}`))
+  lines.push(``)
+  lines.push(`KEY SKILLS — NATIONAL CURRICULUM`)
+  lines.push(`${'-'.repeat(40)}`)
+  plan.keySkills?.forEach(ks => {
+    lines.push(`${ks.skill}`)
+    lines.push(`  NC Reference: ${ks.curriculumLink}`)
+  })
+  lines.push(``)
+  lines.push(`SEND ADAPTATIONS`)
+  lines.push(`${'-'.repeat(40)}`)
+  lines.push(`Support / Lower attaining:`)
+  plan.sendAdaptations?.lower?.forEach(a => lines.push(`  • ${a}`))
+  lines.push(`Extension / Higher attaining:`)
+  plan.sendAdaptations?.higher?.forEach(a => lines.push(`  • ${a}`))
+  lines.push(`EAL Learners:`)
+  plan.sendAdaptations?.eal?.forEach(a => lines.push(`  • ${a}`))
+  lines.push(``)
+  lines.push(`MODEL EXAMPLE — ${plan.modelExample?.title?.toUpperCase() || ''}`)
+  lines.push(`${'-'.repeat(40)}`)
+  lines.push(plan.modelExample?.description || '')
+  lines.push(``)
+  plan.modelExample?.sections?.forEach(section => {
+    lines.push(`[${section.label.toUpperCase()}]`)
+    lines.push(section.example)
+    lines.push(`Guidance: ${section.placeholder}`)
+    lines.push(``)
+  })
+  return lines.join('\n')
+}
+
+function downloadTxt(book, yearGroup, idea, plan) {
+  const text = buildPlanText(book, yearGroup, idea, plan)
+  const blob = new Blob([text], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${idea.title.replace(/[^a-z0-9]/gi, '_')}_lesson_plan.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function downloadPdf(book, yearGroup, idea, plan) {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const GREEN_RGB = [29, 158, 117]
+  const NAVY_RGB = [30, 36, 51]
+  const MUTED_RGB = [95, 94, 90]
+  const pageW = 210
+  const margin = 18
+  const contentW = pageW - margin * 2
+  let y = 0
+
+  function addPage() { doc.addPage(); y = 18 }
+
+  function checkY(needed = 10) { if (y + needed > 275) addPage() }
+
+  function heading(text, size = 11, color = NAVY_RGB) {
+    checkY(10)
+    doc.setFontSize(size)
+    doc.setTextColor(...color)
+    doc.setFont('helvetica', 'bold')
+    const lines = doc.splitTextToSize(text, contentW)
+    doc.text(lines, margin, y)
+    y += lines.length * (size * 0.45) + 3
+  }
+
+  function body(text, size = 10, color = MUTED_RGB) {
+    checkY(8)
+    doc.setFontSize(size)
+    doc.setTextColor(...color)
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(text, contentW)
+    doc.text(lines, margin, y)
+    y += lines.length * (size * 0.45) + 2
+  }
+
+  function bullet(text, indent = 5) {
+    checkY(7)
+    doc.setFontSize(10)
+    doc.setTextColor(...MUTED_RGB)
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(text, contentW - indent)
+    doc.text('•', margin + indent - 4, y)
+    doc.text(lines, margin + indent, y)
+    y += lines.length * 4.5 + 1.5
+  }
+
+  function divider() {
+    checkY(6)
+    doc.setDrawColor(211, 209, 199)
+    doc.setLineWidth(0.3)
+    doc.line(margin, y, pageW - margin, y)
+    y += 5
+  }
+
+  function sectionLabel(text) {
+    checkY(10)
+    doc.setFillColor(...GREEN_RGB)
+    doc.roundedRect(margin, y - 4, contentW, 7, 1.5, 1.5, 'F')
+    doc.setFontSize(9)
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.text(text.toUpperCase(), margin + 4, y + 0.5)
+    y += 8
+  }
+
+  // Header
+  doc.setFillColor(...NAVY_RGB)
+  doc.rect(0, 0, pageW, 32, 'F')
+  doc.setFontSize(16)
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.text(idea.title, margin, 13)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(139, 147, 167)
+  doc.text(`${idea.subject}  ·  ${book.title} by ${book.author}  ·  ${yearGroup || 'Primary'}`, margin, 21)
+  doc.setFontSize(8)
+  doc.text(`Generated by TeachReads`, margin, 28)
+  y = 40
+
+  // Overview
+  sectionLabel('Lesson Overview')
+  body(plan.lessonOverview)
+  y += 3
+
+  // Learning Intentions
+  sectionLabel('Learning Intentions')
+  plan.learningIntentions?.forEach(li => bullet(li))
+  y += 3
+
+  // Success Criteria
+  sectionLabel('Success Criteria')
+  plan.successCriteria?.forEach(sc => bullet('✓  ' + sc))
+  y += 3
+
+  // Key Skills
+  sectionLabel('Key Skills — National Curriculum')
+  plan.keySkills?.forEach((ks, i) => {
+    checkY(12)
+    heading(ks.skill, 10, NAVY_RGB)
+    body(ks.curriculumLink)
+    if (i < plan.keySkills.length - 1) { y += 1; divider() }
+  })
+  y += 3
+
+  // SEND
+  sectionLabel('SEND Adaptations')
+  const groups = [
+    { key: 'lower', label: '🤝 Support / Lower attaining' },
+    { key: 'higher', label: '🚀 Extension / Higher attaining' },
+    { key: 'eal', label: '🌍 EAL Learners' },
+  ]
+  groups.forEach(g => {
+    heading(g.label, 10, NAVY_RGB)
+    plan.sendAdaptations?.[g.key]?.forEach(a => bullet(a))
+    y += 2
+  })
+
+  // Model Example
+  sectionLabel('Model Example')
+  body(plan.modelExample?.description || '')
+  y += 2
+  heading(plan.modelExample?.title || '', 11, NAVY_RGB)
+  y += 2
+  plan.modelExample?.sections?.forEach(section => {
+    checkY(20)
+    doc.setFontSize(9)
+    doc.setTextColor(...GREEN_RGB)
+    doc.setFont('helvetica', 'bold')
+    doc.text(section.label.toUpperCase(), margin, y)
+    y += 5
+    doc.setFillColor(240, 250, 246)
+    const exLines = doc.splitTextToSize(section.example, contentW - 8)
+    const guideLines = doc.splitTextToSize('📌 ' + section.placeholder, contentW - 8)
+    const boxH = (exLines.length + guideLines.length) * 4.5 + 14
+    checkY(boxH)
+    doc.roundedRect(margin, y - 3, contentW, boxH, 2, 2, 'F')
+    doc.setDrawColor(...GREEN_RGB)
+    doc.setLineWidth(0.3)
+    doc.roundedRect(margin, y - 3, contentW, boxH, 2, 2, 'S')
+    doc.setFontSize(10)
+    doc.setTextColor(44, 44, 42)
+    doc.setFont('helvetica', 'normal')
+    doc.text(exLines, margin + 4, y + 2)
+    y += exLines.length * 4.5 + 5
+    doc.setDrawColor(211, 209, 199)
+    doc.line(margin + 4, y - 1, pageW - margin - 4, y - 1)
+    doc.setFontSize(9)
+    doc.setTextColor(...MUTED_RGB)
+    doc.text(guideLines, margin + 4, y + 3)
+    y += guideLines.length * 4.5 + 10
+  })
+
+  doc.save(`${idea.title.replace(/[^a-z0-9]/gi, '_')}_lesson_plan.pdf`)
+}
+
+async function downloadDocx(book, yearGroup, idea, plan) {
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType } = await import('docx')
+  const { saveAs } = await import('file-saver')
+
+  const greenColor = '1D9E75'
+  const navyColor = '1E2433'
+  const mutedColor = '5F5E5A'
+
+  function sectionHeading(text) {
+    return new Paragraph({
+      children: [new TextRun({ text, bold: true, color: 'FFFFFF', size: 22 })],
+      shading: { type: ShadingType.SOLID, color: greenColor },
+      spacing: { before: 300, after: 150 },
+      indent: { left: 100, right: 100 },
+    })
+  }
+
+  function bodyPara(text, options = {}) {
+    return new Paragraph({
+      children: [new TextRun({ text, color: mutedColor, size: 20, ...options })],
+      spacing: { after: 100 },
+      indent: { left: 100 },
+    })
+  }
+
+  function bulletPara(text) {
+    return new Paragraph({
+      children: [new TextRun({ text, color: mutedColor, size: 20 })],
+      bullet: { level: 0 },
+      spacing: { after: 80 },
+      indent: { left: 200 },
+    })
+  }
+
+  const children = [
+    // Title block
+    new Paragraph({
+      children: [new TextRun({ text: idea.title, bold: true, color: navyColor, size: 36 })],
+      heading: HeadingLevel.HEADING_1,
+      spacing: { after: 100 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({ text: `${idea.subject}  ·  `, color: mutedColor, size: 20 }),
+        new TextRun({ text: `${book.title}`, italics: true, color: mutedColor, size: 20 }),
+        new TextRun({ text: ` by ${book.author}  ·  ${yearGroup || 'Primary'}`, color: mutedColor, size: 20 }),
+      ],
+      spacing: { after: 400 },
+    }),
+
+    // Overview
+    sectionHeading('Lesson Overview'),
+    bodyPara(plan.lessonOverview),
+
+    // Learning Intentions
+    sectionHeading('Learning Intentions'),
+    ...(plan.learningIntentions?.map(li => bulletPara(li)) || []),
+
+    // Success Criteria
+    sectionHeading('Success Criteria'),
+    ...(plan.successCriteria?.map(sc => bulletPara('✓  ' + sc)) || []),
+
+    // Key Skills
+    sectionHeading('Key Skills — National Curriculum'),
+    ...(plan.keySkills?.flatMap(ks => [
+      new Paragraph({ children: [new TextRun({ text: ks.skill, bold: true, color: navyColor, size: 20 })], spacing: { before: 150, after: 60 }, indent: { left: 100 } }),
+      bodyPara(ks.curriculumLink),
+    ]) || []),
+
+    // SEND
+    sectionHeading('SEND Adaptations'),
+    new Paragraph({ children: [new TextRun({ text: '🤝 Support / Lower attaining', bold: true, color: navyColor, size: 20 })], spacing: { before: 150, after: 80 }, indent: { left: 100 } }),
+    ...(plan.sendAdaptations?.lower?.map(a => bulletPara(a)) || []),
+    new Paragraph({ children: [new TextRun({ text: '🚀 Extension / Higher attaining', bold: true, color: navyColor, size: 20 })], spacing: { before: 150, after: 80 }, indent: { left: 100 } }),
+    ...(plan.sendAdaptations?.higher?.map(a => bulletPara(a)) || []),
+    new Paragraph({ children: [new TextRun({ text: '🌍 EAL Learners', bold: true, color: navyColor, size: 20 })], spacing: { before: 150, after: 80 }, indent: { left: 100 } }),
+    ...(plan.sendAdaptations?.eal?.map(a => bulletPara(a)) || []),
+
+    // Model Example
+    sectionHeading('Model Example'),
+    bodyPara(plan.modelExample?.description || ''),
+    new Paragraph({ children: [new TextRun({ text: plan.modelExample?.title || '', bold: true, color: navyColor, size: 24 })], spacing: { before: 200, after: 150 }, indent: { left: 100 } }),
+    ...(plan.modelExample?.sections?.flatMap(section => [
+      new Paragraph({ children: [new TextRun({ text: section.label.toUpperCase(), bold: true, color: greenColor, size: 18 })], spacing: { before: 200, after: 80 }, indent: { left: 100 } }),
+      new Paragraph({
+        children: [new TextRun({ text: section.example, color: '2C2C2A', size: 20 })],
+        shading: { type: ShadingType.SOLID, color: 'F0FAF6' },
+        spacing: { after: 80 },
+        indent: { left: 100, right: 100 },
+        border: { left: { style: BorderStyle.SINGLE, size: 6, color: greenColor } },
+      }),
+      new Paragraph({ children: [new TextRun({ text: '📌 ' + section.placeholder, italics: true, color: mutedColor, size: 18 })], spacing: { after: 150 }, indent: { left: 100 } }),
+    ]) || []),
+
+    // Footer
+    new Paragraph({ children: [new TextRun({ text: 'Generated by TeachReads', color: 'B4B2A9', size: 16, italics: true })], spacing: { before: 600 }, alignment: AlignmentType.CENTER }),
+  ]
+
+  const doc = new Document({ sections: [{ properties: {}, children }] })
+  const blob = await Packer.toBlob(doc)
+  saveAs(blob, `${idea.title.replace(/[^a-z0-9]/gi, '_')}_lesson_plan.docx`)
+}
+
+// Download dropdown component
+function DownloadDropdown({ book, yearGroup, idea, plan }) {
+  const [open, setOpen] = useState(false)
+  const [downloading, setDownloading] = useState(null)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  async function handle(format) {
+    if (!plan || plan.error) return
+    setOpen(false)
+    setDownloading(format)
+    try {
+      if (format === 'pdf') await downloadPdf(book, yearGroup, idea, plan)
+      if (format === 'docx') await downloadDocx(book, yearGroup, idea, plan)
+      if (format === 'txt') downloadTxt(book, yearGroup, idea, plan)
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  const ready = plan && !plan.error
+  const formats = [
+    { id: 'pdf', label: '📄 PDF', desc: 'Best for printing' },
+    { id: 'docx', label: '📝 Word (.docx)', desc: 'Editable document' },
+    { id: 'txt', label: '📃 Plain text', desc: 'Works anywhere' },
+  ]
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => ready && setOpen(o => !o)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, border: `0.5px solid ${ready ? BORDER : '#E0DED8'}`, background: ready ? PAGE_BG : '#F2F1ED', fontSize: 12, color: ready ? MUTED : '#B4B2A9', cursor: ready ? 'pointer' : 'not-allowed', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+        title={ready ? 'Download lesson plan' : 'Plan still generating...'}
+      >
+        {downloading ? '⏳' : '⬇'} {downloading ? `Generating ${downloading.toUpperCase()}...` : 'Download plan'}
+        {ready && !downloading && <span style={{ fontSize: 10 }}>▼</span>}
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 190, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 300 }}>
+          <div style={{ padding: '8px 12px 6px', fontSize: 11, color: MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `0.5px solid ${BORDER}` }}>Choose format</div>
+          {formats.map(f => (
+            <div
+              key={f.id}
+              onClick={() => handle(f.id)}
+              style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{f.label}</span>
+              <span style={{ fontSize: 11, color: MUTED }}>{f.desc}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── Nav Bar ───────────────────────────────────────────────────────────────────
@@ -738,14 +1123,7 @@ Generate a complete lesson resource. Return ONLY a valid JSON object with no ext
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {/* Download button — placeholder for future PDF */}
-                  <button
-                    onClick={e => { e.stopPropagation(); alert("PDF download coming soon — you'll be able to download this lesson plan as a formatted document.") }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 20, border: `0.5px solid ${BORDER}`, background: PAGE_BG, fontSize: 12, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
-                    title="Download lesson plan"
-                  >
-                    ⬇ Download plan
-                  </button>
+                  <DownloadDropdown book={book} yearGroup={yearGroup} idea={idea} plan={plan} />
                   <span style={{ fontSize: 13, color: MUTED, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
                 </div>
               </div>
