@@ -1799,6 +1799,10 @@ function ResourcesPage({ onNavigate }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [selectedLesson, setSelectedLesson] = useState(null)
   const [selectedResourceType, setSelectedResourceType] = useState(null)
+  const [planSearch, setPlanSearch] = useState('')
+  const [planFilterSubject, setPlanFilterSubject] = useState('All')
+  const [planFilterYear, setPlanFilterYear] = useState('All')
+  const [planDropdownOpen, setPlanDropdownOpen] = useState(false)
 
   // Ad-hoc state
   const [prompt, setPrompt] = useState('')
@@ -1943,95 +1947,176 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
             )}
 
             {/* ── Plan-based tab ── */}
-            {tab === 'plan' && (
-              <div>
-                <p style={{ fontSize: 13, color: MUTED, marginBottom: 16, lineHeight: 1.6 }}>
-                  Select a plan, choose a lesson, then pick what type of resource to generate. The AI will use the full lesson context to create something tailored.
-                </p>
+            {tab === 'plan' && (() => {
+              // Flatten all plans with their group context
+              const allPlans = DUMMY_PLANS.flatMap(group =>
+                group.plans.map(plan => ({ ...plan, group }))
+              )
+              // Derive filter options
+              const planSubjects = ['All', ...Array.from(new Set(allPlans.map(p => p.subject))).sort()]
+              const planYears = ['All', ...Array.from(new Set(allPlans.map(p => p.group.yearGroup))).sort()]
+              // Filter
+              const filteredPlans = allPlans.filter(p => {
+                if (planFilterSubject !== 'All' && p.subject !== planFilterSubject) return false
+                if (planFilterYear !== 'All' && p.group.yearGroup !== planFilterYear) return false
+                if (planSearch && !p.title.toLowerCase().includes(planSearch.toLowerCase()) &&
+                    !p.group.book.title.toLowerCase().includes(planSearch.toLowerCase())) return false
+                return true
+              })
 
-                {/* Step 1 — Pick a plan */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                    Step 1 — Select a plan
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {DUMMY_PLANS.map(group => group.plans.map(plan => {
-                      const isSelected = selectedPlan?.id === plan.id
-                      return (
-                        <div key={plan.id}
-                          onClick={() => { setSelectedPlanGroup(group); setSelectedPlan(plan); setSelectedLesson(null) }}
-                          style={{ padding: "10px 14px", borderRadius: 8, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: isSelected ? GREEN : PAGE_BG, color: isSelected ? "#fff" : MUTED }}>{plan.subject}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#085041" : TEXT }}>{plan.title}</div>
-                            <div style={{ fontSize: 11, color: MUTED }}>{group.book.title} · {group.yearGroup} · {plan.lessons} lessons</div>
-                          </div>
-                          {isSelected && <span style={{ color: GREEN, fontSize: 16 }}>✓</span>}
+              // Dummy lesson context — in real app these come from the saved plan
+              const DUMMY_LESSON_CONTEXT = [
+                { num: 1, title: 'Introduction & exploration', type: 'Explore', intention: 'Understand the key features and context of the topic' },
+                { num: 2, title: 'Analyse key examples', type: 'Analyse', intention: 'Identify and describe specific features from real examples' },
+                { num: 3, title: 'Teach the core skill', type: 'Teach', intention: 'Learn and practise the main skill or technique for this unit' },
+                { num: 4, title: 'Practise independently', type: 'Practise', intention: 'Apply the skill independently with scaffolded support' },
+                { num: 5, title: 'Plan and structure', type: 'Apply', intention: 'Plan the structure of the final piece of work' },
+                { num: 6, title: 'Create the final piece', type: 'Create', intention: 'Produce a complete, polished final piece of work' },
+              ]
+              const lessonContext = DUMMY_LESSON_CONTEXT.slice(0, selectedPlan?.lessons || 0)
+
+              const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
+              const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
+
+              return (
+                <div>
+                  <p style={{ fontSize: 13, color: MUTED, marginBottom: 16, lineHeight: 1.6 }}>
+                    Select a plan, choose a lesson, then pick what type of resource to generate. The AI will use the full lesson context to create something tailored.
+                  </p>
+
+                  {/* Step 1 — Pick a plan with search + filters + dropdown */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                      Step 1 — Select a plan
+                    </div>
+
+                    {/* Filter row */}
+                    <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 160, position: "relative" }}>
+                        <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: MUTED }}>🔍</span>
+                        <input
+                          style={{ ...s.input, height: 32, fontSize: 12, paddingLeft: 28 }}
+                          placeholder="Search plans or books..."
+                          value={planSearch}
+                          onChange={e => { setPlanSearch(e.target.value); setPlanDropdownOpen(true) }}
+                          onFocus={() => setPlanDropdownOpen(true)}
+                        />
+                      </div>
+                      <select value={planFilterSubject} onChange={e => { setPlanFilterSubject(e.target.value); setPlanDropdownOpen(true) }}
+                        style={{ height: 32, fontSize: 12, borderRadius: 8, border: `0.5px solid ${planFilterSubject !== 'All' ? GREEN : BORDER}`, padding: "0 10px", background: planFilterSubject !== 'All' ? LIGHT_GREEN : BG, color: planFilterSubject !== 'All' ? '#085041' : TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }}>
+                        {planSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+                      </select>
+                      <select value={planFilterYear} onChange={e => { setPlanFilterYear(e.target.value); setPlanDropdownOpen(true) }}
+                        style={{ height: 32, fontSize: 12, borderRadius: 8, border: `0.5px solid ${planFilterYear !== 'All' ? GREEN : BORDER}`, padding: "0 10px", background: planFilterYear !== 'All' ? LIGHT_GREEN : BG, color: planFilterYear !== 'All' ? '#085041' : TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }}>
+                        {planYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Selected plan display or dropdown */}
+                    {selectedPlan && !planDropdownOpen ? (
+                      <div style={{ padding: "10px 14px", borderRadius: 8, border: `0.5px solid ${GREEN}`, background: LIGHT_GREEN, display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: GREEN, color: "#fff" }}>{selectedPlan.subject}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "#085041" }}>{selectedPlan.title}</div>
+                          <div style={{ fontSize: 11, color: MUTED }}>{selectedPlanGroup.book.title} · {selectedPlanGroup.yearGroup} · {selectedPlan.lessons} lessons</div>
                         </div>
-                      )
-                    }))}
-                  </div>
-                </div>
-
-                {/* Step 2 — Pick a lesson */}
-                {selectedPlan && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                      Step 2 — Select a lesson
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {Array.from({ length: selectedPlan.lessons }, (_, i) => {
-                        const lessonNum = i + 1
-                        const isSelected = selectedLesson?.num === lessonNum
-                        return (
-                          <div key={i}
-                            onClick={() => setSelectedLesson({ num: lessonNum, title: `Lesson ${lessonNum}`, learningIntention: '' })}
-                            style={{ padding: "6px 14px", borderRadius: 20, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isSelected ? "#085041" : MUTED }}>
-                            L{lessonNum}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3 — Pick resource type */}
-                {selectedLesson && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                      Step 3 — Choose resource type
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                      {RESOURCE_TYPES.map(rt => {
-                        const isSelected = selectedResourceType === rt.id
-                        return (
-                          <div key={rt.id}
-                            onClick={() => setSelectedResourceType(rt.id)}
-                            style={{ padding: "10px 12px", borderRadius: 8, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
-                            <span style={{ fontSize: 20, flexShrink: 0 }}>{rt.emoji}</span>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#085041" : TEXT }}>{rt.label}</div>
-                              <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.4 }}>{rt.desc}</div>
+                        <button onClick={() => { setPlanDropdownOpen(true); setSelectedPlan(null); setSelectedLesson(null) }}
+                          style={{ fontSize: 11, color: MUTED, background: "none", border: `0.5px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ border: `0.5px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
+                        {filteredPlans.length === 0 ? (
+                          <div style={{ padding: "1rem", textAlign: "center", color: MUTED, fontSize: 13 }}>No plans match your filters</div>
+                        ) : filteredPlans.map(plan => (
+                          <div key={plan.id}
+                            onClick={() => { setSelectedPlanGroup(plan.group); setSelectedPlan(plan); setSelectedLesson(null); setPlanDropdownOpen(false) }}
+                            style={{ padding: "10px 14px", borderBottom: `0.5px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: BG }}
+                            onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                            onMouseLeave={e => e.currentTarget.style.background = BG}>
+                            <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: PAGE_BG, color: MUTED, flexShrink: 0 }}>{plan.subject}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
+                              <div style={{ fontSize: 11, color: MUTED }}>{plan.group.book.title} · {plan.group.yearGroup} · {plan.lessons} lessons</div>
                             </div>
+                            <span style={{ fontSize: 12, color: GREEN, flexShrink: 0 }}>Select →</span>
                           </div>
-                        )
-                      })}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {/* Generate button */}
-                {selectedResourceType && (
-                  <button
-                    onClick={generateFromPlan}
-                    disabled={generating}
-                    style={s.submitBtn(generating)}
-                  >
-                    {generating ? '⏳ Generating resource...' : '✨ Generate resource'}
-                  </button>
-                )}
-              </div>
-            )}
+                  {/* Step 2 — Pick a lesson with context */}
+                  {selectedPlan && !planDropdownOpen && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                        Step 2 — Select a lesson
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {lessonContext.map(lesson => {
+                          const isSelected = selectedLesson?.num === lesson.num
+                          const tc = typeColors[lesson.type] || GREEN
+                          const tb = typeBgs[lesson.type] || LIGHT_GREEN
+                          return (
+                            <div key={lesson.num}
+                              onClick={() => setSelectedLesson(lesson)}
+                              style={{ padding: "10px 14px", borderRadius: 8, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                              {/* Lesson number */}
+                              <div style={{ width: 28, height: 28, background: isSelected ? GREEN : PAGE_BG, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: isSelected ? "#fff" : MUTED, flexShrink: 0, marginTop: 1 }}>
+                                {lesson.num}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
+                                  <span style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#085041" : TEXT }}>{lesson.title}</span>
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: tc, background: tb, padding: "1px 7px", borderRadius: 20 }}>{lesson.type}</span>
+                                </div>
+                                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
+                                  <span style={{ fontWeight: 500 }}>Learning intention: </span>{lesson.intention}
+                                </div>
+                              </div>
+                              {isSelected && <span style={{ color: GREEN, fontSize: 16, flexShrink: 0, marginTop: 4 }}>✓</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3 — Pick resource type */}
+                  {selectedLesson && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                        Step 3 — Choose resource type
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                        {RESOURCE_TYPES.map(rt => {
+                          const isSelected = selectedResourceType === rt.id
+                          return (
+                            <div key={rt.id}
+                              onClick={() => setSelectedResourceType(rt.id)}
+                              style={{ padding: "10px 12px", borderRadius: 8, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                              <span style={{ fontSize: 20, flexShrink: 0 }}>{rt.emoji}</span>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#085041" : TEXT }}>{rt.label}</div>
+                                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.4 }}>{rt.desc}</div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generate button */}
+                  {selectedResourceType && (
+                    <button onClick={generateFromPlan} disabled={generating} style={s.submitBtn(generating)}>
+                      {generating ? '⏳ Generating resource...' : '✨ Generate resource'}
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
 
           </div>
         </div>
