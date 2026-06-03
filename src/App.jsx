@@ -1480,11 +1480,7 @@ function MyPlansPage({ onNavigate }) {
   const [search, setSearch] = useState('')
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
-  const [openBooks, setOpenBooks] = useState(() => {
-    const init = {}
-    DUMMY_PLANS.forEach((g, i) => { init[g.book.title] = i === 0 })
-    return init
-  })
+  const [openBooks, setOpenBooks] = useState({})
 
   const allSubjects = ['All', ...Array.from(new Set(DUMMY_PLANS.flatMap(g => g.plans.map(p => p.subject)))).sort()]
   const allYears = ['All', ...Array.from(new Set(DUMMY_PLANS.map(g => g.yearGroup))).sort()]
