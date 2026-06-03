@@ -2301,19 +2301,18 @@ function LibraryBookCard({ book, plans, onCreatePlan, onViewPlans, onEdit, onDel
       {/* Actions */}
       <div style={{ padding: "8px 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
         {plans.length > 0 ? (
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <button
               onClick={() => onViewPlans(book)}
-              style={{ flex: 1, height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+              style={{ width: "100%", height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
             >
               📋 View plans ({plans.length})
             </button>
             <button
               onClick={() => onCreatePlan(book)}
-              title="Create new plan"
-              style={{ width: 32, height: 32, background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 8, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              style={{ width: "100%", height: 28, background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 8, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
             >
-              ✨
+              ✨ Create new plan
             </button>
           </div>
         ) : (
