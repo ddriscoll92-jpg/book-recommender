@@ -569,7 +569,7 @@ function NavBar({ currentPage, onNavigate }) {
 
   const navItems = [
     { id: 'search', label: 'Book Recommender', active: true },
-    { id: 'plans', label: 'My Plans', active: false },
+    { id: 'plans', label: 'My Plans', active: true },
     { id: 'books', label: 'My Books', active: true },
     { id: 'resources', label: 'Resources', active: false },
   ]
@@ -1421,6 +1421,251 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
   )
 }
 
+// ── My Plans Page ─────────────────────────────────────────────────────────────
+const DUMMY_PLANS = [
+  {
+    book: { title: 'Horrible Histories: Ruthless Romans', author: 'Terry Deary', emoji: '🏛️' },
+    subject: 'History',
+    yearGroup: 'Year 4',
+    plans: [
+      { id: 1, title: 'Roman Mosaic Patterns', subject: 'Art', lessons: 5, created: '28 May 2025', topic: 'Romans' },
+      { id: 2, title: 'Writing a Roman Diary Entry', subject: 'Literacy', lessons: 6, created: '28 May 2025', topic: 'Romans' },
+      { id: 3, title: 'Roman Settlements and Maps', subject: 'Geography', lessons: 4, created: '29 May 2025', topic: 'Romans' },
+    ],
+  },
+  {
+    book: { title: 'The Iron Man', author: 'Ted Hughes', emoji: '✏️' },
+    subject: 'Literacy',
+    yearGroup: 'Year 5',
+    plans: [
+      { id: 4, title: 'Descriptive Writing — The Iron Man', subject: 'Literacy', lessons: 5, created: '12 Apr 2025', topic: 'The Iron Man' },
+      { id: 5, title: 'Forces and Materials', subject: 'Science', lessons: 4, created: '14 Apr 2025', topic: 'The Iron Man' },
+    ],
+  },
+  {
+    book: { title: 'Fantastic Mr Fox', author: 'Roald Dahl', emoji: '✏️' },
+    subject: 'Literacy',
+    yearGroup: 'Year 3',
+    plans: [
+      { id: 6, title: 'Character Description', subject: 'Literacy', lessons: 5, created: '3 Mar 2025', topic: 'Fantastic Mr Fox' },
+    ],
+  },
+  {
+    book: { title: 'DK Eyewitness: Ancient Rome', author: 'DK', emoji: '🏛️' },
+    subject: 'History',
+    yearGroup: 'Year 4',
+    plans: [
+      { id: 7, title: 'The Roman Army', subject: 'History', lessons: 6, created: '31 May 2025', topic: 'Romans' },
+    ],
+  },
+]
+
+const SUBJECT_COLOURS = {
+  Literacy: { bg: '#EEF2FF', color: '#3730A3' },
+  History: { bg: '#FEF3C7', color: '#92400E' },
+  Art: { bg: '#FCE7F3', color: '#9D174D' },
+  Geography: { bg: '#ECFDF5', color: '#065F46' },
+  Science: { bg: '#EFF6FF', color: '#1E40AF' },
+  Maths: { bg: '#FFF7ED', color: '#9A3412' },
+  PSHE: { bg: '#FDF4FF', color: '#7E22CE' },
+  Music: { bg: '#F0FDF4', color: '#166534' },
+  PE: { bg: '#FFF1F2', color: '#9F1239' },
+  RE: { bg: '#F0F9FF', color: '#075985' },
+  DT: { bg: '#FAFAF9', color: '#44403C' },
+  Computing: { bg: '#F8FAFC', color: '#0F172A' },
+}
+
+function MyPlansPage({ onNavigate }) {
+  const [search, setSearch] = useState('')
+  const [filterSubject, setFilterSubject] = useState('All')
+  const [filterYear, setFilterYear] = useState('All')
+  const [openBooks, setOpenBooks] = useState(() => {
+    const init = {}
+    DUMMY_PLANS.forEach((g, i) => { init[g.book.title] = i === 0 })
+    return init
+  })
+
+  const allSubjects = ['All', ...Array.from(new Set(DUMMY_PLANS.flatMap(g => g.plans.map(p => p.subject)))).sort()]
+  const allYears = ['All', ...Array.from(new Set(DUMMY_PLANS.map(g => g.yearGroup))).sort()]
+
+  // Filter groups and their plans
+  const filteredGroups = DUMMY_PLANS.map(group => {
+    const filteredPlans = group.plans.filter(plan => {
+      if (filterSubject !== 'All' && plan.subject !== filterSubject) return false
+      if (filterYear !== 'All' && group.yearGroup !== filterYear) return false
+      if (search && !plan.title.toLowerCase().includes(search.toLowerCase()) &&
+          !group.book.title.toLowerCase().includes(search.toLowerCase()) &&
+          !plan.topic.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+    return { ...group, plans: filteredPlans }
+  }).filter(g => g.plans.length > 0)
+
+  const totalPlans = filteredGroups.reduce((acc, g) => acc + g.plans.length, 0)
+  const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search
+
+  function toggleBook(title) {
+    setOpenBooks(prev => ({ ...prev, [title]: !prev[title] }))
+  }
+
+  const selectStyle = { height: 32, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 12px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
+
+  return (
+    <div style={{ ...s.page, maxWidth: "100%" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>📋</div>
+            <div>
+              <h1 style={s.h1}>My Plans</h1>
+              <p style={s.headerSub}>All your generated lesson plans, organised by book</p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate("search")}
+            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            + Create new plan
+          </button>
+        </div>
+
+        {/* Filter bar */}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Search */}
+          <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: MUTED }}>🔍</span>
+            <input
+              style={{ ...s.input, paddingLeft: 30, height: 32, fontSize: 13 }}
+              placeholder="Search by book, plan or topic..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          {/* Subject */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
+            <select style={{ ...selectStyle, borderColor: filterSubject !== 'All' ? GREEN : BORDER, background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT }}
+              value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
+              {allSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+            </select>
+          </div>
+          {/* Year group */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Year</span>
+            <select style={{ ...selectStyle, borderColor: filterYear !== 'All' ? GREEN : BORDER, background: filterYear !== 'All' ? LIGHT_GREEN : BG, color: filterYear !== 'All' ? '#085041' : TEXT }}
+              value={filterYear} onChange={e => setFilterYear(e.target.value)}>
+              {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
+            </select>
+          </div>
+          {filtersActive && (
+            <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }}
+              style={{ fontSize: 12, color: MUTED, cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>
+              Clear all
+            </span>
+          )}
+          <span style={{ fontSize: 12, color: MUTED, marginLeft: "auto", whiteSpace: "nowrap" }}>
+            {totalPlans} plan{totalPlans !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* Empty state */}
+        {filteredGroups.length === 0 && (
+          <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 6 }}>
+              {filtersActive ? 'No plans match your filters' : 'No plans yet'}
+            </div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
+              {filtersActive ? 'Try adjusting your search or filters.' : 'Find a book and generate your first lesson plan to get started.'}
+            </div>
+            {filtersActive
+              ? <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 13, color: GREEN, cursor: "pointer", textDecoration: "underline" }}>Clear filters</span>
+              : <button onClick={() => onNavigate('search')} style={{ height: 36, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Find a book</button>
+            }
+          </div>
+        )}
+
+        {/* Book groups */}
+        {filteredGroups.map(group => {
+          const isOpen = openBooks[group.book.title]
+          return (
+            <div key={group.book.title} style={{ marginBottom: 12 }}>
+
+              {/* Book header */}
+              <div
+                onClick={() => toggleBook(group.book.title)}
+                style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: isOpen ? "12px 12px 0 0" : 12, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, background: LIGHT_GREEN, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{group.book.emoji}</div>
+                  <div>
+                    <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, lineHeight: 1.3 }}>{group.book.title}</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+                      <span style={{ fontStyle: "italic" }}>{group.book.author}</span>
+                      <span style={{ margin: "0 6px" }}>·</span>
+                      {group.yearGroup}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
+                    {group.plans.length} plan{group.plans.length !== 1 ? 's' : ''}
+                  </span>
+                  <span style={{ fontSize: 13, color: MUTED, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
+                </div>
+              </div>
+
+              {/* Plans list */}
+              {isOpen && (
+                <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
+                  {group.plans.map((plan, pi) => {
+                    const sc = SUBJECT_COLOURS[plan.subject] || { bg: PAGE_BG, color: MUTED }
+                    return (
+                      <div
+                        key={plan.id}
+                        style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, borderTop: pi > 0 ? `0.5px solid ${BORDER}` : "none", background: BG }}
+                        onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                        onMouseLeave={e => e.currentTarget.style.background = BG}
+                      >
+                        {/* Subject badge */}
+                        <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0 }}>
+                          {plan.subject}
+                        </span>
+
+                        {/* Plan info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
+                          <div style={{ fontSize: 11, color: MUTED }}>
+                            {plan.lessons} lessons · Created {plan.created}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button style={{ height: 28, padding: "0 12px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                            View
+                          </button>
+                          <button style={{ height: 28, padding: "0 12px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                            ⬇ Download
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+      </div>
+    </div>
+  )
+}
+
 // ── My Books Page ─────────────────────────────────────────────────────────────
 const DUMMY_FAVOURITES = [
   {
@@ -1786,10 +2031,11 @@ export default function App() {
   function handleNavigate(dest) {
     if (dest === 'search') { setSelectedBook(null); setPage('search') }
     if (dest === 'books') { setPage('books') }
+    if (dest === 'plans') { setPage('plans') }
   }
 
   // map internal page names to nav highlight
-  const navPage = page === 'book' || page === 'resources' ? 'search' : page === 'books' ? 'books' : page
+  const navPage = page === 'book' || page === 'resources' ? 'search' : page === 'books' ? 'books' : page === 'plans' ? 'plans' : page
 
   return (
     <div>
@@ -1812,6 +2058,9 @@ export default function App() {
       )}
       {page === 'books' && (
         <MyBooksPage onNavigate={handleNavigate} />
+      )}
+      {page === 'plans' && (
+        <MyPlansPage onNavigate={handleNavigate} />
       )}
       {page === 'search' && (
         <SearchPage
