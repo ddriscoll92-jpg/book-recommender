@@ -2162,7 +2162,7 @@ const DUMMY_BOOK_PLANS_INIT = {
   5: [],
 }
 
-function PlansModal({ book, plans, onClose, onAddPlan, onEditPlan, onDeletePlan }) {
+function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, onDeletePlan }) {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
@@ -2231,7 +2231,7 @@ function PlansModal({ book, plans, onClose, onAddPlan, onEditPlan, onDeletePlan 
                         <div style={{ fontSize: 11, color: MUTED }}>{plan.lessons} lessons · Created {plan.created}</div>
                       </div>
                       <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                        <button style={{ height: 26, padding: "0 10px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>View</button>
+                        <button onClick={() => onViewPlan(plan)} style={{ height: 26, padding: "0 10px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>View</button>
                         <button onClick={() => startEdit(plan)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
                         {isConfirmingDelete ? (
                           <>
@@ -2664,6 +2664,7 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
           plans={getPlans(modal.book.id)}
           onClose={() => setModal(null)}
           onAddPlan={() => { setModal(null); onSelectBook(modal.book) }}
+          onViewPlan={plan => { setModal(null); onSelectBook(modal.book) }}
           onEditPlan={plan => handleEditPlan(modal.book.id, plan)}
           onDeletePlan={planId => handleDeletePlan(modal.book.id, planId)}
         />
