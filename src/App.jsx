@@ -1497,46 +1497,43 @@ function BookGridCard({ book, isFavourite, onToggleFavourite }) {
 
 // Inline filter bar component used in each section
 function SectionFilters({ books, filters, setFilters }) {
-  // Derive unique subjects and year groups from the books in this section
   const subjects = ['All', ...Array.from(new Set(books.map(b => b.subject))).sort()]
   const yearGroups = ['All', ...Array.from(new Set(books.map(b => b.yearGroup))).sort()]
 
-  function filterPill(label, active, onClick) {
-    return (
-      <span
-        key={label}
-        onClick={onClick}
-        style={{ padding: "3px 10px", borderRadius: 20, border: `0.5px solid ${active ? GREEN : BORDER}`, fontSize: 11, fontWeight: active ? 600 : 400, color: active ? "#085041" : MUTED, background: active ? LIGHT_GREEN : BG, cursor: "pointer", whiteSpace: "nowrap", userSelect: "none" }}
-      >
-        {label}
-      </span>
-    )
-  }
+  const selectStyle = { height: 30, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 10px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
+  const hasPlansActive = filters.hasPlans
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-      {/* Subject pills */}
-      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500, marginRight: 2 }}>Subject:</span>
-      {subjects.map(sub => filterPill(
-        sub,
-        filters.subject === sub,
-        () => setFilters(f => ({ ...f, subject: sub }))
-      ))}
-      <span style={{ width: 1, height: 16, background: BORDER, margin: "0 4px" }} />
-      {/* Year group pills */}
-      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500, marginRight: 2 }}>Year:</span>
-      {yearGroups.map(yg => filterPill(
-        yg,
-        filters.yearGroup === yg,
-        () => setFilters(f => ({ ...f, yearGroup: yg }))
-      ))}
-      <span style={{ width: 1, height: 16, background: BORDER, margin: "0 4px" }} />
-      {/* Has plans toggle */}
-      {filterPill(
-        "📝 Has plans",
-        filters.hasPlans,
-        () => setFilters(f => ({ ...f, hasPlans: !f.hasPlans }))
-      )}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      {/* Subject dropdown */}
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
+        <select
+          style={{ ...selectStyle, borderColor: filters.subject !== 'All' ? GREEN : BORDER, color: filters.subject !== 'All' ? "#085041" : TEXT, background: filters.subject !== 'All' ? LIGHT_GREEN : BG }}
+          value={filters.subject}
+          onChange={e => setFilters(f => ({ ...f, subject: e.target.value }))}
+        >
+          {subjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+        </select>
+      </div>
+      {/* Year group dropdown */}
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Year</span>
+        <select
+          style={{ ...selectStyle, borderColor: filters.yearGroup !== 'All' ? GREEN : BORDER, color: filters.yearGroup !== 'All' ? "#085041" : TEXT, background: filters.yearGroup !== 'All' ? LIGHT_GREEN : BG }}
+          value={filters.yearGroup}
+          onChange={e => setFilters(f => ({ ...f, yearGroup: e.target.value }))}
+        >
+          {yearGroups.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
+        </select>
+      </div>
+      {/* Has plans toggle pill */}
+      <span
+        onClick={() => setFilters(f => ({ ...f, hasPlans: !f.hasPlans }))}
+        style={{ padding: "4px 10px", borderRadius: 20, border: `0.5px solid ${hasPlansActive ? GREEN : BORDER}`, fontSize: 11, fontWeight: hasPlansActive ? 600 : 400, color: hasPlansActive ? "#085041" : MUTED, background: hasPlansActive ? LIGHT_GREEN : BG, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+      >
+        📝 Has plans
+      </span>
     </div>
   )
 }
