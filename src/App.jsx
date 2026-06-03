@@ -2144,13 +2144,14 @@ const DUMMY_LIBRARY = [
   { id: 5, title: 'Usborne See Inside: Science', author: 'Rob Lloyd Jones', subject: 'Science', yearGroup: 'Year 5', copies: 3, notes: '', coverUrl: null, emoji: '🔬', addedDate: '5 Apr 2025' },
 ]
 
-function LibraryBookCard({ book, onCreatePlan }) {
+function LibraryBookCard({ book, onCreatePlan, onEdit, onDelete }) {
   const [hovered, setHovered] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   return (
     <div
       style={{ background: BG, border: `0.5px solid ${hovered ? GREEN : BORDER}`, borderRadius: 12, overflow: "hidden", transition: "all 0.15s", boxShadow: hovered ? "0 4px 16px rgba(0,0,0,0.08)" : "none", display: "flex", flexDirection: "column" }}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseLeave={() => { setHovered(false); setConfirmDelete(false) }}
     >
       {/* Cover */}
       <div style={{ background: LIGHT_GREEN, height: 100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, position: "relative" }}>
@@ -2175,25 +2176,60 @@ function LibraryBookCard({ book, onCreatePlan }) {
         <div style={{ fontSize: 10, color: MUTED }}>Added {book.addedDate}</div>
       </div>
       {/* Actions */}
-      <div style={{ padding: "8px 12px 12px" }}>
+      <div style={{ padding: "8px 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
         <button
           onClick={() => onCreatePlan(book)}
           style={{ width: "100%", height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
         >
           ✨ Create plan
         </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={() => onEdit(book)}
+            style={{ flex: 1, height: 28, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+          >
+            ✏️ Edit
+          </button>
+          {confirmDelete ? (
+            <div style={{ flex: 1, display: "flex", gap: 4 }}>
+              <button
+                onClick={() => onDelete(book.id)}
+                style={{ flex: 1, height: 28, background: "#FCEBEB", border: `0.5px solid #A32D2D`, borderRadius: 7, fontSize: 11, fontWeight: 600, color: "#A32D2D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                style={{ height: 28, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{ flex: 1, height: 28, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+            >
+              🗑️ Delete
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-function AddBookModal({ onClose, onAdd }) {
-  const [mode, setMode] = useState('search') // 'search' | 'manual'
+function BookModal({ book, onClose, onSave, isEdit }) {
+  const [mode, setMode] = useState(isEdit ? 'manual' : 'search')
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
-  const [form, setForm] = useState({ title: '', author: '', subject: '', yearGroup: '', copies: 1, notes: '' })
+  const [form, setForm] = useState(
+    isEdit
+      ? { title: book.title, author: book.author, subject: book.subject, yearGroup: book.yearGroup, copies: book.copies, notes: book.notes || '' }
+      : { title: '', author: '', subject: '', yearGroup: '', copies: 1, notes: '' }
+  )
 
   async function searchBooks() {
     if (!query.trim()) return
@@ -2204,89 +2240,96 @@ function AddBookModal({ onClose, onAdd }) {
       setResults((data.docs || []).map(b => ({
         title: b.title,
         author: b.author_name?.[0] || 'Unknown',
-        emoji: '📚',
         coverUrl: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : null,
       })))
     } catch { setResults([]) }
     setSearching(false); setSearched(true)
   }
 
-  function selectResult(book) {
-    setForm(f => ({ ...f, title: book.title, author: book.author }))
+  function selectResult(r) {
+    setForm(f => ({ ...f, title: r.title, author: r.author }))
     setMode('manual')
   }
 
-  function handleAdd() {
+  function handleSave() {
     if (!form.title || !form.author || !form.subject || !form.yearGroup) return
-    onAdd({ ...form, id: Date.now(), emoji: '📚', addedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) })
+    const saved = isEdit
+      ? { ...book, ...form, copies: parseInt(form.copies) || 1 }
+      : { ...form, id: Date.now(), emoji: '📚', copies: parseInt(form.copies) || 1, addedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
+    onSave(saved)
   }
 
   const inputStyle = { ...s.input, height: 36, fontSize: 13 }
   const selectStyle = { ...s.select, height: 36, fontSize: 13 }
+  const valid = form.title && form.author && form.subject && form.yearGroup
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       <div style={{ background: BG, borderRadius: 14, width: "100%", maxWidth: 500, maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        {/* Modal header */}
+        {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: `0.5px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Add book to library</div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>
+            {isEdit ? 'Edit book' : 'Add book to library'}
+          </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: MUTED, lineHeight: 1 }}>×</button>
         </div>
-
         <div style={{ padding: "16px 20px" }}>
-          {/* Mode tabs */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 16, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
-            {[['search', '🔍 Search'], ['manual', '✏️ Add manually']].map(([id, label]) => (
-              <button key={id} onClick={() => setMode(id)}
-                style={{ flex: 1, height: 32, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : "transparent", color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          {/* Mode tabs — only show for new books */}
+          {!isEdit && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 16, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
+              {[['search', '🔍 Search'], ['manual', '✏️ Add manually']].map(([id, label]) => (
+                <button key={id} onClick={() => setMode(id)}
+                  style={{ flex: 1, height: 32, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : "transparent", color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {mode === 'search' && (
+          {/* Search mode */}
+          {mode === 'search' && !isEdit && (
             <div>
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 <input style={{ ...inputStyle, flex: 1 }} placeholder="Search by title or author..." value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && searchBooks()} />
+                  onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchBooks()} />
                 <button onClick={searchBooks} disabled={searching}
-                  style={{ height: 36, padding: "0 14px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>
+                  style={{ height: 36, padding: "0 14px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                   {searching ? '...' : 'Search'}
                 </button>
               </div>
               {searched && results.length === 0 && (
                 <div style={{ textAlign: "center", padding: "1rem", color: MUTED, fontSize: 13 }}>
-                  No results found. <span style={{ color: GREEN, cursor: "pointer", textDecoration: "underline" }} onClick={() => setMode('manual')}>Add manually instead</span>
+                  No results. <span style={{ color: GREEN, cursor: "pointer", textDecoration: "underline" }} onClick={() => setMode('manual')}>Add manually</span>
                 </div>
               )}
               {results.map((r, i) => (
                 <div key={i} onClick={() => selectResult(r)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: `0.5px solid ${BORDER}`, marginBottom: 8, cursor: "pointer", background: BG }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: `0.5px solid ${BORDER}`, marginBottom: 8, cursor: "pointer" }}
                   onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
                   onMouseLeave={e => e.currentTarget.style.background = BG}>
                   {r.coverUrl
                     ? <img src={r.coverUrl} style={{ width: 36, height: 48, borderRadius: 4, objectFit: "cover", flexShrink: 0 }} />
                     : <div style={{ width: 36, height: 48, background: LIGHT_GREEN, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📚</div>}
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{r.title}</div>
                     <div style={{ fontSize: 11, color: MUTED, fontStyle: "italic" }}>{r.author}</div>
                   </div>
-                  <span style={{ marginLeft: "auto", fontSize: 12, color: GREEN, fontWeight: 500 }}>Select →</span>
+                  <span style={{ fontSize: 12, color: GREEN, fontWeight: 500 }}>Select →</span>
                 </div>
               ))}
               {searched && results.length > 0 && (
-                <div style={{ textAlign: "center", marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: MUTED }}>Can't find it? </span>
-                  <span style={{ fontSize: 12, color: GREEN, cursor: "pointer", textDecoration: "underline" }} onClick={() => setMode('manual')}>Add manually</span>
+                <div style={{ textAlign: "center", marginTop: 8, fontSize: 12 }}>
+                  <span style={{ color: MUTED }}>Can't find it? </span>
+                  <span style={{ color: GREEN, cursor: "pointer", textDecoration: "underline" }} onClick={() => setMode('manual')}>Add manually</span>
                 </div>
               )}
             </div>
           )}
 
-          {mode === 'manual' && (
+          {/* Manual / edit form */}
+          {(mode === 'manual' || isEdit) && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {form.title && (
+              {!isEdit && form.title && (
                 <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#085041" }}>
                   ✓ Imported: <strong>{form.title}</strong> by {form.author}
                 </div>
@@ -2321,18 +2364,15 @@ function AddBookModal({ onClose, onAdd }) {
               </div>
               <div>
                 <label style={s.label}>Number of copies</label>
-                <input style={inputStyle} type="number" min="1" value={form.copies} onChange={e => setForm(f => ({ ...f, copies: parseInt(e.target.value) || 1 }))} />
+                <input style={inputStyle} type="number" min="1" value={form.copies} onChange={e => setForm(f => ({ ...f, copies: e.target.value }))} />
               </div>
               <div>
                 <label style={s.label}>Notes <span style={s.labelOpt}>— optional</span></label>
                 <input style={inputStyle} placeholder="e.g. 3 copies in Y4 cupboard" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
-              <button
-                onClick={handleAdd}
-                disabled={!form.title || !form.author || !form.subject || !form.yearGroup}
-                style={{ height: 40, background: (!form.title || !form.author || !form.subject || !form.yearGroup) ? '#888780' : GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: (!form.title || !form.author || !form.subject || !form.yearGroup) ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}
-              >
-                Add to library
+              <button onClick={handleSave} disabled={!valid}
+                style={{ height: 40, background: valid ? GREEN : '#888780', color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: valid ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
+                {isEdit ? 'Save changes' : 'Add to library'}
               </button>
             </div>
           )}
@@ -2344,7 +2384,7 @@ function AddBookModal({ onClose, onAdd }) {
 
 function MyLibraryPage({ onNavigate, onSelectBook }) {
   const [library, setLibrary] = useState(DUMMY_LIBRARY)
-  const [showModal, setShowModal] = useState(false)
+  const [modal, setModal] = useState(null) // null | { mode: 'add' } | { mode: 'edit', book }
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
   const [search, setSearch] = useState('')
@@ -2361,9 +2401,17 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
 
   const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search
 
-  function addBook(book) {
-    setLibrary(prev => [{ ...book, emoji: '📚' }, ...prev])
-    setShowModal(false)
+  function handleSave(book) {
+    if (modal?.mode === 'edit') {
+      setLibrary(prev => prev.map(b => b.id === book.id ? book : b))
+    } else {
+      setLibrary(prev => [book, ...prev])
+    }
+    setModal(null)
+  }
+
+  function handleDelete(id) {
+    setLibrary(prev => prev.filter(b => b.id !== id))
   }
 
   const selectStyle = { height: 32, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 12px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
@@ -2381,10 +2429,8 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
               <p style={s.headerSub}>Books you own — click any book to create a lesson plan</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}
-          >
+          <button onClick={() => setModal({ mode: 'add' })}
+            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}>
             + Add book
           </button>
         </div>
@@ -2398,7 +2444,7 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
             <select style={{ ...selectStyle, borderColor: filterSubject !== 'All' ? GREEN : BORDER, background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT }} value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
-              {allSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+              {allSubjects.map(subj => <option key={subj} value={subj}>{subj === 'All' ? 'All subjects' : subj}</option>)}
             </select>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2425,13 +2471,19 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
             </div>
             {filtersActive
               ? <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 13, color: GREEN, cursor: "pointer", textDecoration: "underline" }}>Clear filters</span>
-              : <button onClick={() => setShowModal(true)} style={{ height: 36, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Add your first book</button>
+              : <button onClick={() => setModal({ mode: 'add' })} style={{ height: 36, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Add your first book</button>
             }
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
             {filtered.map(book => (
-              <LibraryBookCard key={book.id} book={book} onCreatePlan={onSelectBook} />
+              <LibraryBookCard
+                key={book.id}
+                book={book}
+                onCreatePlan={onSelectBook}
+                onEdit={b => setModal({ mode: 'edit', book: b })}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
@@ -2439,7 +2491,14 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
 
-      {showModal && <AddBookModal onClose={() => setShowModal(false)} onAdd={addBook} />}
+      {modal && (
+        <BookModal
+          book={modal.book}
+          isEdit={modal.mode === 'edit'}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   )
 }
