@@ -925,7 +925,24 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
 
         <div style={s.card}>
           <div style={s.formGrid}>
-            <div><label style={s.label}>Subject</label><input style={s.input} placeholder="e.g. History" value={subject} onChange={e => set('subject', e.target.value)} /></div>
+            <div>
+              <label style={s.label}>Subject</label>
+              <select style={s.select} value={subject} onChange={e => set('subject', e.target.value)}>
+                <option value="">Select subject...</option>
+                <option>Art</option>
+                <option>Computing</option>
+                <option>DT</option>
+                <option>Geography</option>
+                <option>History</option>
+                <option>Literacy</option>
+                <option>Maths</option>
+                <option>Music</option>
+                <option>PE</option>
+                <option>PSHE</option>
+                <option>RE</option>
+                <option>Science</option>
+              </select>
+            </div>
             <div><label style={s.label}>Topic</label><input style={s.input} placeholder="e.g. Romans" value={topic} onChange={e => set('topic', e.target.value)} /></div>
             <div>
               <label style={s.label}>Year group</label>
@@ -940,7 +957,24 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
             <label style={s.label}>Specific focus <span style={s.labelOpt}>— optional</span></label>
             <textarea style={s.textarea} placeholder="Add any specific aspect of the topic..." value={focus} onChange={e => set('focus', e.target.value)} />
             <div style={s.chipsBar}>
-              {CHIPS.map(chip => <span key={chip.value} style={s.chip} onClick={() => set('focus', chip.value)}>⚡ {chip.label}</span>)}
+              {CHIPS.map(chip => {
+                const active = focus.split(',').map(f => f.trim()).includes(chip.value)
+                return (
+                  <span
+                    key={chip.value}
+                    style={{ ...s.chip, background: active ? LIGHT_GREEN : BG, borderColor: active ? GREEN : BORDER, color: active ? "#085041" : MUTED, fontWeight: active ? 600 : 400 }}
+                    onClick={() => {
+                      const current = focus.split(',').map(f => f.trim()).filter(Boolean)
+                      const next = current.includes(chip.value)
+                        ? current.filter(f => f !== chip.value)
+                        : [...current, chip.value]
+                      set('focus', next.join(', '))
+                    }}
+                  >
+                    ⚡ {chip.label}
+                  </span>
+                )
+              })}
             </div>
           </div>
           <div style={s.accordion}>
@@ -1553,6 +1587,8 @@ function MyBooksPage({ onNavigate }) {
   const [favourites, setFavourites] = useState(DUMMY_FAVOURITES.map(b => b.title))
   const [favFilters, setFavFilters] = useState({ ...defaultFilters })
   const [recentFilters, setRecentFilters] = useState({ ...defaultFilters })
+  const [favVisible, setFavVisible] = useState(6)
+  const [recentVisible, setRecentVisible] = useState(6)
 
   function toggleFavourite(title) {
     setFavourites(prev => prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title])
@@ -1623,10 +1659,17 @@ function MyBooksPage({ onNavigate }) {
               No favourites match the selected filters. <span style={{ cursor: "pointer", color: GREEN, textDecoration: "underline" }} onClick={() => setFavFilters({ ...defaultFilters })}>Clear filters</span>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {filteredFavourites.map(book => (
-                <BookGridCard key={book.title} book={book} isFavourite={true} onToggleFavourite={toggleFavourite} />
-              ))}
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                {filteredFavourites.slice(0, favVisible).map(book => (
+                  <BookGridCard key={book.title} book={book} isFavourite={true} onToggleFavourite={toggleFavourite} />
+                ))}
+              </div>
+              {filteredFavourites.length > favVisible && (
+                <button onClick={() => setFavVisible(v => v + 6)} style={{ width: "100%", height: 38, marginTop: 12, background: "transparent", border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                  Load more ({filteredFavourites.length - favVisible} remaining)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1668,10 +1711,17 @@ function MyBooksPage({ onNavigate }) {
               No books match the selected filters. <span style={{ cursor: "pointer", color: GREEN, textDecoration: "underline" }} onClick={() => setRecentFilters({ ...defaultFilters })}>Clear filters</span>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {filteredRecent.map(book => (
-                <BookGridCard key={book.title} book={book} isFavourite={false} onToggleFavourite={toggleFavourite} />
-              ))}
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                {filteredRecent.slice(0, recentVisible).map(book => (
+                  <BookGridCard key={book.title} book={book} isFavourite={false} onToggleFavourite={toggleFavourite} />
+                ))}
+              </div>
+              {filteredRecent.length > recentVisible && (
+                <button onClick={() => setRecentVisible(v => v + 6)} style={{ width: "100%", height: 38, marginTop: 12, background: "transparent", border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                  Load more ({filteredRecent.length - recentVisible} remaining)
+                </button>
+              )}
             </div>
           )}
         </div>
