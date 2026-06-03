@@ -2144,7 +2144,130 @@ const DUMMY_LIBRARY = [
   { id: 5, title: 'Usborne See Inside: Science', author: 'Rob Lloyd Jones', subject: 'Science', yearGroup: 'Year 5', copies: 3, notes: '', coverUrl: null, emoji: '🔬', addedDate: '5 Apr 2025' },
 ]
 
-function LibraryBookCard({ book, onCreatePlan, onEdit, onDelete }) {
+// Plans keyed by library book id
+const DUMMY_BOOK_PLANS_INIT = {
+  1: [
+    { id: 101, title: 'Roman Mosaic Patterns', subject: 'Art', lessons: 5, created: '28 May 2025' },
+    { id: 102, title: 'Writing a Roman Diary Entry', subject: 'Literacy', lessons: 6, created: '28 May 2025' },
+    { id: 103, title: 'Roman Settlements and Maps', subject: 'Geography', lessons: 4, created: '29 May 2025' },
+  ],
+  2: [
+    { id: 104, title: 'Descriptive Writing — The Iron Man', subject: 'Literacy', lessons: 5, created: '12 Apr 2025' },
+    { id: 105, title: 'Forces and Materials', subject: 'Science', lessons: 4, created: '14 Apr 2025' },
+  ],
+  3: [],
+  4: [
+    { id: 106, title: 'The Roman Army', subject: 'History', lessons: 6, created: '31 May 2025' },
+  ],
+  5: [],
+}
+
+function PlansModal({ book, plans, onClose, onAddPlan, onEditPlan, onDeletePlan }) {
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+
+  function startEdit(plan) {
+    setEditingId(plan.id)
+    setEditForm({ title: plan.title, subject: plan.subject })
+  }
+
+  function saveEdit(plan) {
+    onEditPlan({ ...plan, ...editForm })
+    setEditingId(null)
+  }
+
+  const inputStyle = { height: 30, fontSize: 12, border: `0.5px solid ${BORDER}`, borderRadius: 6, padding: "0 8px", fontFamily: "'DM Sans', sans-serif", color: TEXT, background: BG, outline: "none" }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: BG, borderRadius: 14, width: "100%", maxWidth: 520, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }}>
+
+        {/* Header */}
+        <div style={{ padding: "16px 20px", borderBottom: `0.5px solid ${BORDER}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{book.title}</div>
+            <div style={{ fontSize: 12, color: MUTED, fontStyle: "italic" }}>{book.author} · {book.yearGroup}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: MUTED, lineHeight: 1, flexShrink: 0, marginLeft: 12 }}>×</button>
+        </div>
+
+        {/* Plans list */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px" }}>
+          {plans.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "2rem 1rem", color: MUTED, fontSize: 13 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+              No plans yet for this book.
+            </div>
+          ) : (
+            plans.map((plan, i) => {
+              const sc = SUBJECT_COLOURS[plan.subject] || { bg: PAGE_BG, color: MUTED }
+              const isEditing = editingId === plan.id
+              const isConfirmingDelete = confirmDeleteId === plan.id
+              return (
+                <div key={plan.id} style={{ borderBottom: i < plans.length - 1 ? `0.5px solid ${BORDER}` : "none", padding: "10px 0" }}>
+                  {isEditing ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        style={{ ...inputStyle, flex: 1, minWidth: 120 }}
+                        value={editForm.title}
+                        onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                      />
+                      <select
+                        style={{ ...inputStyle, height: 30, cursor: "pointer" }}
+                        value={editForm.subject}
+                        onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                      >
+                        {['Art','Computing','DT','Geography','History','Literacy','Maths','Music','PE','PSHE','RE','Science'].map(s => <option key={s}>{s}</option>)}
+                      </select>
+                      <button onClick={() => saveEdit(plan)} style={{ height: 30, padding: "0 12px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Save</button>
+                      <button onClick={() => setEditingId(null)} style={{ height: 30, padding: "0 10px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 12, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0 }}>{plan.subject}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
+                        <div style={{ fontSize: 11, color: MUTED }}>{plan.lessons} lessons · Created {plan.created}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                        <button style={{ height: 26, padding: "0 10px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>View</button>
+                        <button onClick={() => startEdit(plan)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
+                        {isConfirmingDelete ? (
+                          <>
+                            <button onClick={() => { onDeletePlan(plan.id); setConfirmDeleteId(null) }} style={{ height: 26, padding: "0 8px", background: "#FCEBEB", border: `0.5px solid #A32D2D`, borderRadius: 6, fontSize: 11, fontWeight: 600, color: "#A32D2D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                            <button onClick={() => setConfirmDeleteId(null)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>✕</button>
+                          </>
+                        ) : (
+                          <button onClick={() => setConfirmDeleteId(plan.id)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "12px 20px", borderTop: `0.5px solid ${BORDER}`, display: "flex", gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={onAddPlan}
+            style={{ flex: 1, height: 38, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif' " }}
+          >
+            ✨ Create new plan
+          </button>
+          <button onClick={onClose} style={{ height: 38, padding: "0 16px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LibraryBookCard({ book, plans, onCreatePlan, onViewPlans, onEdit, onDelete }) {
   const [hovered, setHovered] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   return (
@@ -2177,12 +2300,30 @@ function LibraryBookCard({ book, onCreatePlan, onEdit, onDelete }) {
       </div>
       {/* Actions */}
       <div style={{ padding: "8px 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-        <button
-          onClick={() => onCreatePlan(book)}
-          style={{ width: "100%", height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-        >
-          ✨ Create plan
-        </button>
+        {plans.length > 0 ? (
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => onViewPlans(book)}
+              style={{ flex: 1, height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+            >
+              📋 View plans ({plans.length})
+            </button>
+            <button
+              onClick={() => onCreatePlan(book)}
+              title="Create new plan"
+              style={{ width: 32, height: 32, background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 8, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            >
+              ✨
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => onCreatePlan(book)}
+            style={{ width: "100%", height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+          >
+            ✨ Create plan
+          </button>
+        )}
         <div style={{ display: "flex", gap: 6 }}>
           <button
             onClick={() => onEdit(book)}
@@ -2384,10 +2525,27 @@ function BookModal({ book, onClose, onSave, isEdit }) {
 
 function MyLibraryPage({ onNavigate, onSelectBook }) {
   const [library, setLibrary] = useState(DUMMY_LIBRARY)
-  const [modal, setModal] = useState(null) // null | { mode: 'add' } | { mode: 'edit', book }
+  const [bookPlans, setBookPlans] = useState(DUMMY_BOOK_PLANS_INIT)
+  const [modal, setModal] = useState(null) // null | { mode: 'add' } | { mode: 'edit', book } | { mode: 'plans', book }
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
   const [search, setSearch] = useState('')
+
+  function getPlans(bookId) { return bookPlans[bookId] || [] }
+
+  function handleEditPlan(bookId, updatedPlan) {
+    setBookPlans(prev => ({
+      ...prev,
+      [bookId]: (prev[bookId] || []).map(p => p.id === updatedPlan.id ? updatedPlan : p)
+    }))
+  }
+
+  function handleDeletePlan(bookId, planId) {
+    setBookPlans(prev => ({
+      ...prev,
+      [bookId]: (prev[bookId] || []).filter(p => p.id !== planId)
+    }))
+  }
 
   const allSubjects = ['All', ...Array.from(new Set(library.map(b => b.subject))).sort()]
   const allYears = ['All', ...Array.from(new Set(library.map(b => b.yearGroup))).sort()]
@@ -2480,7 +2638,9 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
               <LibraryBookCard
                 key={book.id}
                 book={book}
+                plans={getPlans(book.id)}
                 onCreatePlan={onSelectBook}
+                onViewPlans={b => setModal({ mode: 'plans', book: b })}
                 onEdit={b => setModal({ mode: 'edit', book: b })}
                 onDelete={handleDelete}
               />
@@ -2491,12 +2651,22 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
 
-      {modal && (
+      {modal && modal.mode !== 'plans' && (
         <BookModal
           book={modal.book}
           isEdit={modal.mode === 'edit'}
           onClose={() => setModal(null)}
           onSave={handleSave}
+        />
+      )}
+      {modal?.mode === 'plans' && (
+        <PlansModal
+          book={modal.book}
+          plans={getPlans(modal.book.id)}
+          onClose={() => setModal(null)}
+          onAddPlan={() => { setModal(null); onSelectBook(modal.book) }}
+          onEditPlan={plan => handleEditPlan(modal.book.id, plan)}
+          onDeletePlan={planId => handleDeletePlan(modal.book.id, planId)}
         />
       )}
     </div>
