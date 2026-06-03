@@ -1495,8 +1495,67 @@ function BookGridCard({ book, isFavourite, onToggleFavourite }) {
   )
 }
 
+// Inline filter bar component used in each section
+function SectionFilters({ books, filters, setFilters }) {
+  // Derive unique subjects and year groups from the books in this section
+  const subjects = ['All', ...Array.from(new Set(books.map(b => b.subject))).sort()]
+  const yearGroups = ['All', ...Array.from(new Set(books.map(b => b.yearGroup))).sort()]
+
+  function filterPill(label, active, onClick) {
+    return (
+      <span
+        key={label}
+        onClick={onClick}
+        style={{ padding: "3px 10px", borderRadius: 20, border: `0.5px solid ${active ? GREEN : BORDER}`, fontSize: 11, fontWeight: active ? 600 : 400, color: active ? "#085041" : MUTED, background: active ? LIGHT_GREEN : BG, cursor: "pointer", whiteSpace: "nowrap", userSelect: "none" }}
+      >
+        {label}
+      </span>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+      {/* Subject pills */}
+      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500, marginRight: 2 }}>Subject:</span>
+      {subjects.map(sub => filterPill(
+        sub,
+        filters.subject === sub,
+        () => setFilters(f => ({ ...f, subject: sub }))
+      ))}
+      <span style={{ width: 1, height: 16, background: BORDER, margin: "0 4px" }} />
+      {/* Year group pills */}
+      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500, marginRight: 2 }}>Year:</span>
+      {yearGroups.map(yg => filterPill(
+        yg,
+        filters.yearGroup === yg,
+        () => setFilters(f => ({ ...f, yearGroup: yg }))
+      ))}
+      <span style={{ width: 1, height: 16, background: BORDER, margin: "0 4px" }} />
+      {/* Has plans toggle */}
+      {filterPill(
+        "📝 Has plans",
+        filters.hasPlans,
+        () => setFilters(f => ({ ...f, hasPlans: !f.hasPlans }))
+      )}
+    </div>
+  )
+}
+
+function applyFilters(books, filters) {
+  return books.filter(b => {
+    if (filters.subject !== 'All' && b.subject !== filters.subject) return false
+    if (filters.yearGroup !== 'All' && b.yearGroup !== filters.yearGroup) return false
+    if (filters.hasPlans && !b.hasPlans) return false
+    return true
+  })
+}
+
+const defaultFilters = { subject: 'All', yearGroup: 'All', hasPlans: false }
+
 function MyBooksPage({ onNavigate }) {
   const [favourites, setFavourites] = useState(DUMMY_FAVOURITES.map(b => b.title))
+  const [favFilters, setFavFilters] = useState({ ...defaultFilters })
+  const [recentFilters, setRecentFilters] = useState({ ...defaultFilters })
 
   function toggleFavourite(title) {
     setFavourites(prev => prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title])
@@ -1505,6 +1564,12 @@ function MyBooksPage({ onNavigate }) {
   const allBooks = [...DUMMY_FAVOURITES, ...DUMMY_RECENT.filter(b => !DUMMY_FAVOURITES.find(f => f.title === b.title))]
   const favouriteBooks = allBooks.filter(b => favourites.includes(b.title))
   const recentBooks = allBooks.filter(b => !favourites.includes(b.title))
+
+  const filteredFavourites = applyFilters(favouriteBooks, favFilters)
+  const filteredRecent = applyFilters(recentBooks, recentFilters)
+
+  const favFilterActive = favFilters.subject !== 'All' || favFilters.yearGroup !== 'All' || favFilters.hasPlans
+  const recentFilterActive = recentFilters.subject !== 'All' || recentFilters.yearGroup !== 'All' || recentFilters.hasPlans
 
   return (
     <div style={{ ...s.page, maxWidth: "100%" }}>
@@ -1529,10 +1594,26 @@ function MyBooksPage({ onNavigate }) {
 
         {/* Favourites section */}
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 16 }}>⭐</span>
-            <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Favourites</span>
-            <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>{favouriteBooks.length}</span>
+          {/* Section header row */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <span style={{ fontSize: 16 }}>⭐</span>
+              <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Favourites</span>
+              <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
+                {filteredFavourites.length}{favFilterActive ? ` of ${favouriteBooks.length}` : ''}
+              </span>
+              {favFilterActive && (
+                <span
+                  onClick={() => setFavFilters({ ...defaultFilters })}
+                  style={{ fontSize: 11, color: MUTED, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Clear
+                </span>
+              )}
+            </div>
+            {favouriteBooks.length > 0 && (
+              <SectionFilters books={favouriteBooks} filters={favFilters} setFilters={setFavFilters} />
+            )}
           </div>
 
           {favouriteBooks.length === 0 ? (
@@ -1540,9 +1621,13 @@ function MyBooksPage({ onNavigate }) {
               <div style={{ fontSize: 32, marginBottom: 8 }}>☆</div>
               Star a book to add it to your favourites
             </div>
+          ) : filteredFavourites.length === 0 ? (
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
+              No favourites match the selected filters. <span style={{ cursor: "pointer", color: GREEN, textDecoration: "underline" }} onClick={() => setFavFilters({ ...defaultFilters })}>Clear filters</span>
+            </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {favouriteBooks.map(book => (
+              {filteredFavourites.map(book => (
                 <BookGridCard key={book.title} book={book} isFavourite={true} onToggleFavourite={toggleFavourite} />
               ))}
             </div>
@@ -1554,10 +1639,26 @@ function MyBooksPage({ onNavigate }) {
 
         {/* Recently used section */}
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 16 }}>🕐</span>
-            <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Recently used</span>
-            <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>{recentBooks.length}</span>
+          {/* Section header row */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <span style={{ fontSize: 16 }}>🕐</span>
+              <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Recently used</span>
+              <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
+                {filteredRecent.length}{recentFilterActive ? ` of ${recentBooks.length}` : ''}
+              </span>
+              {recentFilterActive && (
+                <span
+                  onClick={() => setRecentFilters({ ...defaultFilters })}
+                  style={{ fontSize: 11, color: MUTED, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Clear
+                </span>
+              )}
+            </div>
+            {recentBooks.length > 0 && (
+              <SectionFilters books={recentBooks} filters={recentFilters} setFilters={setRecentFilters} />
+            )}
           </div>
 
           {recentBooks.length === 0 ? (
@@ -1565,9 +1666,13 @@ function MyBooksPage({ onNavigate }) {
               <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>
               Books you search and use will appear here
             </div>
+          ) : filteredRecent.length === 0 ? (
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
+              No books match the selected filters. <span style={{ cursor: "pointer", color: GREEN, textDecoration: "underline" }} onClick={() => setRecentFilters({ ...defaultFilters })}>Clear filters</span>
+            </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {recentBooks.map(book => (
+              {filteredRecent.map(book => (
                 <BookGridCard key={book.title} book={book} isFavourite={false} onToggleFavourite={toggleFavourite} />
               ))}
             </div>
