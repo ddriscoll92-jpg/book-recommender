@@ -1722,6 +1722,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
         onDeletePlan={() => {}}
       />
     )}
+    </>
   )
 }
 
@@ -3382,6 +3383,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   const recentFilterActive = recentFilters.subject !== 'All' || recentFilters.yearGroup !== 'All' || recentFilters.hasPlans
 
   return (
+    <>
     <div style={{ ...s.page, maxWidth: "100%" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 1rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
