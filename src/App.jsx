@@ -565,7 +565,7 @@ function DownloadDropdown({ book, yearGroup, idea, plan }) {
 }
 
 // ── Nav Bar ───────────────────────────────────────────────────────────────────
-function NavBar({ currentPage, onNavigate }) {
+function NavBar({ currentPage, onNavigate, userName, userEmail }) {
   const [profileOpen, setProfileOpen] = useState(false)
 
   const navItems = [
@@ -618,9 +618,11 @@ function NavBar({ currentPage, onNavigate }) {
           onClick={() => setProfileOpen(o => !o)}
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, background: profileOpen ? NAVY_LIGHT : 'transparent' }}
         >
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>T</div>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>
+            {(userName || 'T')[0].toUpperCase()}
+          </div>
           <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>Teacher</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
             <div style={{ fontSize: 11, color: NAVY_MUTED }}>Free plan</div>
           </div>
           <span style={{ fontSize: 11, color: NAVY_MUTED, marginLeft: 2 }}>▼</span>
@@ -628,19 +630,21 @@ function NavBar({ currentPage, onNavigate }) {
 
         {/* Dropdown */}
         {profileOpen && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
+          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
             <div style={{ padding: '12px 14px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>Teacher</div>
-              <div style={{ fontSize: 12, color: MUTED }}>teacher@school.co.uk</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{userName || 'Teacher'}</div>
+              <div style={{ fontSize: 12, color: MUTED }}>{userEmail}</div>
             </div>
             {[
-              { label: '👤  My Profile', note: '' },
-              { label: '⚙️  Settings', note: '' },
-              { label: '💳  Upgrade Plan', note: 'Coming soon' },
-              { label: '🚪  Sign Out', note: '' },
+              { label: '👤  My Profile', note: '', dest: null },
+              { label: '⚙️  Settings', note: '', dest: null },
+              { label: '💳  Upgrade Plan', note: 'Coming soon', dest: null },
+              { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
-              <div key={i} style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
-                onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+              <div key={i}
+                onClick={() => { if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
+                style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: item.dest ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
+                onMouseEnter={e => { if (item.dest) e.currentTarget.style.background = PAGE_BG }}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 {item.label}
@@ -1532,9 +1536,11 @@ function MyPlansPage({ onNavigate }) {
   useEffect(() => {
     async function loadPlans() {
       setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await supabase
         .from('plans')
         .select('*')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
       if (!error && data) {
         // Group by book
@@ -2648,9 +2654,11 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
 
   const loadLibrary = useCallback(async () => {
     setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
     const { data, error } = await supabase
       .from('library_books')
       .select('*')
+      .eq('user_id', user?.id)
       .order('added_at', { ascending: false })
     if (!error) setLibrary(data || [])
     setLoading(false)
@@ -2703,7 +2711,7 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
     } else {
       const { error } = await supabase
         .from('library_books')
-        .insert({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
+        .insert({ user_id: (await supabase.auth.getUser()).data.user?.id, title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
       if (!error) await loadLibrary()
       else console.error('Insert error:', error)
     }
