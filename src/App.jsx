@@ -1935,42 +1935,31 @@ function MyPlansPage({ onNavigate }) {
         </div>
 
         {/* Filter bar */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {/* Search */}
-          <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: MUTED }}>🔍</span>
-            <input
-              style={{ ...s.input, paddingLeft: 30, height: 32, fontSize: 13 }}
-              placeholder="Search by book, plan or topic..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          {/* Subject */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
-            <select style={{ ...selectStyle, borderColor: filterSubject !== 'All' ? GREEN : BORDER, background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT }}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "nowrap" }}>
+          <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
+          <input
+            style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+            placeholder="Search by book, plan or topic..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && <span onClick={() => setSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Subject</span>
+            <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${filterSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
               value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
               {allSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
             </select>
           </div>
-          {/* Year group */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Year</span>
-            <select style={{ ...selectStyle, borderColor: filterYear !== 'All' ? GREEN : BORDER, background: filterYear !== 'All' ? LIGHT_GREEN : BG, color: filterYear !== 'All' ? '#085041' : TEXT }}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Year</span>
+            <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${filterYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: filterYear !== 'All' ? LIGHT_GREEN : BG, color: filterYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
               value={filterYear} onChange={e => setFilterYear(e.target.value)}>
               {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
             </select>
           </div>
-          {filtersActive && (
-            <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }}
-              style={{ fontSize: 12, color: MUTED, cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>
-              Clear all
-            </span>
-          )}
-          <span style={{ fontSize: 12, color: MUTED, marginLeft: "auto", whiteSpace: "nowrap" }}>
-            {totalPlans} plan{totalPlans !== 1 ? 's' : ''}
-          </span>
+          {filtersActive && <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Clear</span>}
+          <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{totalPlans} plan{totalPlans !== 1 ? 's' : ''}</span>
         </div>
 
         {/* Loading state */}
