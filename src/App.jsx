@@ -3989,9 +3989,11 @@ export default function App() {
   }, [])
 
   async function loadProfilePreferences(userId) {
-    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url').eq('id', userId).single()
+    const { data, error } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url').eq('id', userId).single()
+    console.log('loadProfilePreferences:', { data, error })
     if (data) {
       if (data.display_name) setDisplayName(data.display_name)
+      console.log('avatar_url from DB:', data.avatar_url)
       if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
       setSearchState(prev => ({
         ...prev,
@@ -4035,7 +4037,7 @@ export default function App() {
     <div>
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} />
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
-      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { console.log('onUpdated called:', name, url); if (name) setDisplayName(name); if (url) { console.log('setting avatarUrl:', url); setAvatarUrl(url); } loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
