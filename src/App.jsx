@@ -130,10 +130,16 @@ async function callAPI(prompt, raw = false) {
 // ── Script loader helper ──────────────────────────────────────────────────────
 function loadScript(src) {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
+    const existing = document.querySelector(`script[src="${src}"]`)
+    if (existing) {
+      if (existing.dataset.loaded) { resolve(); return }
+      existing.addEventListener('load', () => resolve())
+      existing.addEventListener('error', () => reject())
+      return
+    }
     const script = document.createElement('script')
     script.src = src
-    script.onload = resolve
+    script.onload = () => { script.dataset.loaded = '1'; resolve() }
     script.onerror = reject
     document.head.appendChild(script)
   })
@@ -389,10 +395,11 @@ async function downloadPdf(book, yearGroup, idea, plan) {
 }
 
 async function downloadDocx(book, yearGroup, idea, plan) {
-  await loadScript('https://unpkg.com/docx@8.5.0/build/index.js')
+  await loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js')
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType, PageBreak } = window.docx
-  const { saveAs } = window
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType } = window.docx
+  const PageBreak = window.docx.PageBreak || (() => ({ type: 'pageBreak' }))
+  const saveAs = window.saveAs || (window.FileSaver && window.FileSaver.saveAs)
 
   const greenColor = '1D9E75'
   const navyColor = '1E2433'
@@ -2150,9 +2157,10 @@ function ResourceOutput({ resource }) {
         })
         doc.save(`${resource.title.replace(/[^a-z0-9]/gi, '_')}.pdf`)
       } else if (format === 'docx') {
-        await loadScript('https://unpkg.com/docx@8.5.0/build/index.js')
+        await loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js')
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
         const { Document, Packer, Paragraph, TextRun, ShadingType, AlignmentType } = window.docx
+        if (!Document) throw new Error('docx not loaded')
         const { saveAs } = window
         const children = [
           new Paragraph({ children: [new TextRun({ text: resource.title, bold: true, color: '1E2433', size: 36 })], spacing: { after: 80 } }),
