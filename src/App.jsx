@@ -1770,6 +1770,8 @@ const SUBJECT_COLOURS = {
 function MyPlanDownloadButton({ plan, group, size }) {
   const [open, setOpen] = useState(false)
   const [downloading, setDownloading] = useState(null)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef(null)
   const ref = useRef(null)
 
   useEffect(() => {
@@ -1777,6 +1779,14 @@ function MyPlanDownloadButton({ plan, group, size }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  function openDropdown() {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setDropPos({ top: rect.top - 4, left: rect.right })
+    }
+    setOpen(o => !o)
+  }
 
   async function loadFullPlan() {
     const { data: lessons } = await supabase.from('lessons').select('*').eq('plan_id', plan.id).order('lesson_number')
@@ -1818,15 +1828,16 @@ function MyPlanDownloadButton({ plan, group, size }) {
   return (
     <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={openDropdown}
         disabled={!!downloading}
-        style={{ height: isSmall ? 26 : 28, padding: isSmall ? '0 8px' : '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: isSmall ? 6 : 7, fontSize: isSmall ? 11 : 11, color: downloading ? MUTED : MUTED, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+        style={{ height: isSmall ? 26 : 28, padding: isSmall ? '0 8px' : '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: isSmall ? 6 : 7, fontSize: 11, color: MUTED, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: 3 }}>
         {downloading ? '⏳' : '⬇'}
         {!isSmall && <span style={{ marginLeft: 2 }}>{downloading ? `${downloading.toUpperCase()}...` : 'Download'}</span>}
         {!downloading && !isSmall && <span style={{ fontSize: 9 }}>▼</span>}
       </button>
       {open && (
-        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 300 }}>
+        <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, transform: 'translate(-100%, -100%)', background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden', zIndex: 9999 }}>
           <div style={{ padding: '7px 12px 5px', fontSize: 10, color: MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `0.5px solid ${BORDER}` }}>Choose format</div>
           {formats.map(f => (
             <div key={f.id} onClick={() => handle(f.id)}
