@@ -3050,11 +3050,14 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
     })
   }
 
-  // Favourites = starred saved books
-  const favouriteBooks = applyGlobal(allSaved.filter(b => b.is_favourite))
+  // Favourites = starred saved books + starred library books
+  const favouriteBooks = applyGlobal([
+    ...allSaved.filter(b => b.is_favourite),
+    ...allLib.filter(b => b.is_favourite),
+  ])
   // Recently used = non-starred saved books
   const recentBooks = applyGlobal(allSaved.filter(b => !b.is_favourite))
-  // Library with global filter
+  // Library = all library books (favourited ones still show here too)
   const filteredLib = applyGlobal(allLib)
 
   const allSubjects = ['All', ...Array.from(new Set([...allSaved, ...allLib].map(b => b.subject).filter(Boolean))).sort()]
@@ -3062,10 +3065,13 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   const totalBooks = favouriteBooks.length + filteredLib.length + recentBooks.length
 
   async function toggleFavourite(book) {
+    const newVal = !book.is_favourite
     if (book.source === 'saved') {
-      const newVal = !book.is_favourite
       await supabase.from('saved_books').update({ is_favourite: newVal }).eq('id', book.id)
       setSavedBooks(prev => prev.map(b => b.id === book.id ? { ...b, is_favourite: newVal } : b))
+    } else if (book.source === 'library') {
+      await supabase.from('library_books').update({ is_favourite: newVal }).eq('id', book.id)
+      setLibraryBooks(prev => prev.map(b => b.id === book.id ? { ...b, is_favourite: newVal } : b))
     }
   }
 
