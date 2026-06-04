@@ -2387,7 +2387,6 @@ For all other types: use appropriate sections for the resource type.`
     try {
       const result = await callAPI(apiPrompt, true)
       setResource(result)
-      loadCatalogue()
       // Save resource to Supabase
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -2401,6 +2400,7 @@ For all other types: use appropriate sections for the resource type.`
             sections: result.sections,
             prompt: apiPrompt,
           })
+          loadCatalogue()
         }
       } catch (e) { console.warn('Could not save resource:', e) }
     } catch { setError('Something went wrong. Please try again.') }
@@ -2429,7 +2429,6 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
     try {
       const result = await callAPI(apiPrompt, true)
       setResource(result)
-      loadCatalogue()
       // Save resource to Supabase
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -2442,6 +2441,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
             sections: result.sections,
             prompt: prompt,
           })
+          loadCatalogue()
         }
       } catch (e) { console.warn('Could not save resource:', e) }
     } catch { setError('Something went wrong. Please try again.') }
