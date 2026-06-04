@@ -2351,6 +2351,16 @@ function ResourcesPage({ onNavigate }) {
   const [planFilterSubject, setPlanFilterSubject] = useState('All')
   const [planFilterYear, setPlanFilterYear] = useState('All')
   const [planDropdownOpen, setPlanDropdownOpen] = useState(false)
+  const [realLessons, setRealLessons] = useState([])
+
+  useEffect(() => {
+    if (!selectedPlan?.id) { setRealLessons([]); return }
+    supabase.from('lessons')
+      .select('lesson_number, title, type, learning_intention')
+      .eq('plan_id', selectedPlan.id)
+      .order('lesson_number')
+      .then(({ data }) => { if (data) setRealLessons(data) })
+  }, [selectedPlan?.id])
 
   useEffect(() => {
     async function loadRealPlans() {
@@ -2365,26 +2375,9 @@ function ResourcesPage({ onNavigate }) {
         const groups = []
         plans.forEach(plan => {
           const existing = groups.find(g => g.book.title === plan.book_title)
-          const planEntry = {
-            id: plan.id,
-            title: plan.title,
-            subject: plan.subject,
-            lessons: plan.lesson_count,
-            topic: plan.title,
-            group: null,
-          }
-          if (existing) {
-            planEntry.group = existing
-            existing.plans.push(planEntry)
-          } else {
-            const newGroup = {
-              book: { title: plan.book_title, author: plan.book_author || '', emoji: '📚' },
-              yearGroup: plan.year_group,
-              plans: [planEntry],
-            }
-            planEntry.group = newGroup
-            groups.push(newGroup)
-          }
+          const planEntry = { id: plan.id, title: plan.title, subject: plan.subject, lessons: plan.lesson_count, topic: plan.title }
+          if (existing) { existing.plans.push(planEntry) }
+          else { groups.push({ book: { title: plan.book_title, author: plan.book_author || '', emoji: '📚' }, yearGroup: plan.year_group, plans: [planEntry] }) }
         })
         setRealPlans(groups)
       }
@@ -2507,6 +2500,18 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
     </button>
   )
 
+  // Plan tab computed values (moved out of IIFE)
+  const allPlans = realPlans.flatMap(group => group.plans.map(plan => ({ ...plan, group })))
+  const planSubjects = ['All', ...Array.from(new Set(allPlans.map(p => p.subject))).sort()]
+  const planYears = ['All', ...Array.from(new Set(allPlans.map(p => p.group.yearGroup))).sort()]
+  const filteredPlans = allPlans.filter(p => {
+    if (planFilterSubject !== 'All' && p.subject !== planFilterSubject) return false
+    if (planFilterYear !== 'All' && p.group.yearGroup !== planFilterYear) return false
+    if (planSearch && !p.title.toLowerCase().includes(planSearch.toLowerCase()) &&
+        !p.group.book.title.toLowerCase().includes(planSearch.toLowerCase())) return false
+    return true
+  })
+
   return (
     <div style={{ ...s.page, maxWidth: "100%" }}>
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
@@ -2568,29 +2573,8 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
 
             {/* ── Plan-based tab ── */}
             {tab === 'plan' && (() => {
-              // Flatten all plans with their group context
-              const allPlans = realPlans.flatMap(group =>
-                group.plans.map(plan => ({ ...plan, group }))
-              )
-              // Derive filter options
-              const planSubjects = ['All', ...Array.from(new Set(allPlans.map(p => p.subject))).sort()]
-              const planYears = ['All', ...Array.from(new Set(allPlans.map(p => p.group.yearGroup))).sort()]
-              // Filter
-              const filteredPlans = allPlans.filter(p => {
-                if (planFilterSubject !== 'All' && p.subject !== planFilterSubject) return false
-                if (planFilterYear !== 'All' && p.group.yearGroup !== planFilterYear) return false
-                if (planSearch && !p.title.toLowerCase().includes(planSearch.toLowerCase()) &&
-                    !p.group.book.title.toLowerCase().includes(planSearch.toLowerCase())) return false
-                return true
-              })
 
-              // Use real lesson data from selectedPlan if available
-              const [realLessons, setRealLessons] = useState([])
-              useEffect(() => {
-                if (!selectedPlan?.id) return
-                supabase.from('lessons').select('lesson_number, title, type, learning_intention').eq('plan_id', selectedPlan.id).order('lesson_number')
-                  .then(({ data }) => { if (data) setRealLessons(data) })
-              }, [selectedPlan?.id])
+              // Use realLessons from component state (loaded via useEffect)
               const lessonContext = realLessons.length > 0
                 ? realLessons.map(l => ({ num: l.lesson_number, title: l.title, type: l.type, intention: l.learning_intention || '' }))
                 : Array.from({ length: selectedPlan?.lessons || 0 }, (_, i) => ({ num: i+1, title: `Lesson ${i+1}`, type: '', intention: '' }))
