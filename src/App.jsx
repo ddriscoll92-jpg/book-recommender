@@ -572,7 +572,7 @@ function DownloadDropdown({ book, yearGroup, idea, plan }) {
 }
 
 // ── Nav Bar ───────────────────────────────────────────────────────────────────
-function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile }) {
+function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl }) {
   const [profileOpen, setProfileOpen] = useState(false)
 
   const navItems = [
@@ -3654,15 +3654,21 @@ function ProfileModal({ session, onClose, onUpdated }) {
     if (file.size > 2 * 1024 * 1024) { flash('error', 'Image must be under 2MB.'); return }
     setUploading(true)
     try {
-      const ext = file.name.split('.').pop()
-      const path = `avatars/${session.user.id}.${ext}`
-      const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+      const ext = file.name.split('.').pop().toLowerCase()
+      const path = `${session.user.id}/avatar.${ext}`
+      const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
       if (uploadErr) throw uploadErr
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: publicUrl })
-      setAvatarUrl(publicUrl)
+      // Add cache-busting so the new image shows immediately
+      const urlWithCache = `${publicUrl}?t=${Date.now()}`
+      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: urlWithCache })
+      setAvatarUrl(urlWithCache)
+      onUpdated && onUpdated(displayName, urlWithCache)
       flash('success', 'Profile picture updated.')
-    } catch (e) { flash('error', 'Could not upload image. Make sure the avatars storage bucket exists in Supabase.') }
+    } catch (e) {
+      console.error('Avatar upload error:', e)
+      flash('error', e.message || 'Could not upload image.')
+    }
     setUploading(false)
   }
 
@@ -3965,6 +3971,7 @@ export default function App() {
   const [page, setPage] = useState('search')
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
   const [selectedBook, setSelectedBook] = useState(null)
   const [selectedIdeas, setSelectedIdeas] = useState([])
   const [searchState, setSearchState] = useState(initialSearchState)
@@ -4025,9 +4032,9 @@ export default function App() {
 
   return (
     <div>
-      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} />
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} />
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
-      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name) => { setDisplayName(name); loadProfilePreferences(session.user.id) }} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
