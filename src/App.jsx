@@ -3160,7 +3160,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         </div>
 
         {/* Global search bar */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 30, padding: '8px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 180, position: 'relative', display: 'flex', alignItems: 'center' }}>
             <span style={{ fontSize: 15, color: MUTED, marginRight: 8, flexShrink: 0 }}>🔍</span>
             <input
