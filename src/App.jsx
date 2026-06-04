@@ -3154,66 +3154,42 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => onNavigate('search')} style={{ height: 38, padding: '0 14px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, fontWeight: 500, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Find books</button>
+            <button onClick={() => onNavigate('search')} style={{ height: 38, padding: '0 14px', background: GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, color: LIGHT_GREEN, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Find books</button>
             <button onClick={() => setModal({ mode: 'add' })} style={{ height: 38, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Add to library</button>
           </div>
         </div>
 
-        {/* Global search bar */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 180, position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <span style={{ fontSize: 15, color: MUTED, marginRight: 8, flexShrink: 0 }}>🔍</span>
-            <input
-              style={{ flex: 1, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
-              placeholder="Search your books..."
-              value={globalSearch}
-              onChange={e => setGlobalSearch(e.target.value)}
-            />
-            {globalSearch && (
-              <span onClick={() => setGlobalSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', marginLeft: 6, flexShrink: 0 }}>✕</span>
-            )}
-          </div>
-          <div style={{ width: '0.5px', height: 20, background: BORDER, flexShrink: 0 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500, whiteSpace: 'nowrap' }}>Subject</span>
-            <select
-              style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalSubject !== 'All' ? LIGHT_GREEN : BG, color: globalSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+        {/* Global search + filter bar */}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
+          <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
+          <input
+            style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+            placeholder="Search by book or author..."
+            value={globalSearch}
+            onChange={e => setGlobalSearch(e.target.value)}
+          />
+          {globalSearch && <span onClick={() => setGlobalSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Subject</span>
+            <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalSubject !== 'All' ? LIGHT_GREEN : BG, color: globalSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
               value={globalSubject} onChange={e => setGlobalSubject(e.target.value)}>
               {allSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
             </select>
           </div>
-          <div style={{ width: '0.5px', height: 20, background: BORDER, flexShrink: 0 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500, whiteSpace: 'nowrap' }}>Year</span>
-            <select
-              style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalYear !== 'All' ? LIGHT_GREEN : BG, color: globalYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Year</span>
+            <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalYear !== 'All' ? LIGHT_GREEN : BG, color: globalYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
               value={globalYear} onChange={e => setGlobalYear(e.target.value)}>
               {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
             </select>
           </div>
-          <div style={{ width: '0.5px', height: 20, background: BORDER, flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>{totalBooks} book{totalBooks !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{totalBooks} book{totalBooks !== 1 ? 's' : ''}</span>
         </div>
 
         {loading && <div style={{ textAlign: 'center', padding: '3rem', color: MUTED, fontSize: 14 }}>Loading your books...</div>}
 
         {!loading && (
           <>
-            {/* ── Favourites ── */}
-            <div style={{ marginBottom: '2rem' }}>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontSize: 16 }}>⭐</span>
-                  <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>My favourites</span>
-                  <span style={{ background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{favouriteBooks.length}</span>
-                </div>
-                <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Your top books — starred for quick access</p>
-              </div>
-              {renderSection(favouriteBooks, favVisible, setFavVisible, favFilters, setFavFilters, "Star a book from your recommendations to add it here", "☆")}
-            </div>
-
-            <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, marginBottom: '2rem' }} />
-
             {/* ── My Library ── */}
             <div style={{ marginBottom: '2rem' }}>
               <div style={{ marginBottom: 12 }}>
@@ -3225,6 +3201,21 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                 <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Books you own — add, edit and create plans from your physical collection</p>
               </div>
               {renderSection(filteredLib, libVisible, setLibVisible, libFilters, setLibFilters, "Add the books you own to quickly create plans from them", "🏫")}
+            </div>
+
+            <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, marginBottom: '2rem' }} />
+
+            {/* ── Favourites ── */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 16 }}>⭐</span>
+                  <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>My favourites</span>
+                  <span style={{ background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{favouriteBooks.length}</span>
+                </div>
+                <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Your top books — starred for quick access</p>
+              </div>
+              {renderSection(favouriteBooks, favVisible, setFavVisible, favFilters, setFavFilters, "Star a book from your recommendations to add it here", "☆")}
             </div>
 
             <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, marginBottom: '2rem' }} />
