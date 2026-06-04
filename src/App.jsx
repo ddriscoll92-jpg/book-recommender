@@ -3659,11 +3659,11 @@ function ProfileModal({ session, onClose, onUpdated }) {
       const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
       if (uploadErr) throw uploadErr
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-      // Add cache-busting so the new image shows immediately
-      const urlWithCache = `${publicUrl}?t=${Date.now()}`
-      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: urlWithCache })
-      setAvatarUrl(urlWithCache)
-      onUpdated && onUpdated(displayName, urlWithCache)
+      // Store clean URL in DB, add cache-bust only for immediate display
+      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: publicUrl })
+      const displayUrl = `${publicUrl}?t=${Date.now()}`
+      setAvatarUrl(displayUrl)
+      onUpdated && onUpdated(displayName, displayUrl)
       flash('success', 'Profile picture updated.')
     } catch (e) {
       console.error('Avatar upload error:', e)
@@ -3989,9 +3989,10 @@ export default function App() {
   }, [])
 
   async function loadProfilePreferences(userId) {
-    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name').eq('id', userId).single()
+    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url').eq('id', userId).single()
     if (data) {
       if (data.display_name) setDisplayName(data.display_name)
+      if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
       setSearchState(prev => ({
         ...prev,
         yearGroup: data.default_year || prev.yearGroup,
