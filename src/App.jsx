@@ -2881,7 +2881,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
     setLibraryBooks(prev => prev.filter(b => b.id !== id))
   }
 
-  function SectionGrid({ books, visible, setVisible, filters, setFilters, emptyMsg, emptyIcon }) {
+  function SectionGrid({ books, visible, setVisible, filters, setFilters, emptyMsg, emptyIcon, filterSlot }) {
     const filtered = applyFilters(books, filters)
     const active = filters.subject !== 'All' || filters.yearGroup !== 'All' || filters.hasPlans
     return (
@@ -2953,10 +2953,13 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
           <>
             {/* ── Favourites ── */}
             <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 16 }}>⭐</span>
-                <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Favourites</span>
-                <span style={{ background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{favouriteBooks.length}</span>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 16 }}>⭐</span>
+                  <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>My favourites</span>
+                  <span style={{ background: LIGHT_GREEN, color: '#085041', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{favouriteBooks.length}</span>
+                </div>
+                <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Your top books — starred for quick access</p>
               </div>
               <SectionGrid books={favouriteBooks} visible={favVisible} setVisible={setFavVisible} filters={favFilters} setFilters={setFavFilters}
                 emptyMsg="Star a book from your recommendations to add it here" emptyIcon="☆" />
@@ -2966,10 +2969,13 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
             {/* ── My Library ── */}
             <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 16 }}>🏫</span>
-                <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>My library</span>
-                <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{allLib.length}</span>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 16 }}>🏫</span>
+                  <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>My library</span>
+                  <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{allLib.length}</span>
+                </div>
+                <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Books you own — add, edit and create plans from your physical collection</p>
               </div>
               <SectionGrid books={allLib} visible={libVisible} setVisible={setLibVisible} filters={libFilters} setFilters={setLibFilters}
                 emptyMsg="Add the books you own to quickly create plans from them" emptyIcon="🏫" />
@@ -2979,10 +2985,13 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
             {/* ── Recently used ── */}
             <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 16 }}>🕐</span>
-                <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Recently used</span>
-                <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{recentBooks.length}</span>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 16 }}>🕐</span>
+                  <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Recently used</span>
+                  <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>{recentBooks.length}</span>
+                </div>
+                <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Books you've found and used through the book recommender</p>
               </div>
               <SectionGrid books={recentBooks} visible={recentVisible} setVisible={setRecentVisible} filters={recentFilters} setFilters={setRecentFilters}
                 emptyMsg="Books you find through the recommender will appear here" emptyIcon="📚" />
@@ -2998,13 +3007,19 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
     {modal?.mode === 'info' && <BookInfoModal book={modal.book} onClose={() => setModal(null)} />}
     {modal?.mode === 'plans' && (
       <PlansModal
-        book={{ title: modal.book.title, author: modal.book.author, emoji: '📚' }}
+        book={{ title: modal.book.title, author: modal.book.author, yearGroup: modal.book.yearGroup || '', emoji: '📚' }}
         plans={bookPlans[modal.book.title] || []}
         onClose={() => setModal(null)}
         onAddPlan={() => { setModal(null); onSelectBook && onSelectBook({ title: modal.book.title, author: modal.book.author, reason: '' }) }}
         onViewPlan={() => {}}
-        onEditPlan={() => {}}
-        onDeletePlan={() => {}}
+        onEditPlan={async (plan) => {
+          await supabase.from('plans').update({ title: plan.title, subject: plan.subject }).eq('id', plan.id)
+          loadAll()
+        }}
+        onDeletePlan={async (planId) => {
+          await supabase.from('plans').delete().eq('id', planId)
+          loadAll()
+        }}
       />
     )}
     {(modal?.mode === 'add' || modal?.mode === 'edit') && (
