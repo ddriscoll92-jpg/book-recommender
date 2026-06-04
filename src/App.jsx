@@ -629,7 +629,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
           </div>
           <div style={{ lineHeight: 1.2 }}>
             <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
-            <div style={{ fontSize: 11, color: NAVY_MUTED }}>Free plan</div>
+            <div style={{ fontSize: 11, color: NAVY_MUTED }}>{ userEmail?.split('@')[1] || 'Teacher' }</div>
           </div>
           <span style={{ fontSize: 11, color: NAVY_MUTED, marginLeft: 2 }}>▼</span>
         </div>
@@ -643,12 +643,11 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
             </div>
             {[
               { label: '👤  Profile & settings', note: '', dest: 'profile' },
-              { label: '💳  Upgrade Plan', note: 'Coming soon', dest: null },
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
               <div key={i}
                 onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
-                style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: item.dest ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
+                style={{ padding: '10px 14px', fontSize: 13, color: i === 2 ? '#A32D2D' : TEXT, cursor: item.dest ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 2 ? `0.5px solid ${BORDER}` : 'none' }}
                 onMouseEnter={e => { if (item.dest) e.currentTarget.style.background = PAGE_BG }}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -913,7 +912,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           <span style={{ flexShrink: 0 }}>⚠️</span>
           <span>Book details are sourced from Open Library and may not be complete. Always verify before ordering.</span>
         </div>
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -1288,7 +1287,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
                       </span>
                     ))}
                   </div>
-                  <div style={s.starNote}>Star ratings will be based on community reviews from teachers. Coming soon.</div>
+                  <div style={s.starNote}>Star ratings will be based on community reviews from teachers. Coming soon — we're working on it.</div>
                 </div>
               </div>
             )}
@@ -1357,7 +1356,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
             </button>
           </div>
         )}
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -1609,7 +1608,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
         <div style={s.header}>
           <div style={s.headerIcon}>📝</div>
           <div>
-            <h1 style={s.h1}>Lesson Resources</h1>
+            <h1 style={s.h1}>Create Resources</h1>
             <p style={s.headerSub}>{book.title} · {yearGroup}</p>
           </div>
         </div>
@@ -1708,7 +1707,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           )
         })}
 
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -2070,7 +2069,7 @@ function MyPlansPage({ onNavigate }) {
           )
         })}
 
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
     </div>
     {viewingPlan && (
@@ -2324,7 +2323,6 @@ function ResourcesPage({ onNavigate }) {
   const [viewingResource, setViewingResource] = useState(null)
 
   async function loadCatalogue() {
-    console.log('loadCatalogue called')
     setCatalogueLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { data, error } = await supabase
@@ -2332,7 +2330,6 @@ function ResourcesPage({ onNavigate }) {
       .select('*')
       .eq('user_id', user?.id)
       .order('created_at', { ascending: false })
-    console.log('loadCatalogue result:', data?.length, 'error:', error)
     if (!error) setCatalogue(data || [])
     else console.error('loadCatalogue error:', error)
     setCatalogueLoading(false)
@@ -2832,7 +2829,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
         {/* Output */}
         {resource && <ResourceOutput resource={resource} />}
 
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -3504,7 +3501,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
           </>
         )}
 
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
     </div>
 
@@ -3954,7 +3951,7 @@ function AuthPage({ onAuth }) {
           </button>
         </div>
       </div>
-      <p style={{ fontSize: 12, color: MUTED, marginTop: '1.5rem', textAlign: 'center' }}>TeachReads · For UK primary school teachers</p>
+      <p style={{ fontSize: 12, color: MUTED, marginTop: '1.5rem', textAlign: 'center' }}>TeachReads · Lesson planning for UK primary teachers</p>
     </div>
   )
 }
@@ -3990,11 +3987,9 @@ export default function App() {
 
   async function loadProfilePreferences(userId) {
     const { data, error } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url').eq('id', userId).single()
-    console.log('loadProfilePreferences:', { data, error })
     if (data) {
       if (data.display_name) setDisplayName(data.display_name)
-      console.log('avatar_url from DB:', data.avatar_url)
-      if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
+        if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
       setSearchState(prev => ({
         ...prev,
         yearGroup: data.default_year || prev.yearGroup,
