@@ -1315,11 +1315,31 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
               <span style={s.badge}>{books.length} results</span>
             </div>
             {books.map((book, i) => (
-              <div key={i} style={s.bookCard} onClick={() => onSelectBook(book)}
+              <div key={i} style={{ ...s.bookCard, position: 'relative' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                <FavouriteButton
+                  title={book.title}
+                  author={book.author}
+                  subject={searchMeta.subject}
+                  yearGroup={searchMeta.yearGroup}
+                  reason={book.reason}
+                />
                 <div style={s.bookNum}>{i + 1}</div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1 }} onClick={async () => {
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (user) {
+                      const { data: existing } = await supabase.from('saved_books').select('id').eq('user_id', user.id).eq('title', book.title).single()
+                      if (existing) {
+                        await supabase.from('saved_books').update({ last_accessed: new Date().toISOString(), last_used: new Date().toISOString() }).eq('id', existing.id)
+                      } else {
+                        await supabase.from('saved_books').insert({ user_id: user.id, title: book.title, author: book.author, subject: searchMeta.subject, year_group: searchMeta.yearGroup, reason: book.reason, is_favourite: false, last_accessed: new Date().toISOString(), last_used: new Date().toISOString() })
+                      }
+                    }
+                  } catch(e) { console.warn('Could not save book:', e) }
+                  onSelectBook(book)
+                }}>
                   <div style={s.bookTitle}>{book.title}</div>
                   <div style={s.bookAuthor}>{book.author}</div>
                   <div style={s.bookReason}>{book.reason}</div>
