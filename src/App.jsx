@@ -642,8 +642,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile })
               <div style={{ fontSize: 12, color: MUTED }}>{userEmail}</div>
             </div>
             {[
-              { label: '👤  My Profile', note: '', dest: 'profile' },
-              { label: '⚙️  Settings', note: '', dest: 'profile' },
+              { label: '👤  Profile & settings', note: '', dest: 'profile' },
               { label: '💳  Upgrade Plan', note: 'Coming soon', dest: null },
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
