@@ -1767,7 +1767,7 @@ const SUBJECT_COLOURS = {
 }
 
 // ── My Plan Download Button ───────────────────────────────────────────────────
-function MyPlanDownloadButton({ plan, group }) {
+function MyPlanDownloadButton({ plan, group, size }) {
   const [open, setOpen] = useState(false)
   const [downloading, setDownloading] = useState(null)
   const ref = useRef(null)
@@ -1814,14 +1814,16 @@ function MyPlanDownloadButton({ plan, group }) {
     { id: 'txt', label: '📃 Text', desc: 'Plain text' },
   ]
 
+  const isSmall = size === 'sm'
   return (
     <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
       <button
         onClick={() => setOpen(o => !o)}
         disabled={!!downloading}
-        style={{ height: 28, padding: '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: downloading ? MUTED : TEXT, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        {downloading ? '⏳' : '⬇'} {downloading ? `${downloading.toUpperCase()}...` : 'Download'}
-        {!downloading && <span style={{ fontSize: 9 }}>▼</span>}
+        style={{ height: isSmall ? 26 : 28, padding: isSmall ? '0 8px' : '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: isSmall ? 6 : 7, fontSize: isSmall ? 11 : 11, color: downloading ? MUTED : MUTED, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+        {downloading ? '⏳' : '⬇'}
+        {!isSmall && <span style={{ marginLeft: 2 }}>{downloading ? `${downloading.toUpperCase()}...` : 'Download'}</span>}
+        {!downloading && !isSmall && <span style={{ fontSize: 9 }}>▼</span>}
       </button>
       {open && (
         <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 300 }}>
@@ -2630,6 +2632,7 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
                     </div>
                     <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                       <button onClick={() => setViewingPlan(plan)} style={{ height: 26, padding: '0 10px', background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#085041', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>View</button>
+                      <MyPlanDownloadButton plan={plan} group={{ book, yearGroup: book.yearGroup || '' }} size="sm" />
                       <button onClick={() => startEdit(plan)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
                       {isConfirming ? (
                         <>
