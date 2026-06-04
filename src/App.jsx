@@ -2994,6 +2994,10 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   // Modal state
   const [modal, setModal] = useState(null) // null | { mode: 'add'|'edit', book } | { mode: 'plans', book } | { mode: 'info', book }
   const [viewingPlanDetail, setViewingPlanDetail] = useState(null)
+  // Global search/filter bar
+  const [globalSearch, setGlobalSearch] = useState('')
+  const [globalSubject, setGlobalSubject] = useState('All')
+  const [globalYear, setGlobalYear] = useState('All')
   // Filters per section
   const [favFilters, setFavFilters] = useState({ ...defaultFilters })
   const [libFilters, setLibFilters] = useState({ ...defaultFilters })
@@ -3045,10 +3049,26 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   const allSaved = savedBooks.map(normaliseSaved)
   const allLib = libraryBooks.map(normaliseLib)
 
+  function applyGlobal(books) {
+    return books.filter(b => {
+      if (globalSubject !== 'All' && b.subject !== globalSubject) return false
+      if (globalYear !== 'All' && b.yearGroup !== globalYear) return false
+      if (globalSearch && !b.title.toLowerCase().includes(globalSearch.toLowerCase()) &&
+          !b.author.toLowerCase().includes(globalSearch.toLowerCase())) return false
+      return true
+    })
+  }
+
   // Favourites = starred saved books
-  const favouriteBooks = allSaved.filter(b => b.is_favourite)
+  const favouriteBooks = applyGlobal(allSaved.filter(b => b.is_favourite))
   // Recently used = non-starred saved books
-  const recentBooks = allSaved.filter(b => !b.is_favourite)
+  const recentBooks = applyGlobal(allSaved.filter(b => !b.is_favourite))
+  // Library with global filter
+  const filteredLib = applyGlobal(allLib)
+
+  const allSubjects = ['All', ...Array.from(new Set([...allSaved, ...allLib].map(b => b.subject).filter(Boolean))).sort()]
+  const allYears = ['All', ...Array.from(new Set([...allSaved, ...allLib].map(b => b.yearGroup).filter(Boolean))).sort()]
+  const totalBooks = favouriteBooks.length + filteredLib.length + recentBooks.length
 
   async function toggleFavourite(book) {
     if (book.source === 'saved') {
@@ -3139,6 +3159,42 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
           </div>
         </div>
 
+        {/* Global search bar */}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 30, padding: '8px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 180, position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: 15, color: MUTED, marginRight: 8, flexShrink: 0 }}>🔍</span>
+            <input
+              style={{ flex: 1, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+              placeholder="Search your books..."
+              value={globalSearch}
+              onChange={e => setGlobalSearch(e.target.value)}
+            />
+            {globalSearch && (
+              <span onClick={() => setGlobalSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', marginLeft: 6, flexShrink: 0 }}>✕</span>
+            )}
+          </div>
+          <div style={{ width: '0.5px', height: 20, background: BORDER, flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500, whiteSpace: 'nowrap' }}>Subject</span>
+            <select
+              style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalSubject !== 'All' ? LIGHT_GREEN : BG, color: globalSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+              value={globalSubject} onChange={e => setGlobalSubject(e.target.value)}>
+              {allSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+            </select>
+          </div>
+          <div style={{ width: '0.5px', height: 20, background: BORDER, flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 500, whiteSpace: 'nowrap' }}>Year</span>
+            <select
+              style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalYear !== 'All' ? LIGHT_GREEN : BG, color: globalYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+              value={globalYear} onChange={e => setGlobalYear(e.target.value)}>
+              {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
+            </select>
+          </div>
+          <div style={{ width: '0.5px', height: 20, background: BORDER, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>{totalBooks} book{totalBooks !== 1 ? 's' : ''}</span>
+        </div>
+
         {loading && <div style={{ textAlign: 'center', padding: '3rem', color: MUTED, fontSize: 14 }}>Loading your books...</div>}
 
         {!loading && (
@@ -3168,7 +3224,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                 </div>
                 <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Books you own — add, edit and create plans from your physical collection</p>
               </div>
-              {renderSection(allLib, libVisible, setLibVisible, libFilters, setLibFilters, "Add the books you own to quickly create plans from them", "🏫")}
+              {renderSection(filteredLib, libVisible, setLibVisible, libFilters, setLibFilters, "Add the books you own to quickly create plans from them", "🏫")}
             </div>
 
             <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, marginBottom: '2rem' }} />
