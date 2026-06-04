@@ -2958,7 +2958,7 @@ function BookModal({ book, onClose, onSave, isEdit }) {
               </div>
               <div>
                 <label style={s.label}>Number of copies</label>
-                <input style={inputStyle} type="number" min="1" value={form.copies} onChange={e => setForm(f => ({ ...f, copies: e.target.value }))} />
+                <input style={inputStyle} type="number" min="1" max="999" value={form.copies} onChange={e => setForm(f => ({ ...f, copies: Math.min(999, Math.max(1, parseInt(e.target.value) || 1)) }))} />
               </div>
               <div>
                 <label style={s.label}>Notes <span style={s.labelOpt}>— optional</span></label>
@@ -3186,6 +3186,115 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
   )
 }
 
+// ── Book Info Modal ──────────────────────────────────────────────────────────
+function BookInfoModal({ book, onClose }) {
+  const [details, setDetails] = useState(null)
+  const [loadingDetails, setLoadingDetails] = useState(true)
+  const [coverError, setCoverError] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      setLoadingDetails(true)
+      try {
+        const query = encodeURIComponent(`${book.title} ${book.author}`)
+        const res = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=1`)
+        const data = await res.json()
+        if (data.docs?.length > 0) {
+          const b = data.docs[0]
+          setDetails({
+            publisher: b.publisher?.[0] || null,
+            firstPublished: b.first_publish_year || null,
+            pages: b.number_of_pages_median || null,
+            subjects: b.subject?.slice(0, 5) || [],
+            coverUrl: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-L.jpg` : null,
+            illustrator: b.contributor?.find(c => c.toLowerCase().includes('illustrat')) || null,
+          })
+        }
+      } catch(e) {}
+      setLoadingDetails(false)
+    }
+    load()
+  }, [book.title])
+
+  const cover = details?.coverUrl && !coverError ? details.coverUrl : null
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '85vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT }}>Book details</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED, lineHeight: 1, flexShrink: 0, marginLeft: 12 }}>×</button>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', marginBottom: 20 }}>
+            {/* Cover */}
+            <div style={{ flexShrink: 0 }}>
+              {loadingDetails ? (
+                <div style={{ width: 90, height: 130, background: PAGE_BG, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>📚</div>
+              ) : cover ? (
+                <img src={cover} alt={book.title} onError={() => setCoverError(true)}
+                  style={{ width: 90, borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.12)', display: 'block' }} />
+              ) : (
+                <div style={{ width: 90, height: 130, background: LIGHT_GREEN, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>📖</div>
+              )}
+            </div>
+            {/* Info */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: TEXT, marginBottom: 4, lineHeight: 1.3 }}>{book.title}</div>
+              <div style={{ fontSize: 13, color: GREEN, fontStyle: 'italic', marginBottom: 12 }}>{book.author}</div>
+              {loadingDetails ? (
+                <p style={{ fontSize: 13, color: MUTED }}>Loading details...</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {details?.illustrator && <div style={{ fontSize: 13, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Illustrator: </span>{details.illustrator}</div>}
+                  {details?.publisher && <div style={{ fontSize: 13, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Publisher: </span>{details.publisher}</div>}
+                  {details?.firstPublished && <div style={{ fontSize: 13, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>First published: </span>{details.firstPublished}</div>}
+                  {details?.pages && <div style={{ fontSize: 13, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Pages: </span>{details.pages}</div>}
+                  {!details && <p style={{ fontSize: 13, color: MUTED }}>No additional details found.</p>}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+            <span style={{ fontSize: 11, fontWeight: 500, background: LIGHT_GREEN, color: '#085041', padding: '2px 8px', borderRadius: 20 }}>{book.subject}</span>
+            <span style={{ fontSize: 11, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: '2px 8px', borderRadius: 20 }}>{book.yearGroup}</span>
+          </div>
+
+          {/* Subjects from Open Library */}
+          {details?.subjects?.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Subjects</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {details.subjects.map(sub => (
+                  <span key={sub} style={{ padding: '2px 8px', borderRadius: 20, border: `0.5px solid ${BORDER}`, fontSize: 11, color: MUTED, background: PAGE_BG }}>{sub}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Why recommended */}
+          {book.reason && (
+            <div style={{ background: PAGE_BG, borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Why it was recommended</div>
+              <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>{book.reason}</p>
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '12px 20px', borderTop: `0.5px solid ${BORDER}` }}>
+          <button onClick={onClose} style={{ height: 36, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── My Books Page ─────────────────────────────────────────────────────────────
 
 function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onViewPlans }) {
@@ -3287,6 +3396,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   const [favVisible, setFavVisible] = useState(6)
   const [recentVisible, setRecentVisible] = useState(6)
   const [viewingPlans, setViewingPlans] = useState(null)
+  const [viewingBook, setViewingBook] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -3374,7 +3484,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                     {filteredFavourites.slice(0, favVisible).map(book => (
                       <BookGridCard key={book.id} book={book} isFavourite={true} onToggleFavourite={toggleFavourite}
-                        onViewBook={b => onSelectBook && onSelectBook({ title: b.title, author: b.author, reason: b.reason || '' })}
+                        onViewBook={b => setViewingBook(b)}
                         onViewPlans={b => setViewingPlans(b)} />
                     ))}
                   </div>
@@ -3412,7 +3522,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                     {filteredRecent.slice(0, recentVisible).map(book => (
                       <BookGridCard key={book.id} book={book} isFavourite={false} onToggleFavourite={toggleFavourite}
-                        onViewBook={b => onSelectBook && onSelectBook({ title: b.title, author: b.author, reason: b.reason || '' })}
+                        onViewBook={b => setViewingBook(b)}
                         onViewPlans={b => setViewingPlans(b)} />
                     ))}
                   </div>
@@ -3439,6 +3549,9 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         onEditPlan={() => {}}
         onDeletePlan={() => {}}
       />
+    )}
+    {viewingBook && (
+      <BookInfoModal book={viewingBook} onClose={() => setViewingBook(null)} />
     )}
     </>
   )
