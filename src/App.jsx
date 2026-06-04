@@ -1710,6 +1710,18 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
     </div>
+
+    {viewingPlans && (
+      <PlansModal
+        book={{ title: viewingPlans.title, author: viewingPlans.author, emoji: '📚' }}
+        plans={bookPlans[viewingPlans.title] || []}
+        onClose={() => setViewingPlans(null)}
+        onAddPlan={() => { setViewingPlans(null); onSelectBook && onSelectBook({ title: viewingPlans.title, author: viewingPlans.author, reason: '' }) }}
+        onViewPlan={(plan) => setViewingPlans(null)}
+        onEditPlan={() => {}}
+        onDeletePlan={() => {}}
+      />
+    )}
   )
 }
 
@@ -1765,6 +1777,81 @@ const SUBJECT_COLOURS = {
   RE: { bg: '#F0F9FF', color: '#075985' },
   DT: { bg: '#FAFAF9', color: '#44403C' },
   Computing: { bg: '#F8FAFC', color: '#0F172A' },
+}
+
+// ── My Plan Download Button ───────────────────────────────────────────────────
+function MyPlanDownloadButton({ plan, group }) {
+  const [open, setOpen] = useState(false)
+  const [downloading, setDownloading] = useState(null)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  async function loadFullPlan() {
+    const { data: lessons } = await supabase.from('lessons').select('*').eq('plan_id', plan.id).order('lesson_number')
+    const { data: planData } = await supabase.from('plans').select('*').eq('id', plan.id).single()
+    return { ...planData, lessons: lessons || [] }
+  }
+
+  async function handle(format) {
+    setOpen(false)
+    setDownloading(format)
+    try {
+      const fullPlan = await loadFullPlan()
+      const bookObj = { title: group.book.title, author: group.book.author || '' }
+      const ideaObj = { title: fullPlan.title, subject: fullPlan.subject, description: fullPlan.unit_overview || '' }
+      const planObj = {
+        unitOverview: fullPlan.unit_overview,
+        lessons: (fullPlan.lessons || []).map(l => ({
+          lessonNumber: l.lesson_number, title: l.title, type: l.type,
+          lessonOverview: l.lesson_overview, learningIntention: l.learning_intention,
+          successCriteria: l.success_criteria, mainActivity: l.main_activity,
+          teacherNotes: l.teacher_notes, ncLinks: l.nc_links, sendAdaptations: l.send_adaptations,
+        })),
+        modelExample: fullPlan.model_example,
+      }
+      if (format === 'txt') downloadTxt(bookObj, fullPlan.year_group, ideaObj, planObj)
+      if (format === 'pdf') await downloadPdf(bookObj, fullPlan.year_group, ideaObj, planObj)
+      if (format === 'docx') await downloadDocx(bookObj, fullPlan.year_group, ideaObj, planObj)
+    } catch(e) { console.error('Download error:', e) }
+    setDownloading(null)
+  }
+
+  const formats = [
+    { id: 'pdf', label: '📄 PDF', desc: 'Print-ready' },
+    { id: 'docx', label: '📝 Word', desc: 'Editable' },
+    { id: 'txt', label: '📃 Text', desc: 'Plain text' },
+  ]
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        disabled={!!downloading}
+        style={{ height: 28, padding: '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: downloading ? MUTED : TEXT, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {downloading ? '⏳' : '⬇'} {downloading ? `${downloading.toUpperCase()}...` : 'Download'}
+        {!downloading && <span style={{ fontSize: 9 }}>▼</span>}
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 300 }}>
+          <div style={{ padding: '7px 12px 5px', fontSize: 10, color: MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `0.5px solid ${BORDER}` }}>Choose format</div>
+          {formats.map(f => (
+            <div key={f.id} onClick={() => handle(f.id)}
+              style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <span style={{ fontSize: 12, color: TEXT, fontWeight: 500 }}>{f.label}</span>
+              <span style={{ fontSize: 10, color: MUTED }}>{f.desc}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function MyPlansPage({ onNavigate }) {
@@ -1981,9 +2068,7 @@ function MyPlansPage({ onNavigate }) {
                           <button onClick={() => setViewingPlan({ plan, group })} style={{ height: 28, padding: "0 12px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                             View
                           </button>
-                          <button style={{ height: 28, padding: "0 12px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                            ⬇ Download
-                          </button>
+                          <MyPlanDownloadButton plan={plan} group={group} />
                         </div>
                       </div>
                     )
@@ -3104,7 +3189,7 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
 
 // ── My Books Page ─────────────────────────────────────────────────────────────
 
-function BookGridCard({ book, isFavourite, onToggleFavourite }) {
+function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onViewPlans }) {
   const [hovered, setHovered] = useState(false)
   const subjectMeta = SUBJECTS.find(s => s.name === book.subject)
 
@@ -3117,7 +3202,6 @@ function BookGridCard({ book, isFavourite, onToggleFavourite }) {
       {/* Cover area */}
       <div style={{ background: LIGHT_GREEN, height: 110, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", fontSize: 42 }}>
         {subjectMeta?.emoji || "📚"}
-        {/* Favourite star */}
         <button
           onClick={() => onToggleFavourite(book.title)}
           style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
@@ -3125,10 +3209,9 @@ function BookGridCard({ book, isFavourite, onToggleFavourite }) {
         >
           {isFavourite ? "⭐" : "☆"}
         </button>
-        {/* Has plans badge */}
-        {book.hasPlans && (
+        {book.planCount > 0 && (
           <div style={{ position: "absolute", bottom: 8, left: 8, background: GREEN, color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20 }}>
-            📝 Has plans
+            📝 {book.planCount} plan{book.planCount !== 1 ? 's' : ''}
           </div>
         )}
       </div>
@@ -3137,12 +3220,10 @@ function BookGridCard({ book, isFavourite, onToggleFavourite }) {
       <div style={{ padding: "12px 12px 10px", flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ fontFamily: "'Lora', serif", fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, marginBottom: 3 }}>{book.title}</div>
         <div style={{ fontSize: 11, color: GREEN, fontStyle: "italic", marginBottom: 8 }}>{book.author}</div>
-
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
           <span style={{ fontSize: 10, fontWeight: 500, background: LIGHT_GREEN, color: "#085041", padding: "2px 7px", borderRadius: 20 }}>{book.subject}</span>
           <span style={{ fontSize: 10, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: "2px 7px", borderRadius: 20 }}>{book.yearGroup}</span>
         </div>
-
         <div style={{ marginTop: "auto", paddingTop: 8, borderTop: `0.5px solid ${BORDER}` }}>
           <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>
             <span style={{ fontWeight: 500, color: TEXT }}>Last used:</span> {book.lastUsed}
@@ -3155,11 +3236,15 @@ function BookGridCard({ book, isFavourite, onToggleFavourite }) {
 
       {/* Actions */}
       <div style={{ padding: "8px 12px 12px", display: "flex", gap: 6 }}>
-        <button style={{ flex: 1, height: 30, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+        <button
+          onClick={() => onViewBook && onViewBook(book)}
+          style={{ flex: 1, height: 30, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
           View book
         </button>
-        <button style={{ flex: 1, height: 30, background: book.hasPlans ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${book.hasPlans ? GREEN : BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: book.hasPlans ? "#085041" : MUTED, cursor: book.hasPlans ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif" }}>
-          {book.hasPlans ? "View plans" : "No plans yet"}
+        <button
+          onClick={() => book.planCount > 0 && onViewPlans && onViewPlans(book)}
+          style={{ flex: 1, height: 30, background: book.planCount > 0 ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${book.planCount > 0 ? GREEN : BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: book.planCount > 0 ? "#085041" : MUTED, cursor: book.planCount > 0 ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif" }}>
+          {book.planCount > 0 ? `View plans (${book.planCount})` : "No plans yet"}
         </button>
       </div>
     </div>
@@ -3220,13 +3305,16 @@ function applyFilters(books, filters) {
 
 const defaultFilters = { subject: 'All', yearGroup: 'All', hasPlans: false }
 
-function MyBooksPage({ onNavigate }) {
+function MyBooksPage({ onNavigate, onSelectBook }) {
   const [savedBooks, setSavedBooks] = useState([])
+  const [planCounts, setPlanCounts] = useState({})
+  const [bookPlans, setBookPlans] = useState({})
   const [loading, setLoading] = useState(true)
   const [favFilters, setFavFilters] = useState({ ...defaultFilters })
   const [recentFilters, setRecentFilters] = useState({ ...defaultFilters })
   const [favVisible, setFavVisible] = useState(6)
   const [recentVisible, setRecentVisible] = useState(6)
+  const [viewingPlans, setViewingPlans] = useState(null) // book
 
   useEffect(() => {
     async function load() {
@@ -3237,7 +3325,31 @@ function MyBooksPage({ onNavigate }) {
         .select('*')
         .eq('user_id', user?.id)
         .order('last_accessed', { ascending: false })
-      if (!error) setSavedBooks(data || [])
+      if (!error && data) {
+        setSavedBooks(data)
+        // Load plan counts for each book
+        const { data: plans } = await supabase
+          .from('plans')
+          .select('id, title, subject, lesson_count, created_at, book_title, year_group')
+          .eq('user_id', user?.id)
+        if (plans) {
+          const counts = {}
+          const grouped = {}
+          data.forEach(b => {
+            const bookPlans = plans.filter(p => p.book_title === b.title)
+            counts[b.title] = bookPlans.length
+            grouped[b.title] = bookPlans.map(p => ({
+              id: p.id,
+              title: p.title,
+              subject: p.subject,
+              lessons: p.lesson_count,
+              created: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+            }))
+          })
+          setPlanCounts(counts)
+          setBookPlans(grouped)
+        }
+      }
       setLoading(false)
     }
     load()
@@ -3247,21 +3359,17 @@ function MyBooksPage({ onNavigate }) {
     const book = savedBooks.find(b => b.title === title)
     if (!book) return
     const newVal = !book.is_favourite
-    const { error } = await supabase
-      .from('saved_books')
-      .update({ is_favourite: newVal })
-      .eq('id', book.id)
+    const { error } = await supabase.from('saved_books').update({ is_favourite: newVal }).eq('id', book.id)
     if (!error) setSavedBooks(prev => prev.map(b => b.title === title ? { ...b, is_favourite: newVal } : b))
   }
 
-  // Normalise DB fields to match BookGridCard expectations
   function normalise(b) {
     return {
       ...b,
       yearGroup: b.year_group,
       lastUsed: b.last_used ? new Date(b.last_used).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
       lastAccessed: b.last_accessed ? new Date(b.last_accessed).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-      hasPlans: false,
+      planCount: planCounts[b.title] || 0,
       emoji: '📚',
     }
   }
@@ -3320,7 +3428,9 @@ function MyBooksPage({ onNavigate }) {
                 <div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                     {filteredFavourites.slice(0, favVisible).map(book => (
-                      <BookGridCard key={book.id} book={book} isFavourite={true} onToggleFavourite={toggleFavourite} />
+                      <BookGridCard key={book.id} book={book} isFavourite={true} onToggleFavourite={toggleFavourite}
+                        onViewBook={b => onSelectBook && onSelectBook({ title: b.title, author: b.author, reason: b.reason || '' })}
+                        onViewPlans={b => setViewingPlans(b)} />
                     ))}
                   </div>
                   {filteredFavourites.length > favVisible && (
@@ -3360,7 +3470,9 @@ function MyBooksPage({ onNavigate }) {
                 <div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                     {filteredRecent.slice(0, recentVisible).map(book => (
-                      <BookGridCard key={book.id} book={book} isFavourite={false} onToggleFavourite={toggleFavourite} />
+                      <BookGridCard key={book.id} book={book} isFavourite={false} onToggleFavourite={toggleFavourite}
+                        onViewBook={b => onSelectBook && onSelectBook({ title: b.title, author: b.author, reason: b.reason || '' })}
+                        onViewPlans={b => setViewingPlans(b)} />
                     ))}
                   </div>
                   {filteredRecent.length > recentVisible && (
@@ -3515,7 +3627,7 @@ export default function App() {
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} />
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
       {page === 'library' && <MyLibraryPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
-      {page === 'books' && <MyBooksPage onNavigate={handleNavigate} />}
+      {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
         <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />
