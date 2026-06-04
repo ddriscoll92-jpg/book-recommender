@@ -3127,1382 +3127,154 @@ function MyBooksPage({ onNavigate }) {
   )
 }
 
-// ── My Plans Page ─────────────────────────────────────────────────────────────
-const DUMMY_PLANS = [
-  {
-    book: { title: 'Horrible Histories: Ruthless Romans', author: 'Terry Deary', emoji: '🏛️' },
-    subject: 'History',
-    yearGroup: 'Year 4',
-    plans: [
-      { id: 1, title: 'Roman Mosaic Patterns', subject: 'Art', lessons: 5, created: '28 May 2025', topic: 'Romans' },
-      { id: 2, title: 'Writing a Roman Diary Entry', subject: 'Literacy', lessons: 6, created: '28 May 2025', topic: 'Romans' },
-      { id: 3, title: 'Roman Settlements and Maps', subject: 'Geography', lessons: 4, created: '29 May 2025', topic: 'Romans' },
-    ],
-  },
-  {
-    book: { title: 'The Iron Man', author: 'Ted Hughes', emoji: '✏️' },
-    subject: 'Literacy',
-    yearGroup: 'Year 5',
-    plans: [
-      { id: 4, title: 'Descriptive Writing — The Iron Man', subject: 'Literacy', lessons: 5, created: '12 Apr 2025', topic: 'The Iron Man' },
-      { id: 5, title: 'Forces and Materials', subject: 'Science', lessons: 4, created: '14 Apr 2025', topic: 'The Iron Man' },
-    ],
-  },
-  {
-    book: { title: 'Fantastic Mr Fox', author: 'Roald Dahl', emoji: '✏️' },
-    subject: 'Literacy',
-    yearGroup: 'Year 3',
-    plans: [
-      { id: 6, title: 'Character Description', subject: 'Literacy', lessons: 5, created: '3 Mar 2025', topic: 'Fantastic Mr Fox' },
-    ],
-  },
-  {
-    book: { title: 'DK Eyewitness: Ancient Rome', author: 'DK', emoji: '🏛️' },
-    subject: 'History',
-    yearGroup: 'Year 4',
-    plans: [
-      { id: 7, title: 'The Roman Army', subject: 'History', lessons: 6, created: '31 May 2025', topic: 'Romans' },
-    ],
-  },
-]
+// ── Auth Page ─────────────────────────────────────────────────────────────────
+function AuthPage({ onAuth }) {
+  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-const SUBJECT_COLOURS = {
-  Literacy: { bg: '#EEF2FF', color: '#3730A3' },
-  History: { bg: '#FEF3C7', color: '#92400E' },
-  Art: { bg: '#FCE7F3', color: '#9D174D' },
-  Geography: { bg: '#ECFDF5', color: '#065F46' },
-  Science: { bg: '#EFF6FF', color: '#1E40AF' },
-  Maths: { bg: '#FFF7ED', color: '#9A3412' },
-  PSHE: { bg: '#FDF4FF', color: '#7E22CE' },
-  Music: { bg: '#F0FDF4', color: '#166534' },
-  PE: { bg: '#FFF1F2', color: '#9F1239' },
-  RE: { bg: '#F0F9FF', color: '#075985' },
-  DT: { bg: '#FAFAF9', color: '#44403C' },
-  Computing: { bg: '#F8FAFC', color: '#0F172A' },
-}
-
-function MyPlansPage({ onNavigate }) {
-  const [plans, setPlans] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [filterSubject, setFilterSubject] = useState('All')
-  const [filterYear, setFilterYear] = useState('All')
-  const [openBooks, setOpenBooks] = useState({})
-
-  useEffect(() => {
-    async function loadPlans() {
-      setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data, error } = await supabase
-        .from('plans')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-      if (!error && data) {
-        // Group by book
-        const groups = []
-        data.forEach(plan => {
-          const existing = groups.find(g => g.book.title === plan.book_title)
-          const planEntry = {
-            id: plan.id,
-            title: plan.title,
-            subject: plan.subject,
-            lessons: plan.lesson_count,
-            topic: plan.title,
-            created: new Date(plan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-          }
-          if (existing) {
-            existing.plans.push(planEntry)
-          } else {
-            groups.push({
-              book: { title: plan.book_title, author: plan.book_author || '', emoji: plan.book_emoji || '📚' },
-              yearGroup: plan.year_group,
-              plans: [planEntry]
-            })
-          }
-        })
-        setPlans(groups)
-      }
-      setLoading(false)
-    }
-    loadPlans()
-  }, [])
-
-  const allSubjects = ['All', ...Array.from(new Set(plans.flatMap(g => g.plans.map(p => p.subject)))).sort()]
-  const allYears = ['All', ...Array.from(new Set(plans.map(g => g.yearGroup))).sort()]
-
-  const filteredGroups = plans.map(group => {
-    const filteredPlans = group.plans.filter(plan => {
-      if (filterSubject !== 'All' && plan.subject !== filterSubject) return false
-      if (filterYear !== 'All' && group.yearGroup !== filterYear) return false
-      if (search && !plan.title.toLowerCase().includes(search.toLowerCase()) &&
-          !group.book.title.toLowerCase().includes(search.toLowerCase())) return false
-      return true
-    })
-    return { ...group, plans: filteredPlans }
-  }).filter(g => g.plans.length > 0)
-
-  const totalPlans = filteredGroups.reduce((acc, g) => acc + g.plans.length, 0)
-  const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search
-
-  function toggleBook(title) {
-    setOpenBooks(prev => ({ ...prev, [title]: !prev[title] }))
-  }
-
-  const selectStyle = { height: 32, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 12px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
-
-  return (
-    <div style={{ ...s.page, maxWidth: "100%" }}>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>📋</div>
-            <div>
-              <h1 style={s.h1}>My Plans</h1>
-              <p style={s.headerSub}>All your generated lesson plans, organised by book</p>
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate("search")}
-            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}
-          >
-            + Create new plan
-          </button>
-        </div>
-
-        {/* Filter bar */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {/* Search */}
-          <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: MUTED }}>🔍</span>
-            <input
-              style={{ ...s.input, paddingLeft: 30, height: 32, fontSize: 13 }}
-              placeholder="Search by book, plan or topic..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          {/* Subject */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
-            <select style={{ ...selectStyle, borderColor: filterSubject !== 'All' ? GREEN : BORDER, background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT }}
-              value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
-              {allSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
-            </select>
-          </div>
-          {/* Year group */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Year</span>
-            <select style={{ ...selectStyle, borderColor: filterYear !== 'All' ? GREEN : BORDER, background: filterYear !== 'All' ? LIGHT_GREEN : BG, color: filterYear !== 'All' ? '#085041' : TEXT }}
-              value={filterYear} onChange={e => setFilterYear(e.target.value)}>
-              {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
-            </select>
-          </div>
-          {filtersActive && (
-            <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }}
-              style={{ fontSize: 12, color: MUTED, cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>
-              Clear all
-            </span>
-          )}
-          <span style={{ fontSize: 12, color: MUTED, marginLeft: "auto", whiteSpace: "nowrap" }}>
-            {totalPlans} plan{totalPlans !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {/* Loading state */}
-        {loading && (
-          <div style={{ textAlign: "center", padding: "3rem", color: MUTED, fontSize: 14 }}>Loading your plans...</div>
-        )}
-
-        {/* Empty state */}
-        {!loading && filteredGroups.length === 0 && (
-          <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 6 }}>
-              {filtersActive ? 'No plans match your filters' : 'No plans yet'}
-            </div>
-            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
-              {filtersActive ? 'Try adjusting your search or filters.' : 'Find a book and generate your first lesson plan to get started.'}
-            </div>
-            {filtersActive
-              ? <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 13, color: GREEN, cursor: "pointer", textDecoration: "underline" }}>Clear filters</span>
-              : <button onClick={() => onNavigate('search')} style={{ height: 36, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Find a book</button>
-            }
-          </div>
-        )}
-
-        {/* Book groups */}
-        {!loading && filteredGroups.map(group => {
-          const isOpen = openBooks[group.book.title]
-          return (
-            <div key={group.book.title} style={{ marginBottom: 12 }}>
-
-              {/* Book header */}
-              <div
-                onClick={() => toggleBook(group.book.title)}
-                style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: isOpen ? "12px 12px 0 0" : 12, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, background: LIGHT_GREEN, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{group.book.emoji}</div>
-                  <div>
-                    <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT, lineHeight: 1.3 }}>{group.book.title}</div>
-                    <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
-                      <span style={{ fontStyle: "italic" }}>{group.book.author}</span>
-                      <span style={{ margin: "0 6px" }}>·</span>
-                      {group.yearGroup}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
-                    {group.plans.length} plan{group.plans.length !== 1 ? 's' : ''}
-                  </span>
-                  <span style={{ fontSize: 13, color: MUTED, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
-                </div>
-              </div>
-
-              {/* Plans list */}
-              {isOpen && (
-                <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
-                  {group.plans.map((plan, pi) => {
-                    const sc = SUBJECT_COLOURS[plan.subject] || { bg: PAGE_BG, color: MUTED }
-                    return (
-                      <div
-                        key={plan.id}
-                        style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, borderTop: pi > 0 ? `0.5px solid ${BORDER}` : "none", background: BG }}
-                        onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
-                        onMouseLeave={e => e.currentTarget.style.background = BG}
-                      >
-                        {/* Subject badge */}
-                        <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {plan.subject}
-                        </span>
-
-                        {/* Plan info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
-                          <div style={{ fontSize: 11, color: MUTED }}>
-                            {plan.lessons} lessons · Created {plan.created}
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button style={{ height: 28, padding: "0 12px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                            View
-                          </button>
-                          <button style={{ height: 28, padding: "0 12px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                            ⬇ Download
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
-      </div>
-    </div>
-  )
-}
-
-// ── Resources Page ───────────────────────────────────────────────────────────
-const RESOURCE_TYPES = [
-  { id: 'worksheet',      label: 'Worksheet',               emoji: '📄', desc: 'Differentiated — below, at and above expectation' },
-  { id: 'starter',        label: 'Lesson starter',          emoji: '🎯', desc: 'Warm-up activity to begin the lesson' },
-  { id: 'exit_ticket',    label: 'Exit ticket',             emoji: '✅', desc: 'Quick end-of-lesson assessment' },
-  { id: 'writing_frame',  label: 'Writing frame',           emoji: '🖊️', desc: 'Scaffold to support extended writing' },
-  { id: 'knowledge_org',  label: 'Knowledge organiser',     emoji: '📊', desc: 'Visual summary of key facts and vocabulary' },
-  { id: 'vocab_cards',    label: 'Vocabulary cards',        emoji: '🃏', desc: 'Key terms with definitions' },
-  { id: 'comprehension',  label: 'Reading comprehension',   emoji: '🔍', desc: 'Questions to check understanding of a text' },
-]
-
-function ResourceOutput({ resource }) {
-  const [downloading, setDownloading] = useState(null)
-
-  async function handleDownload(format) {
-    setDownloading(format)
+  async function handleSubmit() {
+    if (!email || !password) { setError('Please fill in all fields.'); return }
+    if (mode === 'signup' && !name) { setError('Please enter your name.'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    setLoading(true); setError(''); setSuccess('')
     try {
-      if (format === 'txt') {
-        const lines = []
-        lines.push(resource.title)
-        lines.push('='.repeat(60))
-        lines.push(resource.meta || '')
-        lines.push('')
-        resource.sections?.forEach(sec => {
-          lines.push(sec.heading.toUpperCase())
-          lines.push('-'.repeat(40))
-          lines.push(sec.content)
-          lines.push('')
-        })
-        const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${resource.title.replace(/[^a-z0-9]/gi, '_')}.txt`
-        a.click()
-        URL.revokeObjectURL(url)
-      } else if (format === 'pdf') {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-        const { jsPDF } = window.jspdf
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-        const GREEN_RGB = [29, 158, 117]; const NAVY_RGB = [30, 36, 51]; const MUTED_RGB = [95, 94, 90]
-        const margin = 18; const pageW = 210; const contentW = pageW - margin * 2
-        let y = 0
-        function addPage() { doc.addPage(); y = 18 }
-        function checkY(n = 10) { if (y + n > 275) addPage() }
-        function body(text, size = 10, color = MUTED_RGB) {
-          if (!text) return
-          checkY(8); doc.setFontSize(size); doc.setTextColor(...color); doc.setFont('helvetica', 'normal')
-          const lines = doc.splitTextToSize(String(text), contentW)
-          doc.text(lines, margin, y); y += lines.length * (size * 0.45) + 2
-        }
-        // Header
-        doc.setFillColor(...NAVY_RGB); doc.rect(0, 0, pageW, 32, 'F')
-        doc.setFontSize(15); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold')
-        doc.text(resource.title, margin, 13)
-        doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(139,147,167)
-        doc.text(resource.meta || '', margin, 22)
-        doc.setFontSize(8); doc.text('Generated by TeachReads', margin, 29)
-        y = 42
-        resource.sections?.forEach(sec => {
-          checkY(14)
-          doc.setFillColor(...GREEN_RGB); doc.roundedRect(margin, y - 4, contentW, 7, 1.5, 1.5, 'F')
-          doc.setFontSize(9); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold')
-          doc.text(sec.heading.toUpperCase(), margin + 4, y + 0.5); y += 9
-          body(sec.content); y += 4
-        })
-        doc.save(`${resource.title.replace(/[^a-z0-9]/gi, '_')}.pdf`)
-      } else if (format === 'docx') {
-        await loadScript('https://unpkg.com/docx@8.5.0/build/index.js')
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
-        const { Document, Packer, Paragraph, TextRun, ShadingType, AlignmentType } = window.docx
-        const { saveAs } = window
-        const children = [
-          new Paragraph({ children: [new TextRun({ text: resource.title, bold: true, color: '1E2433', size: 36 })], spacing: { after: 80 } }),
-          new Paragraph({ children: [new TextRun({ text: resource.meta || '', color: '5F5E5A', size: 18, italics: true })], spacing: { after: 400 } }),
-          ...(resource.sections?.flatMap(sec => [
-            new Paragraph({ children: [new TextRun({ text: sec.heading, bold: true, color: 'FFFFFF', size: 22 })], shading: { type: ShadingType.SOLID, color: '1D9E75' }, spacing: { before: 300, after: 140 }, indent: { left: 100, right: 100 } }),
-            new Paragraph({ children: [new TextRun({ text: sec.content, color: '5F5E5A', size: 20 })], spacing: { after: 200 }, indent: { left: 100 } }),
-          ]) || []),
-          new Paragraph({ children: [new TextRun({ text: 'Generated by TeachReads', color: 'B4B2A9', size: 16, italics: true })], spacing: { before: 600 }, alignment: AlignmentType.CENTER }),
-        ]
-        const docFile = new Document({ sections: [{ properties: {}, children }] })
-        const blob = await Packer.toBlob(docFile)
-        saveAs(blob, `${resource.title.replace(/[^a-z0-9]/gi, '_')}.docx`)
+      if (mode === 'signup') {
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } })
+        if (error) throw error
+        setSuccess('Account created! You can now sign in.')
+        setMode('login')
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        onAuth()
       }
-    } finally { setDownloading(null) }
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    }
+    setLoading(false)
   }
 
-  const formats = [
-    { id: 'pdf', label: '📄 PDF', desc: 'Print-ready' },
-    { id: 'docx', label: '📝 Word', desc: 'Editable' },
-    { id: 'txt', label: '📃 Text', desc: 'Plain text' },
-  ]
+  const inputStyle = { width: '100%', height: 44, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 14px', fontSize: 15, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" }
 
   return (
-    <div style={{ marginTop: 20 }}>
-      {/* Resource header */}
-      <div style={{ background: NAVY, borderRadius: "12px 12px 0 0", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+    <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' }}>
+        <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📚</div>
         <div>
-          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: "#FFFFFF", marginBottom: 3 }}>{resource.title}</div>
-          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{resource.meta}</div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 26, fontWeight: 500, color: TEXT }}>TeachReads</div>
+          <div style={{ fontSize: 13, color: MUTED }}>Lesson planning for UK primary teachers</div>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {formats.map(f => (
-            <button key={f.id} onClick={() => handleDownload(f.id)} disabled={!!downloading}
-              style={{ height: 30, padding: "0 10px", background: downloading === f.id ? NAVY_LIGHT : "transparent", border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 11, color: downloading === f.id ? "#fff" : NAVY_MUTED, cursor: downloading ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-              {downloading === f.id ? '⏳' : f.label}
+      </div>
+      <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 14, padding: '2rem', width: '100%', maxWidth: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: '1.5rem', background: PAGE_BG, borderRadius: 8, padding: 4 }}>
+          {[['login', 'Sign in'], ['signup', 'Create account']].map(([id, label]) => (
+            <button key={id} onClick={() => { setMode(id); setError(''); setSuccess('') }}
+              style={{ flex: 1, height: 36, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : 'transparent', color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+              {label}
             </button>
           ))}
         </div>
-      </div>
-      {/* Sections */}
-      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
-        {resource.sections?.map((sec, i) => (
-          <div key={i} style={{ borderTop: i > 0 ? `0.5px solid ${BORDER}` : "none" }}>
-            <div style={{ background: LIGHT_GREEN, padding: "8px 16px", fontSize: 11, fontWeight: 600, color: "#085041", textTransform: "uppercase", letterSpacing: "0.06em" }}>{sec.heading}</div>
-            <div style={{ padding: "12px 16px", background: BG, fontSize: 14, color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{sec.content}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function ResourcesPage({ onNavigate }) {
-  const [tab, setTab] = useState('adhoc') // 'plan' | 'adhoc'
-
-  // Plan-based state
-  const [selectedPlanGroup, setSelectedPlanGroup] = useState(null)
-  const [selectedPlan, setSelectedPlan] = useState(null)
-  const [selectedLesson, setSelectedLesson] = useState(null)
-  const [selectedResourceType, setSelectedResourceType] = useState(null)
-  const [planSearch, setPlanSearch] = useState('')
-  const [planFilterSubject, setPlanFilterSubject] = useState('All')
-  const [planFilterYear, setPlanFilterYear] = useState('All')
-  const [planDropdownOpen, setPlanDropdownOpen] = useState(false)
-
-  // Ad-hoc state
-  const [prompt, setPrompt] = useState('')
-
-  // Shared state
-  const [generating, setGenerating] = useState(false)
-  const [resource, setResource] = useState(null)
-  const [error, setError] = useState('')
-
-  async function generateFromPlan() {
-    if (!selectedPlan || !selectedLesson || !selectedResourceType) return
-    setGenerating(true); setError(''); setResource(null)
-    const rt = RESOURCE_TYPES.find(r => r.id === selectedResourceType)
-    const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
-
-Book: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
-Year group: ${selectedPlanGroup.yearGroup}
-Subject: ${selectedPlan.subject}
-Lesson: ${selectedLesson.title}
-Learning intention: ${selectedLesson.learningIntention || ''}
-Resource type: ${rt.label} — ${rt.desc}
-
-Generate a complete, classroom-ready ${rt.label} resource directly tied to this lesson. Return ONLY a valid JSON object with no extra text or markdown fences:
-
-{
-  "title": "resource title",
-  "meta": "brief one-line description e.g. Year 4 · History · Roman Mosaic Patterns",
-  "sections": [
-    { "heading": "section heading", "content": "full section content — be detailed and classroom-ready" }
-  ]
-}
-
-For worksheets: include Below Expectation, At Expectation and Above Expectation sections with differentiated tasks.
-For vocab cards: list each term as Term: [word] — Definition: [meaning].
-For knowledge organisers: include Key Facts, Key People/Vocabulary, and Key Dates/Events sections.
-For all other types: use appropriate sections for the resource type.`
-
-    try {
-      const result = await callAPI(apiPrompt, true)
-      setResource(result)
-      // Save resource to Supabase
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          await supabase.from('resources').insert({
-            user_id: user.id,
-            plan_id: selectedPlan?.id || null,
-            title: result.title,
-            meta: result.meta,
-            resource_type: selectedResourceType,
-            sections: result.sections,
-            prompt: apiPrompt,
-          })
-        }
-      } catch (e) { console.warn('Could not save resource:', e) }
-    } catch { setError('Something went wrong. Please try again.') }
-    setGenerating(false)
-  }
-
-  async function generateAdhoc() {
-    if (!prompt.trim()) return
-    setGenerating(true); setError(''); setResource(null)
-    const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
-
-Teacher request: ${prompt}
-
-Generate a complete, classroom-ready resource based on this request. Return ONLY a valid JSON object with no extra text or markdown fences:
-
-{
-  "title": "resource title",
-  "meta": "brief one-line description",
-  "sections": [
-    { "heading": "section heading", "content": "full detailed classroom-ready content" }
-  ]
-}
-
-Be detailed and practical. If a worksheet is requested, differentiate for different abilities. If specific year group or subject is mentioned, align to the UK National Curriculum.`
-
-    try {
-      const result = await callAPI(apiPrompt, true)
-      setResource(result)
-      // Save resource to Supabase
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          await supabase.from('resources').insert({
-            user_id: user.id,
-            title: result.title,
-            meta: result.meta,
-            resource_type: 'adhoc',
-            sections: result.sections,
-            prompt: prompt,
-          })
-        }
-      } catch (e) { console.warn('Could not save resource:', e) }
-    } catch { setError('Something went wrong. Please try again.') }
-    setGenerating(false)
-  }
-
-  const EXAMPLE_PROMPTS = [
-    "Create a maths worksheet for Year 4 on multiplication, differentiated for below, at and above expectation",
-    "Make a Year 2 phonics activity focusing on the 'igh' sound with pictures and tracing",
-    "Create a science knowledge organiser for Year 5 on the water cycle",
-    "Generate a Year 6 reading comprehension passage and questions about the Vikings",
-    "Create a PSHE discussion activity for Year 3 about feelings and emotions",
-  ]
-
-  const tabBtn = (id, label, emoji) => (
-    <button onClick={() => { setTab(id); setResource(null); setError('') }}
-      style={{ flex: 1, height: 42, border: "none", borderBottom: tab === id ? `2px solid ${GREEN}` : "2px solid transparent", background: "transparent", cursor: "pointer", fontSize: 14, fontWeight: tab === id ? 600 : 400, color: tab === id ? GREEN : MUTED, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-      {emoji} {label}
-    </button>
-  )
-
-  return (
-    <div style={{ ...s.page, maxWidth: "100%" }}>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.75rem" }}>
-          <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>🛠️</div>
-          <div>
-            <h1 style={s.h1}>Resources</h1>
-            <p style={s.headerSub}>Generate classroom-ready resources from your plans or a custom prompt</p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
-          <div style={{ display: "flex", borderBottom: `0.5px solid ${BORDER}` }}>
-            {tabBtn('adhoc', 'Quick resource', '⚡')}
-            {tabBtn('plan', 'From a plan', '📋')}
-          </div>
-
-          <div style={{ padding: "20px" }}>
-
-            {/* ── Ad-hoc tab ── */}
-            {tab === 'adhoc' && (
-              <div>
-                <p style={{ fontSize: 13, color: MUTED, marginBottom: 14, lineHeight: 1.6 }}>
-                  Describe the resource you need. Be as specific as you like — include year group, subject, topic, and any differentiation requirements.
-                </p>
-                <textarea
-                  style={{ ...s.textarea, height: 100, borderRadius: 8, borderBottom: `0.5px solid ${BORDER}`, marginBottom: 10, fontSize: 14 }}
-                  placeholder='e.g. "Create a maths worksheet for Year 4 on multiplication, differentiated for below, at and above expectation"'
-                  value={prompt}
-                  onChange={e => setPrompt(e.target.value)}
-                />
-                {/* Example prompts */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: MUTED, fontWeight: 500, marginBottom: 6 }}>EXAMPLE PROMPTS</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {EXAMPLE_PROMPTS.map((ex, i) => (
-                      <div key={i} onClick={() => setPrompt(ex)}
-                        style={{ fontSize: 12, color: GREEN, cursor: "pointer", padding: "6px 10px", background: LIGHT_GREEN, borderRadius: 6, lineHeight: 1.5 }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#d1f0e6'}
-                        onMouseLeave={e => e.currentTarget.style.background = LIGHT_GREEN}>
-                        ⚡ {ex}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={generateAdhoc}
-                  disabled={generating || !prompt.trim()}
-                  style={s.submitBtn(generating || !prompt.trim())}
-                >
-                  {generating ? '⏳ Generating resource...' : '✨ Generate resource'}
-                </button>
-              </div>
-            )}
-
-            {/* ── Plan-based tab ── */}
-            {tab === 'plan' && (() => {
-              // Flatten all plans with their group context
-              const allPlans = DUMMY_PLANS.flatMap(group =>
-                group.plans.map(plan => ({ ...plan, group }))
-              )
-              // Derive filter options
-              const planSubjects = ['All', ...Array.from(new Set(allPlans.map(p => p.subject))).sort()]
-              const planYears = ['All', ...Array.from(new Set(allPlans.map(p => p.group.yearGroup))).sort()]
-              // Filter
-              const filteredPlans = allPlans.filter(p => {
-                if (planFilterSubject !== 'All' && p.subject !== planFilterSubject) return false
-                if (planFilterYear !== 'All' && p.group.yearGroup !== planFilterYear) return false
-                if (planSearch && !p.title.toLowerCase().includes(planSearch.toLowerCase()) &&
-                    !p.group.book.title.toLowerCase().includes(planSearch.toLowerCase())) return false
-                return true
-              })
-
-              // Dummy lesson context — in real app these come from the saved plan
-              const DUMMY_LESSON_CONTEXT = [
-                { num: 1, title: 'Introduction & exploration', type: 'Explore', intention: 'Understand the key features and context of the topic' },
-                { num: 2, title: 'Analyse key examples', type: 'Analyse', intention: 'Identify and describe specific features from real examples' },
-                { num: 3, title: 'Teach the core skill', type: 'Teach', intention: 'Learn and practise the main skill or technique for this unit' },
-                { num: 4, title: 'Practise independently', type: 'Practise', intention: 'Apply the skill independently with scaffolded support' },
-                { num: 5, title: 'Plan and structure', type: 'Apply', intention: 'Plan the structure of the final piece of work' },
-                { num: 6, title: 'Create the final piece', type: 'Create', intention: 'Produce a complete, polished final piece of work' },
-              ]
-              const lessonContext = DUMMY_LESSON_CONTEXT.slice(0, selectedPlan?.lessons || 0)
-
-              const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
-              const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
-
-              return (
-                <div>
-                  <p style={{ fontSize: 13, color: MUTED, marginBottom: 16, lineHeight: 1.6 }}>
-                    Select a plan, choose a lesson, then pick what type of resource to generate. The AI will use the full lesson context to create something tailored.
-                  </p>
-
-                  {/* Step 1 — Pick a plan with search + filters + dropdown */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                      Step 1 — Select a plan
-                    </div>
-
-                    {/* Filter row */}
-                    <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                      <div style={{ flex: 1, minWidth: 160, position: "relative" }}>
-                        <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: MUTED }}>🔍</span>
-                        <input
-                          style={{ ...s.input, height: 32, fontSize: 12, paddingLeft: 28 }}
-                          placeholder="Search plans or books..."
-                          value={planSearch}
-                          onChange={e => { setPlanSearch(e.target.value); setPlanDropdownOpen(true) }}
-                          onFocus={() => setPlanDropdownOpen(true)}
-                        />
-                      </div>
-                      <select value={planFilterSubject} onChange={e => { setPlanFilterSubject(e.target.value); setPlanDropdownOpen(true) }}
-                        style={{ height: 32, fontSize: 12, borderRadius: 8, border: `0.5px solid ${planFilterSubject !== 'All' ? GREEN : BORDER}`, padding: "0 10px", background: planFilterSubject !== 'All' ? LIGHT_GREEN : BG, color: planFilterSubject !== 'All' ? '#085041' : TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }}>
-                        {planSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
-                      </select>
-                      <select value={planFilterYear} onChange={e => { setPlanFilterYear(e.target.value); setPlanDropdownOpen(true) }}
-                        style={{ height: 32, fontSize: 12, borderRadius: 8, border: `0.5px solid ${planFilterYear !== 'All' ? GREEN : BORDER}`, padding: "0 10px", background: planFilterYear !== 'All' ? LIGHT_GREEN : BG, color: planFilterYear !== 'All' ? '#085041' : TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }}>
-                        {planYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
-                      </select>
-                    </div>
-
-                    {/* Selected plan display or dropdown */}
-                    {selectedPlan && !planDropdownOpen ? (
-                      <div style={{ padding: "10px 14px", borderRadius: 8, border: `0.5px solid ${GREEN}`, background: LIGHT_GREEN, display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: GREEN, color: "#fff" }}>{selectedPlan.subject}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: "#085041" }}>{selectedPlan.title}</div>
-                          <div style={{ fontSize: 11, color: MUTED }}>{selectedPlanGroup.book.title} · {selectedPlanGroup.yearGroup} · {selectedPlan.lessons} lessons</div>
-                        </div>
-                        <button onClick={() => { setPlanDropdownOpen(true); setSelectedPlan(null); setSelectedLesson(null) }}
-                          style={{ fontSize: 11, color: MUTED, background: "none", border: `0.5px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                          Change
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ border: `0.5px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
-                        {filteredPlans.length === 0 ? (
-                          <div style={{ padding: "1rem", textAlign: "center", color: MUTED, fontSize: 13 }}>No plans match your filters</div>
-                        ) : filteredPlans.map(plan => (
-                          <div key={plan.id}
-                            onClick={() => { setSelectedPlanGroup(plan.group); setSelectedPlan(plan); setSelectedLesson(null); setPlanDropdownOpen(false) }}
-                            style={{ padding: "10px 14px", borderBottom: `0.5px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: BG }}
-                            onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
-                            onMouseLeave={e => e.currentTarget.style.background = BG}>
-                            <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: PAGE_BG, color: MUTED, flexShrink: 0 }}>{plan.subject}</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
-                              <div style={{ fontSize: 11, color: MUTED }}>{plan.group.book.title} · {plan.group.yearGroup} · {plan.lessons} lessons</div>
-                            </div>
-                            <span style={{ fontSize: 12, color: GREEN, flexShrink: 0 }}>Select →</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Step 2 — Pick a lesson with context */}
-                  {selectedPlan && !planDropdownOpen && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                        Step 2 — Select a lesson
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {lessonContext.map(lesson => {
-                          const isSelected = selectedLesson?.num === lesson.num
-                          const tc = typeColors[lesson.type] || GREEN
-                          const tb = typeBgs[lesson.type] || LIGHT_GREEN
-                          return (
-                            <div key={lesson.num}
-                              onClick={() => setSelectedLesson(lesson)}
-                              style={{ padding: "10px 14px", borderRadius: 8, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 12 }}>
-                              {/* Lesson number */}
-                              <div style={{ width: 28, height: 28, background: isSelected ? GREEN : PAGE_BG, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: isSelected ? "#fff" : MUTED, flexShrink: 0, marginTop: 1 }}>
-                                {lesson.num}
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
-                                  <span style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#085041" : TEXT }}>{lesson.title}</span>
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: tc, background: tb, padding: "1px 7px", borderRadius: 20 }}>{lesson.type}</span>
-                                </div>
-                                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
-                                  <span style={{ fontWeight: 500 }}>Learning intention: </span>{lesson.intention}
-                                </div>
-                              </div>
-                              {isSelected && <span style={{ color: GREEN, fontSize: 16, flexShrink: 0, marginTop: 4 }}>✓</span>}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 3 — Pick resource type */}
-                  {selectedLesson && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                        Step 3 — Choose resource type
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                        {RESOURCE_TYPES.map(rt => {
-                          const isSelected = selectedResourceType === rt.id
-                          return (
-                            <div key={rt.id}
-                              onClick={() => setSelectedResourceType(rt.id)}
-                              style={{ padding: "10px 12px", borderRadius: 8, border: `0.5px solid ${isSelected ? GREEN : BORDER}`, background: isSelected ? LIGHT_GREEN : BG, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
-                              <span style={{ fontSize: 20, flexShrink: 0 }}>{rt.emoji}</span>
-                              <div>
-                                <div style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#085041" : TEXT }}>{rt.label}</div>
-                                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.4 }}>{rt.desc}</div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Generate button */}
-                  {selectedResourceType && (
-                    <button onClick={generateFromPlan} disabled={generating} style={s.submitBtn(generating)}>
-                      {generating ? '⏳ Generating resource...' : '✨ Generate resource'}
-                    </button>
-                  )}
-                </div>
-              )
-            })()}
-
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>{error}</div>
-        )}
-
-        {/* Output */}
-        {resource && <ResourceOutput resource={resource} />}
-
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
-      </div>
-    </div>
-  )
-}
-
-// ── My Library Page ──────────────────────────────────────────────────────────
-const DUMMY_LIBRARY = [
-  { id: 1, title: 'Horrible Histories: Ruthless Romans', author: 'Terry Deary', subject: 'History', yearGroup: 'Year 4', copies: 6, notes: 'Class set in Y4 cupboard', coverUrl: null, emoji: '🏛️', addedDate: '10 Jan 2025' },
-  { id: 2, title: 'The Iron Man', author: 'Ted Hughes', subject: 'Literacy', yearGroup: 'Year 5', copies: 1, notes: 'Teacher copy only', coverUrl: null, emoji: '✏️', addedDate: '3 Feb 2025' },
-  { id: 3, title: 'Fantastic Mr Fox', author: 'Roald Dahl', subject: 'Literacy', yearGroup: 'Year 3', copies: 4, notes: '', coverUrl: null, emoji: '✏️', addedDate: '14 Feb 2025' },
-  { id: 4, title: 'DK Eyewitness: Ancient Rome', author: 'DK', subject: 'History', yearGroup: 'Year 4', copies: 2, notes: 'Shared with Y3', coverUrl: null, emoji: '🏛️', addedDate: '20 Mar 2025' },
-  { id: 5, title: 'Usborne See Inside: Science', author: 'Rob Lloyd Jones', subject: 'Science', yearGroup: 'Year 5', copies: 3, notes: '', coverUrl: null, emoji: '🔬', addedDate: '5 Apr 2025' },
-]
-
-// Plans keyed by library book id
-const DUMMY_BOOK_PLANS_INIT = {
-  1: [
-    { id: 101, title: 'Roman Mosaic Patterns', subject: 'Art', lessons: 5, created: '28 May 2025' },
-    { id: 102, title: 'Writing a Roman Diary Entry', subject: 'Literacy', lessons: 6, created: '28 May 2025' },
-    { id: 103, title: 'Roman Settlements and Maps', subject: 'Geography', lessons: 4, created: '29 May 2025' },
-  ],
-  2: [
-    { id: 104, title: 'Descriptive Writing — The Iron Man', subject: 'Literacy', lessons: 5, created: '12 Apr 2025' },
-    { id: 105, title: 'Forces and Materials', subject: 'Science', lessons: 4, created: '14 Apr 2025' },
-  ],
-  3: [],
-  4: [
-    { id: 106, title: 'The Roman Army', subject: 'History', lessons: 6, created: '31 May 2025' },
-  ],
-  5: [],
-}
-
-function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, onDeletePlan }) {
-  const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({})
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
-
-  function startEdit(plan) {
-    setEditingId(plan.id)
-    setEditForm({ title: plan.title, subject: plan.subject })
-  }
-
-  function saveEdit(plan) {
-    onEditPlan({ ...plan, ...editForm })
-    setEditingId(null)
-  }
-
-  const inputStyle = { height: 30, fontSize: 12, border: `0.5px solid ${BORDER}`, borderRadius: 6, padding: "0 8px", fontFamily: "'DM Sans', sans-serif", color: TEXT, background: BG, outline: "none" }
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-      <div style={{ background: BG, borderRadius: 14, width: "100%", maxWidth: 520, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }}>
-
-        {/* Header */}
-        <div style={{ padding: "16px 20px", borderBottom: `0.5px solid ${BORDER}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{book.title}</div>
-            <div style={{ fontSize: 12, color: MUTED, fontStyle: "italic" }}>{book.author} · {book.yearGroup}</div>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: MUTED, lineHeight: 1, flexShrink: 0, marginLeft: 12 }}>×</button>
-        </div>
-
-        {/* Plans list */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px" }}>
-          {plans.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "2rem 1rem", color: MUTED, fontSize: 13 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
-              No plans yet for this book.
-            </div>
-          ) : (
-            plans.map((plan, i) => {
-              const sc = SUBJECT_COLOURS[plan.subject] || { bg: PAGE_BG, color: MUTED }
-              const isEditing = editingId === plan.id
-              const isConfirmingDelete = confirmDeleteId === plan.id
-              return (
-                <div key={plan.id} style={{ borderBottom: i < plans.length - 1 ? `0.5px solid ${BORDER}` : "none", padding: "10px 0" }}>
-                  {isEditing ? (
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                      <input
-                        style={{ ...inputStyle, flex: 1, minWidth: 120 }}
-                        value={editForm.title}
-                        onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      />
-                      <select
-                        style={{ ...inputStyle, height: 30, cursor: "pointer" }}
-                        value={editForm.subject}
-                        onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
-                      >
-                        {['Art','Computing','DT','Geography','History','Literacy','Maths','Music','PE','PSHE','RE','Science'].map(s => <option key={s}>{s}</option>)}
-                      </select>
-                      <button onClick={() => saveEdit(plan)} style={{ height: 30, padding: "0 12px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Save</button>
-                      <button onClick={() => setEditingId(null)} style={{ height: 30, padding: "0 10px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 12, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0 }}>{plan.subject}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
-                        <div style={{ fontSize: 11, color: MUTED }}>{plan.lessons} lessons · Created {plan.created}</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                        <button onClick={() => onViewPlan(plan)} style={{ height: 26, padding: "0 10px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>View</button>
-                        <button onClick={() => startEdit(plan)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
-                        {isConfirmingDelete ? (
-                          <>
-                            <button onClick={() => { onDeletePlan(plan.id); setConfirmDeleteId(null) }} style={{ height: 26, padding: "0 8px", background: "#FCEBEB", border: `0.5px solid #A32D2D`, borderRadius: 6, fontSize: 11, fontWeight: 600, color: "#A32D2D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
-                            <button onClick={() => setConfirmDeleteId(null)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>✕</button>
-                          </>
-                        ) : (
-                          <button onClick={() => setConfirmDeleteId(plan.id)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: "12px 20px", borderTop: `0.5px solid ${BORDER}`, display: "flex", gap: 8, flexShrink: 0 }}>
-          <button
-            onClick={onAddPlan}
-            style={{ flex: 1, height: 38, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif' " }}
-          >
-            ✨ Create new plan
-          </button>
-          <button onClick={onClose} style={{ height: 38, padding: "0 16px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function LibraryBookCard({ book, plans, onCreatePlan, onViewPlans, onEdit, onDelete }) {
-  const [hovered, setHovered] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  return (
-    <div
-      style={{ background: BG, border: `0.5px solid ${hovered ? GREEN : BORDER}`, borderRadius: 12, overflow: "hidden", transition: "all 0.15s", boxShadow: hovered ? "0 4px 16px rgba(0,0,0,0.08)" : "none", display: "flex", flexDirection: "column" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setConfirmDelete(false) }}
-    >
-      {/* Cover */}
-      <div style={{ background: LIGHT_GREEN, height: 100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, position: "relative" }}>
-        {book.emoji}
-        <span style={{ position: "absolute", top: 8, right: 8, background: NAVY, color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20 }}>
-          {book.copies} {book.copies === 1 ? 'copy' : 'copies'}
-        </span>
-      </div>
-      {/* Info */}
-      <div style={{ padding: "12px 12px 8px", flex: 1 }}>
-        <div style={{ fontFamily: "'Lora', serif", fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, marginBottom: 2 }}>{book.title}</div>
-        <div style={{ fontSize: 11, color: GREEN, fontStyle: "italic", marginBottom: 8 }}>{book.author}</div>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 500, background: LIGHT_GREEN, color: "#085041", padding: "2px 7px", borderRadius: 20 }}>{book.subject}</span>
-          <span style={{ fontSize: 10, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: "2px 7px", borderRadius: 20 }}>{book.yearGroup}</span>
-        </div>
-        {book.notes && (
-          <div style={{ fontSize: 11, color: MUTED, background: PAGE_BG, borderRadius: 6, padding: "4px 8px", marginBottom: 6, fontStyle: "italic" }}>
-            📌 {book.notes}
-          </div>
-        )}
-        <div style={{ fontSize: 10, color: MUTED }}>Added {book.addedDate}</div>
-      </div>
-      {/* Actions */}
-      <div style={{ padding: "8px 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {plans.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <button
-              onClick={() => onViewPlans(book)}
-              style={{ width: "100%", height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-            >
-              📋 View plans ({plans.length})
-            </button>
-            <button
-              onClick={() => onCreatePlan(book)}
-              style={{ width: "100%", height: 28, background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 8, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-            >
-              ✨ Create new plan
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => onCreatePlan(book)}
-            style={{ width: "100%", height: 32, background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-          >
-            ✨ Create plan
-          </button>
-        )}
-        <div style={{ display: "flex", gap: 6 }}>
-          <button
-            onClick={() => onEdit(book)}
-            style={{ flex: 1, height: 28, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-          >
-            ✏️ Edit
-          </button>
-          {confirmDelete ? (
-            <div style={{ flex: 1, display: "flex", gap: 4 }}>
-              <button
-                onClick={() => onDelete(book.id)}
-                style={{ flex: 1, height: 28, background: "#FCEBEB", border: `0.5px solid #A32D2D`, borderRadius: 7, fontSize: 11, fontWeight: 600, color: "#A32D2D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                style={{ height: 28, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              style={{ flex: 1, height: 28, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-            >
-              🗑️ Delete
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function BookModal({ book, onClose, onSave, isEdit }) {
-  const [mode, setMode] = useState(isEdit ? 'manual' : 'search')
-  const [query, setQuery] = useState('')
-  const [searching, setSearching] = useState(false)
-  const [results, setResults] = useState([])
-  const [searched, setSearched] = useState(false)
-  const [form, setForm] = useState(
-    isEdit
-      ? { title: book.title, author: book.author, subject: book.subject, yearGroup: book.yearGroup, copies: book.copies, notes: book.notes || '' }
-      : { title: '', author: '', subject: '', yearGroup: '', copies: 1, notes: '' }
-  )
-
-  async function searchBooks() {
-    if (!query.trim()) return
-    setSearching(true); setSearched(false)
-    try {
-      const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=5`)
-      const data = await res.json()
-      setResults((data.docs || []).map(b => ({
-        title: b.title,
-        author: b.author_name?.[0] || 'Unknown',
-        coverUrl: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : null,
-      })))
-    } catch { setResults([]) }
-    setSearching(false); setSearched(true)
-  }
-
-  function selectResult(r) {
-    setForm(f => ({ ...f, title: r.title, author: r.author }))
-    setMode('manual')
-  }
-
-  function handleSave() {
-    if (!form.title || !form.author || !form.subject || !form.yearGroup) return
-    const saved = isEdit
-      ? { ...book, ...form, copies: parseInt(form.copies) || 1 }
-      : { ...form, id: Date.now(), emoji: '📚', copies: parseInt(form.copies) || 1, addedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
-    onSave(saved)
-  }
-
-  const inputStyle = { ...s.input, height: 36, fontSize: 13 }
-  const selectStyle = { ...s.select, height: 36, fontSize: 13 }
-  const valid = form.title && form.author && form.subject && form.yearGroup
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-      <div style={{ background: BG, borderRadius: 14, width: "100%", maxWidth: 500, maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        {/* Header */}
-        <div style={{ padding: "16px 20px", borderBottom: `0.5px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>
-            {isEdit ? 'Edit book' : 'Add book to library'}
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: MUTED, lineHeight: 1 }}>×</button>
-        </div>
-        <div style={{ padding: "16px 20px" }}>
-          {/* Mode tabs — only show for new books */}
-          {!isEdit && (
-            <div style={{ display: "flex", gap: 4, marginBottom: 16, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
-              {[['search', '🔍 Search'], ['manual', '✏️ Add manually']].map(([id, label]) => (
-                <button key={id} onClick={() => setMode(id)}
-                  style={{ flex: 1, height: 32, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : "transparent", color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Search mode */}
-          {mode === 'search' && !isEdit && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {mode === 'signup' && (
             <div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                <input style={{ ...inputStyle, flex: 1 }} placeholder="Search by title or author..." value={query}
-                  onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchBooks()} />
-                <button onClick={searchBooks} disabled={searching}
-                  style={{ height: 36, padding: "0 14px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                  {searching ? '...' : 'Search'}
-                </button>
-              </div>
-              {searched && results.length === 0 && (
-                <div style={{ textAlign: "center", padding: "1rem", color: MUTED, fontSize: 13 }}>
-                  No results. <span style={{ color: GREEN, cursor: "pointer", textDecoration: "underline" }} onClick={() => setMode('manual')}>Add manually</span>
-                </div>
-              )}
-              {results.map((r, i) => (
-                <div key={i} onClick={() => selectResult(r)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: `0.5px solid ${BORDER}`, marginBottom: 8, cursor: "pointer" }}
-                  onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
-                  onMouseLeave={e => e.currentTarget.style.background = BG}>
-                  {r.coverUrl
-                    ? <img src={r.coverUrl} style={{ width: 36, height: 48, borderRadius: 4, objectFit: "cover", flexShrink: 0 }} />
-                    : <div style={{ width: 36, height: 48, background: LIGHT_GREEN, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📚</div>}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{r.title}</div>
-                    <div style={{ fontSize: 11, color: MUTED, fontStyle: "italic" }}>{r.author}</div>
-                  </div>
-                  <span style={{ fontSize: 12, color: GREEN, fontWeight: 500 }}>Select →</span>
-                </div>
-              ))}
-              {searched && results.length > 0 && (
-                <div style={{ textAlign: "center", marginTop: 8, fontSize: 12 }}>
-                  <span style={{ color: MUTED }}>Can't find it? </span>
-                  <span style={{ color: GREEN, cursor: "pointer", textDecoration: "underline" }} onClick={() => setMode('manual')}>Add manually</span>
-                </div>
-              )}
+              <label style={{ ...s.label, marginBottom: 6 }}>Your name</label>
+              <input style={inputStyle} placeholder="e.g. Sarah Jones" value={name} onChange={e => setName(e.target.value)} />
             </div>
           )}
-
-          {/* Manual / edit form */}
-          {(mode === 'manual' || isEdit) && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {!isEdit && form.title && (
-                <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#085041" }}>
-                  ✓ Imported: <strong>{form.title}</strong> by {form.author}
-                </div>
-              )}
-              <div>
-                <label style={s.label}>Title</label>
-                <input style={inputStyle} placeholder="Book title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-              </div>
-              <div>
-                <label style={s.label}>Author</label>
-                <input style={inputStyle} placeholder="Author name" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label style={s.label}>Subject</label>
-                  <select style={selectStyle} value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}>
-                    <option value="">Select...</option>
-                    <option>Art</option><option>Computing</option><option>DT</option>
-                    <option>Geography</option><option>History</option><option>Literacy</option>
-                    <option>Maths</option><option>Music</option><option>PE</option>
-                    <option>PSHE</option><option>RE</option><option>Science</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={s.label}>Year group</label>
-                  <select style={selectStyle} value={form.yearGroup} onChange={e => setForm(f => ({ ...f, yearGroup: e.target.value }))}>
-                    <option value="">Select...</option>
-                    <option>Year 1</option><option>Year 2</option><option>Year 3</option>
-                    <option>Year 4</option><option>Year 5</option><option>Year 6</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label style={s.label}>Number of copies</label>
-                <input style={inputStyle} type="number" min="1" value={form.copies} onChange={e => setForm(f => ({ ...f, copies: e.target.value }))} />
-              </div>
-              <div>
-                <label style={s.label}>Notes <span style={s.labelOpt}>— optional</span></label>
-                <input style={inputStyle} placeholder="e.g. 3 copies in Y4 cupboard" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-              </div>
-              <button onClick={handleSave} disabled={!valid}
-                style={{ height: 40, background: valid ? GREEN : '#888780', color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: valid ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
-                {isEdit ? 'Save changes' : 'Add to library'}
-              </button>
-            </div>
-          )}
+          <div>
+            <label style={{ ...s.label, marginBottom: 6 }}>Email address</label>
+            <input style={inputStyle} type="email" placeholder="your@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          <div>
+            <label style={{ ...s.label, marginBottom: 6 }}>Password</label>
+            <input style={inputStyle} type="password" placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13 }}>{error}</div>}
+          {success && <div style={{ background: LIGHT_GREEN, color: '#085041', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13 }}>{success}</div>}
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ height: 44, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
+            {loading ? '⏳ Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+          </button>
         </div>
       </div>
+      <p style={{ fontSize: 12, color: MUTED, marginTop: '1.5rem', textAlign: 'center' }}>TeachReads · For UK primary school teachers</p>
     </div>
   )
 }
 
-function MyLibraryPage({ onNavigate, onSelectBook }) {
-  const [library, setLibrary] = useState([])
-  const [bookPlans, setBookPlans] = useState({})
-  const [modal, setModal] = useState(null)
-  const [filterSubject, setFilterSubject] = useState('All')
-  const [filterYear, setFilterYear] = useState('All')
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
+// ── Root ──────────────────────────────────────────────────────────────────────
+const initialSearchState = {
+  subject: '', topic: '', yearGroup: '', focus: '',
+  accordionOpen: false, contentType: 'Any', bookType: 'Any', readingLevel: 'Any', starRating: 0,
+  books: [], loading: false, loadingMore: false, error: '', searched: false, searchMeta: {},
+}
 
-  const allSubjects = ['All', ...Array.from(new Set(library.map(b => b.subject))).sort()]
-  const allYears = ['All', ...Array.from(new Set(library.map(b => b.year_group))).sort()]
-
-  const loadLibrary = useCallback(async () => {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase
-      .from('library_books')
-      .select('*')
-      .eq('user_id', user?.id)
-      .order('added_at', { ascending: false })
-    if (!error) setLibrary(data || [])
-    setLoading(false)
-  }, [])
-
-  const loadPlansForBooks = useCallback(async (books) => {
-    if (!books.length) return
-    const { data, error } = await supabase
-      .from('plans')
-      .select('id, title, subject, year_group, lesson_count, created_at, book_title')
-      .order('created_at', { ascending: false })
-    if (!error && data) {
-      const grouped = {}
-      books.forEach(b => {
-        grouped[b.id] = data
-          .filter(p => p.book_title === b.title)
-          .map(p => ({ id: p.id, title: p.title, subject: p.subject, lessons: p.lesson_count, created: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }))
-      })
-      setBookPlans(grouped)
-    }
-  }, [])
+export default function App() {
+  const [session, setSession] = useState(undefined)
+  const [page, setPage] = useState('search')
+  const [selectedBook, setSelectedBook] = useState(null)
+  const [selectedIdeas, setSelectedIdeas] = useState([])
+  const [searchState, setSearchState] = useState(initialSearchState)
 
   useEffect(() => {
-    loadLibrary()
-  }, [loadLibrary])
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session))
+    return () => subscription.unsubscribe()
+  }, [])
 
-  useEffect(() => {
-    if (library.length) loadPlansForBooks(library)
-  }, [library, loadPlansForBooks])
-
-  const filtered = library.filter(b => {
-    if (filterSubject !== 'All' && b.subject !== filterSubject) return false
-    if (filterYear !== 'All' && b.year_group !== filterYear) return false
-    if (search && !b.title.toLowerCase().includes(search.toLowerCase()) && !b.author.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
-
-  const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search
-
-  function getPlans(bookId) { return bookPlans[bookId] || [] }
-
-  async function handleSave(book) {
-    if (modal?.mode === 'edit') {
-      const { error } = await supabase
-        .from('library_books')
-        .update({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: book.copies, notes: book.notes })
-        .eq('id', book.id)
-      if (!error) await loadLibrary()
-      else console.error('Update error:', error)
-    } else {
-      const { error } = await supabase
-        .from('library_books')
-        .insert({ user_id: (await supabase.auth.getUser()).data.user?.id, title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
-      if (!error) await loadLibrary()
-      else console.error('Insert error:', error)
-    }
-    setModal(null)
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    setSession(null)
+    setPage('search')
   }
 
-  async function handleDelete(id) {
-    const { error } = await supabase.from('library_books').delete().eq('id', id)
-    if (!error) setLibrary(prev => prev.filter(b => b.id !== id))
+  function handleNavigate(dest) {
+    if (dest === 'search') { setSelectedBook(null); setPage('search') }
+    if (dest === 'books') { setPage('books') }
+    if (dest === 'plans') { setPage('plans') }
+    if (dest === 'library') { setPage('library') }
+    if (dest === 'resources') { setPage('resources') }
+    if (dest === 'signout') { handleSignOut() }
   }
 
-  async function handleEditPlan(bookId, updatedPlan) {
-    const { error } = await supabase
-      .from('plans')
-      .update({ title: updatedPlan.title, subject: updatedPlan.subject })
-      .eq('id', updatedPlan.id)
-    if (!error) {
-      setBookPlans(prev => ({
-        ...prev,
-        [bookId]: (prev[bookId] || []).map(p => p.id === updatedPlan.id ? updatedPlan : p)
-      }))
-    }
+  if (session === undefined) {
+    return (
+      <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: 14, color: MUTED }}>Loading...</div>
+      </div>
+    )
   }
 
-  async function handleDeletePlan(bookId, planId) {
-    const { error } = await supabase.from('plans').delete().eq('id', planId)
-    if (!error) {
-      setBookPlans(prev => ({
-        ...prev,
-        [bookId]: (prev[bookId] || []).filter(p => p.id !== planId)
-      }))
-    }
+  if (!session) {
+    return <AuthPage onAuth={() => supabase.auth.getSession().then(({ data: { session } }) => setSession(session))} />
   }
 
-  // Normalise field names from DB (snake_case) to component expectations
-  function normaliseBook(b) {
-    return { ...b, yearGroup: b.year_group, addedDate: new Date(b.added_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
-  }
-
-  const selectStyle = { height: 32, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 12px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
+  const navPage = page === 'book' || page === 'lessonresources' ? 'search' : page === 'books' ? 'books' : page === 'plans' ? 'plans' : page === 'library' ? 'library' : page === 'resources' ? 'resources' : page
+  const userName = session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
+  const userEmail = session?.user?.email || ''
 
   return (
-    <div style={{ ...s.page, maxWidth: "100%" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 1rem" }}>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>🏫</div>
-            <div>
-              <h1 style={s.h1}>My Library</h1>
-              <p style={s.headerSub}>Books you own — click any book to create a lesson plan</p>
-            </div>
-          </div>
-          <button onClick={() => setModal({ mode: 'add' })}
-            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            + Add book
-          </button>
-        </div>
-
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: MUTED }}>🔍</span>
-            <input style={{ ...s.input, paddingLeft: 30, height: 32, fontSize: 13 }} placeholder="Search your library..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
-            <select style={{ ...selectStyle, borderColor: filterSubject !== 'All' ? GREEN : BORDER, background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT }} value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
-              {allSubjects.map(subj => <option key={subj} value={subj}>{subj === 'All' ? 'All subjects' : subj}</option>)}
-            </select>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Year</span>
-            <select style={{ ...selectStyle, borderColor: filterYear !== 'All' ? GREEN : BORDER, background: filterYear !== 'All' ? LIGHT_GREEN : BG, color: filterYear !== 'All' ? '#085041' : TEXT }} value={filterYear} onChange={e => setFilterYear(e.target.value)}>
-              {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
-            </select>
-          </div>
-          {filtersActive && <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>Clear</span>}
-          <span style={{ fontSize: 12, color: MUTED, marginLeft: "auto", whiteSpace: "nowrap" }}>{filtered.length} book{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: MUTED, fontSize: 14 }}>Loading your library...</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🏫</div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 6 }}>
-              {filtersActive ? 'No books match your filters' : 'Your library is empty'}
-            </div>
-            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
-              {filtersActive ? 'Try adjusting your search or filters.' : 'Add the books you own to quickly create plans from them.'}
-            </div>
-            {filtersActive
-              ? <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 13, color: GREEN, cursor: "pointer", textDecoration: "underline" }}>Clear filters</span>
-              : <button onClick={() => setModal({ mode: 'add' })} style={{ height: 36, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Add your first book</button>
-            }
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-            {filtered.map(book => (
-              <LibraryBookCard
-                key={book.id}
-                book={normaliseBook(book)}
-                plans={getPlans(book.id)}
-                onCreatePlan={onSelectBook}
-                onViewPlans={b => setModal({ mode: 'plans', book: b })}
-                onEdit={b => setModal({ mode: 'edit', book: b })}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        )}
-
-        <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
-      </div>
-
-      {modal && modal.mode !== 'plans' && (
-        <BookModal
-          book={modal.book}
-          isEdit={modal.mode === 'edit'}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-        />
+    <div>
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} />
+      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
+      {page === 'library' && <MyLibraryPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
+      {page === 'books' && <MyBooksPage onNavigate={handleNavigate} />}
+      {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
+      {page === 'lessonresources' && (
+        <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />
       )}
-      {modal?.mode === 'plans' && (
-        <PlansModal
-          book={modal.book}
-          plans={getPlans(modal.book.id)}
-          onClose={() => setModal(null)}
-          onAddPlan={() => { setModal(null); onSelectBook(modal.book) }}
-          onViewPlan={plan => { setModal(null); onSelectBook(modal.book) }}
-          onEditPlan={plan => handleEditPlan(modal.book.id, plan)}
-          onDeletePlan={planId => handleDeletePlan(modal.book.id, planId)}
-        />
+      {page === 'book' && (
+        <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setPage('search')}
+          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} />
+      )}
+      {page === 'search' && (
+        <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} />
       )}
     </div>
   )
-}
 }
