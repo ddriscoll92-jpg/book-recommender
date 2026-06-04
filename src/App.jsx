@@ -624,8 +624,8 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
           onClick={() => setProfileOpen(o => !o)}
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, background: profileOpen ? NAVY_LIGHT : 'transparent' }}
         >
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>
-            {(userName || 'T')[0].toUpperCase()}
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF', overflow: 'hidden', flexShrink: 0 }}>
+            {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : (userName || 'T')[0].toUpperCase()}
           </div>
           <div style={{ lineHeight: 1.2 }}>
             <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
