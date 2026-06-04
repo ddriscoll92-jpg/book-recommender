@@ -2580,6 +2580,199 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
 // ── My Books Page ─────────────────────────────────────────────────────────────
 // (merged My Books + My Library into one page with 3 sections)
 
+// ── Plans Modal ───────────────────────────────────────────────────────────────
+function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, onDeletePlan }) {
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [viewingPlan, setViewingPlan] = useState(null)
+
+  function startEdit(plan) { setEditingId(plan.id); setEditForm({ title: plan.title, subject: plan.subject }) }
+  function saveEdit(plan) { onEditPlan({ ...plan, ...editForm }); setEditingId(null) }
+
+  const inputStyle = { height: 30, fontSize: 12, border: `0.5px solid ${BORDER}`, borderRadius: 6, padding: '0 8px', fontFamily: "'DM Sans', sans-serif", color: TEXT, background: BG, outline: 'none' }
+
+  if (viewingPlan) {
+    return (
+      <PlanDetailModal
+        plan={viewingPlan}
+        group={{ book, yearGroup: book.yearGroup || '' }}
+        onClose={() => setViewingPlan(null)}
+      />
+    )
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{book.title}</div>
+            <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>{book.author}{book.yearGroup ? ` · ${book.yearGroup}` : ''}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED, lineHeight: 1, flexShrink: 0, marginLeft: 12 }}>×</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          {plans.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: MUTED, fontSize: 13 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>No plans yet for this book.
+            </div>
+          ) : plans.map((plan, i) => {
+            const sc = SUBJECT_COLOURS[plan.subject] || { bg: PAGE_BG, color: MUTED }
+            const isEditing = editingId === plan.id
+            const isConfirming = confirmDeleteId === plan.id
+            return (
+              <div key={plan.id} style={{ borderBottom: i < plans.length - 1 ? `0.5px solid ${BORDER}` : 'none', padding: '10px 0' }}>
+                {isEditing ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input style={{ ...inputStyle, flex: 1, minWidth: 120 }} value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} />
+                    <select style={{ ...inputStyle, cursor: 'pointer' }} value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}>
+                      {['Art','Computing','DT','Geography','History','Literacy','Maths','Music','PE','PSHE','RE','Science'].map(s => <option key={s}>{s}</option>)}
+                    </select>
+                    <button onClick={() => saveEdit(plan)} style={{ height: 30, padding: '0 12px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={{ height: 30, padding: '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 12, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{plan.subject}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{plan.title}</div>
+                      <div style={{ fontSize: 11, color: MUTED }}>{plan.lessons} lessons · Created {plan.created}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                      <button onClick={() => setViewingPlan(plan)} style={{ height: 26, padding: '0 10px', background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#085041', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>View</button>
+                      <button onClick={() => startEdit(plan)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
+                      {isConfirming ? (
+                        <>
+                          <button onClick={() => { onDeletePlan(plan.id); setConfirmDeleteId(null) }} style={{ height: 26, padding: '0 8px', background: '#FCEBEB', border: `0.5px solid #A32D2D`, borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                          <button onClick={() => setConfirmDeleteId(null)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✕</button>
+                        </>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(plan.id)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: `0.5px solid ${BORDER}`, display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button onClick={onAddPlan} style={{ flex: 1, height: 38, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✨ Create new plan</button>
+          <button onClick={onClose} style={{ height: 38, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Book Modal (Add/Edit library book) ────────────────────────────────────────
+function BookModal({ book, onClose, onSave, isEdit }) {
+  const [mode, setMode] = useState(isEdit ? 'manual' : 'search')
+  const [query, setQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [results, setResults] = useState([])
+  const [searched, setSearched] = useState(false)
+  const [form, setForm] = useState(
+    isEdit
+      ? { title: book.title, author: book.author, subject: book.subject, yearGroup: book.yearGroup || book.year_group, copies: book.copies, notes: book.notes || '' }
+      : { title: '', author: '', subject: '', yearGroup: '', copies: 1, notes: '' }
+  )
+
+  async function searchBooks() {
+    if (!query.trim()) return
+    setSearching(true); setSearched(false)
+    try {
+      const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=5`)
+      const data = await res.json()
+      setResults((data.docs || []).map(b => ({ title: b.title, author: b.author_name?.[0] || 'Unknown', coverUrl: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : null })))
+    } catch { setResults([]) }
+    setSearching(false); setSearched(true)
+  }
+
+  function selectResult(r) { setForm(f => ({ ...f, title: r.title, author: r.author })); setMode('manual') }
+
+  function handleSave() {
+    if (!form.title || !form.author || !form.subject || !form.yearGroup) return
+    const saved = isEdit
+      ? { ...book, ...form, copies: parseInt(form.copies) || 1 }
+      : { ...form, id: Date.now(), emoji: '📚', copies: parseInt(form.copies) || 1, addedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
+    onSave(saved)
+  }
+
+  const inputStyle = { ...s.input, height: 36, fontSize: 13 }
+  const selectStyle = { ...s.select, height: 36, fontSize: 13 }
+  const valid = form.title && form.author && form.subject && form.yearGroup
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 500, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>{isEdit ? 'Edit book' : 'Add book to library'}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED, lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ padding: '16px 20px' }}>
+          {!isEdit && (
+            <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
+              {[['search', '🔍 Search'], ['manual', '✏️ Add manually']].map(([id, label]) => (
+                <button key={id} onClick={() => setMode(id)}
+                  style={{ flex: 1, height: 32, border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : 'transparent', color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {mode === 'search' && !isEdit && (
+            <div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input style={{ ...inputStyle, flex: 1 }} placeholder="Search by title or author..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchBooks()} />
+                <button onClick={searchBooks} disabled={searching} style={{ height: 36, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{searching ? '...' : 'Search'}</button>
+              </div>
+              {searched && results.length === 0 && <div style={{ textAlign: 'center', padding: '1rem', color: MUTED, fontSize: 13 }}>No results. <span style={{ color: GREEN, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setMode('manual')}>Add manually</span></div>}
+              {results.map((r, i) => (
+                <div key={i} onClick={() => selectResult(r)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, border: `0.5px solid ${BORDER}`, marginBottom: 8, cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = PAGE_BG} onMouseLeave={e => e.currentTarget.style.background = BG}>
+                  {r.coverUrl ? <img src={r.coverUrl} style={{ width: 36, height: 48, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: 36, height: 48, background: LIGHT_GREEN, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>📚</div>}
+                  <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{r.title}</div><div style={{ fontSize: 11, color: MUTED, fontStyle: 'italic' }}>{r.author}</div></div>
+                  <span style={{ fontSize: 12, color: GREEN, fontWeight: 500 }}>Select →</span>
+                </div>
+              ))}
+              {searched && results.length > 0 && <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12 }}><span style={{ color: MUTED }}>Can't find it? </span><span style={{ color: GREEN, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setMode('manual')}>Add manually</span></div>}
+            </div>
+          )}
+          {(mode === 'manual' || isEdit) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {!isEdit && form.title && <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#085041' }}>✓ Imported: <strong>{form.title}</strong> by {form.author}</div>}
+              <div><label style={s.label}>Title</label><input style={inputStyle} placeholder="Book title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+              <div><label style={s.label}>Author</label><input style={inputStyle} placeholder="Author name" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div><label style={s.label}>Subject</label>
+                  <select style={selectStyle} value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}>
+                    <option value="">Select...</option>
+                    {['Art','Computing','DT','Geography','History','Literacy','Maths','Music','PE','PSHE','RE','Science'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div><label style={s.label}>Year group</label>
+                  <select style={selectStyle} value={form.yearGroup} onChange={e => setForm(f => ({ ...f, yearGroup: e.target.value }))}>
+                    <option value="">Select...</option>
+                    {['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(y => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div><label style={s.label}>Number of copies</label><input style={inputStyle} type="number" min="1" max="999" value={form.copies} onChange={e => setForm(f => ({ ...f, copies: Math.min(999, Math.max(1, parseInt(e.target.value) || 1)) }))} /></div>
+              <div><label style={s.label}>Notes <span style={s.labelOpt}>— optional</span></label><input style={inputStyle} placeholder="e.g. 3 copies in Y4 cupboard" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+              <button onClick={handleSave} disabled={!valid}
+                style={{ height: 40, background: valid ? GREEN : '#888780', color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: valid ? 'pointer' : 'not-allowed', fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
+                {isEdit ? 'Save changes' : 'Add to library'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function BookInfoModal({ book, onClose }) {
   const [details, setDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
