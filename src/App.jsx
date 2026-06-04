@@ -1710,19 +1710,6 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
     </div>
-
-    {viewingPlans && (
-      <PlansModal
-        book={{ title: viewingPlans.title, author: viewingPlans.author, emoji: '📚' }}
-        plans={bookPlans[viewingPlans.title] || []}
-        onClose={() => setViewingPlans(null)}
-        onAddPlan={() => { setViewingPlans(null); onSelectBook && onSelectBook({ title: viewingPlans.title, author: viewingPlans.author, reason: '' }) }}
-        onViewPlan={(plan) => setViewingPlans(null)}
-        onEditPlan={() => {}}
-        onDeletePlan={() => {}}
-      />
-    )}
-    </>
   )
 }
 
@@ -3200,14 +3187,11 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Cover area */}
       <div style={{ background: LIGHT_GREEN, height: 110, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", fontSize: 42 }}>
         {subjectMeta?.emoji || "📚"}
-        <button
-          onClick={() => onToggleFavourite(book.title)}
+        <button onClick={() => onToggleFavourite(book.title)}
           style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
-          title={isFavourite ? "Remove from favourites" : "Add to favourites"}
-        >
+          title={isFavourite ? "Remove from favourites" : "Add to favourites"}>
           {isFavourite ? "⭐" : "☆"}
         </button>
         {book.planCount > 0 && (
@@ -3216,8 +3200,6 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
           </div>
         )}
       </div>
-
-      {/* Info */}
       <div style={{ padding: "12px 12px 10px", flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ fontFamily: "'Lora', serif", fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, marginBottom: 3 }}>{book.title}</div>
         <div style={{ fontSize: 11, color: GREEN, fontStyle: "italic", marginBottom: 8 }}>{book.author}</div>
@@ -3226,24 +3208,16 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
           <span style={{ fontSize: 10, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: "2px 7px", borderRadius: 20 }}>{book.yearGroup}</span>
         </div>
         <div style={{ marginTop: "auto", paddingTop: 8, borderTop: `0.5px solid ${BORDER}` }}>
-          <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>
-            <span style={{ fontWeight: 500, color: TEXT }}>Last used:</span> {book.lastUsed}
-          </div>
-          <div style={{ fontSize: 11, color: MUTED }}>
-            <span style={{ fontWeight: 500, color: TEXT }}>Last accessed:</span> {book.lastAccessed}
-          </div>
+          <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}><span style={{ fontWeight: 500, color: TEXT }}>Last used:</span> {book.lastUsed}</div>
+          <div style={{ fontSize: 11, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Last accessed:</span> {book.lastAccessed}</div>
         </div>
       </div>
-
-      {/* Actions */}
       <div style={{ padding: "8px 12px 12px", display: "flex", gap: 6 }}>
-        <button
-          onClick={() => onViewBook && onViewBook(book)}
+        <button onClick={() => onViewBook && onViewBook(book)}
           style={{ flex: 1, height: 30, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
           View book
         </button>
-        <button
-          onClick={() => book.planCount > 0 && onViewPlans && onViewPlans(book)}
+        <button onClick={() => book.planCount > 0 && onViewPlans && onViewPlans(book)}
           style={{ flex: 1, height: 30, background: book.planCount > 0 ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${book.planCount > 0 ? GREEN : BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: book.planCount > 0 ? "#085041" : MUTED, cursor: book.planCount > 0 ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif" }}>
           {book.planCount > 0 ? `View plans (${book.planCount})` : "No plans yet"}
         </button>
@@ -3252,43 +3226,29 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
   )
 }
 
-// Inline filter bar component used in each section
 function SectionFilters({ books, filters, setFilters }) {
   const subjects = ['All', ...Array.from(new Set(books.map(b => b.subject))).sort()]
   const yearGroups = ['All', ...Array.from(new Set(books.map(b => b.yearGroup))).sort()]
-
   const selectStyle = { height: 30, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 10px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
   const hasPlansActive = filters.hasPlans
-
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      {/* Subject dropdown */}
       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
         <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Subject</span>
-        <select
-          style={{ ...selectStyle, borderColor: filters.subject !== 'All' ? GREEN : BORDER, color: filters.subject !== 'All' ? "#085041" : TEXT, background: filters.subject !== 'All' ? LIGHT_GREEN : BG }}
-          value={filters.subject}
-          onChange={e => setFilters(f => ({ ...f, subject: e.target.value }))}
-        >
+        <select style={{ ...selectStyle, borderColor: filters.subject !== 'All' ? GREEN : BORDER, color: filters.subject !== 'All' ? "#085041" : TEXT, background: filters.subject !== 'All' ? LIGHT_GREEN : BG }}
+          value={filters.subject} onChange={e => setFilters(f => ({ ...f, subject: e.target.value }))}>
           {subjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
         </select>
       </div>
-      {/* Year group dropdown */}
       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
         <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Year</span>
-        <select
-          style={{ ...selectStyle, borderColor: filters.yearGroup !== 'All' ? GREEN : BORDER, color: filters.yearGroup !== 'All' ? "#085041" : TEXT, background: filters.yearGroup !== 'All' ? LIGHT_GREEN : BG }}
-          value={filters.yearGroup}
-          onChange={e => setFilters(f => ({ ...f, yearGroup: e.target.value }))}
-        >
+        <select style={{ ...selectStyle, borderColor: filters.yearGroup !== 'All' ? GREEN : BORDER, color: filters.yearGroup !== 'All' ? "#085041" : TEXT, background: filters.yearGroup !== 'All' ? LIGHT_GREEN : BG }}
+          value={filters.yearGroup} onChange={e => setFilters(f => ({ ...f, yearGroup: e.target.value }))}>
           {yearGroups.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
         </select>
       </div>
-      {/* Has plans toggle pill */}
-      <span
-        onClick={() => setFilters(f => ({ ...f, hasPlans: !f.hasPlans }))}
-        style={{ padding: "4px 10px", borderRadius: 20, border: `0.5px solid ${hasPlansActive ? GREEN : BORDER}`, fontSize: 11, fontWeight: hasPlansActive ? 600 : 400, color: hasPlansActive ? "#085041" : MUTED, background: hasPlansActive ? LIGHT_GREEN : BG, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
-      >
+      <span onClick={() => setFilters(f => ({ ...f, hasPlans: !f.hasPlans }))}
+        style={{ padding: "4px 10px", borderRadius: 20, border: `0.5px solid ${hasPlansActive ? GREEN : BORDER}`, fontSize: 11, fontWeight: hasPlansActive ? 600 : 400, color: hasPlansActive ? "#085041" : MUTED, background: hasPlansActive ? LIGHT_GREEN : BG, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
         📝 Has plans
       </span>
     </div>
@@ -3299,7 +3259,7 @@ function applyFilters(books, filters) {
   return books.filter(b => {
     if (filters.subject !== 'All' && b.subject !== filters.subject) return false
     if (filters.yearGroup !== 'All' && b.yearGroup !== filters.yearGroup) return false
-    if (filters.hasPlans && !b.hasPlans) return false
+    if (filters.hasPlans && !b.planCount) return false
     return true
   })
 }
@@ -3315,37 +3275,23 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   const [recentFilters, setRecentFilters] = useState({ ...defaultFilters })
   const [favVisible, setFavVisible] = useState(6)
   const [recentVisible, setRecentVisible] = useState(6)
-  const [viewingPlans, setViewingPlans] = useState(null) // book
+  const [viewingPlans, setViewingPlans] = useState(null)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
-      const { data, error } = await supabase
-        .from('saved_books')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('last_accessed', { ascending: false })
+      const { data, error } = await supabase.from('saved_books').select('*').eq('user_id', user?.id).order('last_accessed', { ascending: false })
       if (!error && data) {
         setSavedBooks(data)
-        // Load plan counts for each book
-        const { data: plans } = await supabase
-          .from('plans')
-          .select('id, title, subject, lesson_count, created_at, book_title, year_group')
-          .eq('user_id', user?.id)
+        const { data: plans } = await supabase.from('plans').select('id, title, subject, lesson_count, created_at, book_title, year_group').eq('user_id', user?.id)
         if (plans) {
           const counts = {}
           const grouped = {}
           data.forEach(b => {
-            const bookPlans = plans.filter(p => p.book_title === b.title)
-            counts[b.title] = bookPlans.length
-            grouped[b.title] = bookPlans.map(p => ({
-              id: p.id,
-              title: p.title,
-              subject: p.subject,
-              lessons: p.lesson_count,
-              created: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-            }))
+            const bp = plans.filter(p => p.book_title === b.title)
+            counts[b.title] = bp.length
+            grouped[b.title] = bp.map(p => ({ id: p.id, title: p.title, subject: p.subject, lessons: p.lesson_count, created: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }))
           })
           setPlanCounts(counts)
           setBookPlans(grouped)
@@ -3365,14 +3311,10 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   }
 
   function normalise(b) {
-    return {
-      ...b,
-      yearGroup: b.year_group,
+    return { ...b, yearGroup: b.year_group,
       lastUsed: b.last_used ? new Date(b.last_used).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
       lastAccessed: b.last_accessed ? new Date(b.last_accessed).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-      planCount: planCounts[b.title] || 0,
-      emoji: '📚',
-    }
+      planCount: planCounts[b.title] || 0, emoji: '📚' }
   }
 
   const favouriteBooks = savedBooks.filter(b => b.is_favourite).map(normalise)
@@ -3389,38 +3331,28 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>📖</div>
-            <div>
-              <h1 style={s.h1}>My Books</h1>
-              <p style={s.headerSub}>Your favourited and recently used books</p>
-            </div>
+            <div><h1 style={s.h1}>My Books</h1><p style={s.headerSub}>Your favourited and recently used books</p></div>
           </div>
-          <button onClick={() => onNavigate("search")}
-            style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            + Find more books
-          </button>
+          <button onClick={() => onNavigate("search")} style={{ height: 38, padding: "0 16px", background: GREEN, color: LIGHT_GREEN, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: 6 }}>+ Find more books</button>
         </div>
 
         {loading && <div style={{ textAlign: "center", padding: "3rem", color: MUTED, fontSize: 14 }}>Loading your books...</div>}
 
         {!loading && (
           <>
-            {/* Favourites */}
             <div style={{ marginBottom: "2rem" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   <span style={{ fontSize: 16 }}>⭐</span>
                   <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Favourites</span>
-                  <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
-                    {filteredFavourites.length}{favFilterActive ? ` of ${favouriteBooks.length}` : ''}
-                  </span>
+                  <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>{filteredFavourites.length}{favFilterActive ? ` of ${favouriteBooks.length}` : ''}</span>
                   {favFilterActive && <span onClick={() => setFavFilters({ ...defaultFilters })} style={{ fontSize: 11, color: MUTED, cursor: "pointer", textDecoration: "underline" }}>Clear</span>}
                 </div>
                 {favouriteBooks.length > 0 && <SectionFilters books={favouriteBooks} filters={favFilters} setFilters={setFavFilters} />}
               </div>
               {favouriteBooks.length === 0 ? (
                 <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "2rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>☆</div>
-                  Star a book to add it to your favourites
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>☆</div>Star a book to add it to your favourites
                 </div>
               ) : filteredFavourites.length === 0 ? (
                 <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
@@ -3446,23 +3378,19 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
             <hr style={{ border: "none", borderTop: `0.5px solid ${BORDER}`, marginBottom: "2rem" }} />
 
-            {/* Recently used */}
             <div style={{ marginBottom: "2rem" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   <span style={{ fontSize: 16 }}>🕐</span>
                   <span style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>Recently used</span>
-                  <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
-                    {filteredRecent.length}{recentFilterActive ? ` of ${recentBooks.length}` : ''}
-                  </span>
+                  <span style={{ background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>{filteredRecent.length}{recentFilterActive ? ` of ${recentBooks.length}` : ''}</span>
                   {recentFilterActive && <span onClick={() => setRecentFilters({ ...defaultFilters })} style={{ fontSize: 11, color: MUTED, cursor: "pointer", textDecoration: "underline" }}>Clear</span>}
                 </div>
                 {recentBooks.length > 0 && <SectionFilters books={recentBooks} filters={recentFilters} setFilters={setRecentFilters} />}
               </div>
               {recentBooks.length === 0 ? (
                 <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "2rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>
-                  Books you search and use will appear here automatically
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>Books you search and use will appear here automatically
                 </div>
               ) : filteredRecent.length === 0 ? (
                 <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: 14 }}>
@@ -3490,6 +3418,18 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
     </div>
+    {viewingPlans && (
+      <PlansModal
+        book={{ title: viewingPlans.title, author: viewingPlans.author, emoji: '📚' }}
+        plans={bookPlans[viewingPlans.title] || []}
+        onClose={() => setViewingPlans(null)}
+        onAddPlan={() => { setViewingPlans(null); onSelectBook && onSelectBook({ title: viewingPlans.title, author: viewingPlans.author, reason: '' }) }}
+        onViewPlan={() => setViewingPlans(null)}
+        onEditPlan={() => {}}
+        onDeletePlan={() => {}}
+      />
+    )}
+    </>
   )
 }
 
@@ -3519,9 +3459,7 @@ function AuthPage({ onAuth }) {
         if (error) throw error
         onAuth()
       }
-    } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.')
-    }
+    } catch (err) { setError(err.message || 'Something went wrong.') }
     setLoading(false)
   }
 
