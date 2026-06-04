@@ -1847,7 +1847,6 @@ function MyPlansPage({ onNavigate }) {
   const [search, setSearch] = useState('')
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
-  const [filterHasPlans, setFilterHasPlans] = useState(false)
   const [openBooks, setOpenBooks] = useState({})
   const [viewingPlan, setViewingPlan] = useState(null) // { plan, group }
 
@@ -1905,7 +1904,7 @@ function MyPlansPage({ onNavigate }) {
   }).filter(g => g.plans.length > 0)
 
   const totalPlans = filteredGroups.reduce((acc, g) => acc + g.plans.length, 0)
-  const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search || filterHasPlans
+  const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search
 
   function toggleBook(title) {
     setOpenBooks(prev => ({ ...prev, [title]: !prev[title] }))
@@ -1959,11 +1958,7 @@ function MyPlansPage({ onNavigate }) {
               {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
             </select>
           </div>
-          <span onClick={() => setFilterHasPlans(f => !f)}
-            style={{ height: 28, padding: '0 10px', borderRadius: 20, border: `0.5px solid ${filterHasPlans ? GREEN : BORDER}`, fontSize: 12, fontWeight: filterHasPlans ? 600 : 400, color: filterHasPlans ? '#085041' : MUTED, background: filterHasPlans ? LIGHT_GREEN : BG, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
-            📝 Has plans
-          </span>
-          {filtersActive && <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All'); setFilterHasPlans(false) }} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Clear</span>}
+          {filtersActive && <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Clear</span>}
           <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{totalPlans} plan{totalPlans !== 1 ? 's' : ''}</span>
         </div>
 
@@ -2992,6 +2987,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   const [globalSearch, setGlobalSearch] = useState('')
   const [globalSubject, setGlobalSubject] = useState('All')
   const [globalYear, setGlobalYear] = useState('All')
+  const [globalHasPlans, setGlobalHasPlans] = useState(false)
   // Filters per section
   const [favFilters, setFavFilters] = useState({ ...defaultFilters })
   const [libFilters, setLibFilters] = useState({ ...defaultFilters })
@@ -3177,6 +3173,10 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
               {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
             </select>
           </div>
+          <span onClick={() => setGlobalHasPlans(h => !h)}
+            style={{ height: 28, padding: '0 10px', borderRadius: 20, border: `0.5px solid ${globalHasPlans ? GREEN : BORDER}`, fontSize: 12, fontWeight: globalHasPlans ? 600 : 400, color: globalHasPlans ? '#085041' : MUTED, background: globalHasPlans ? LIGHT_GREEN : BG, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
+            📝 Has plans
+          </span>
           <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{totalBooks} book{totalBooks !== 1 ? 's' : ''}</span>
         </div>
 
