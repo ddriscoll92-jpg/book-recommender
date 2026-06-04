@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { supabase } from './supabaseClient'
 
 const GREEN = '#1D9E75'
 const LIGHT_GREEN = '#E1F5EE'
@@ -1300,6 +1301,50 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
       const result = await callAPI(prompt, true)
       setPlans(prev => ({ ...prev, [key]: result }))
       setActiveTabs(prev => ({ ...prev, [key]: 0 }))
+
+      // Save to Supabase
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: planData } = await supabase
+            .from('plans')
+            .insert({
+              user_id: user.id,
+              book_title: book.title,
+              book_author: book.author,
+              book_emoji: '📚',
+              subject: idea.subject,
+              year_group: yearGroup || 'Primary',
+              title: idea.title,
+              unit_overview: result.unitOverview || '',
+              model_example: result.modelExample || {},
+              lesson_count: result.lessons?.length || 0,
+            })
+            .select()
+            .single()
+
+          // Save individual lessons
+          if (planData && result.lessons?.length) {
+            await supabase.from('lessons').insert(
+              result.lessons.map(lesson => ({
+                plan_id: planData.id,
+                lesson_number: lesson.lessonNumber,
+                title: lesson.title,
+                type: lesson.type,
+                lesson_overview: lesson.lessonOverview,
+                learning_intention: lesson.learningIntention,
+                success_criteria: lesson.successCriteria,
+                main_activity: lesson.mainActivity,
+                teacher_notes: lesson.teacherNotes,
+                nc_links: lesson.ncLinks,
+                send_adaptations: lesson.sendAdaptations,
+              }))
+            )
+          }
+        }
+      } catch (saveErr) {
+        console.warn('Could not save plan to database:', saveErr)
+      }
     } catch {
       setPlans(prev => ({ ...prev, [key]: { error: true } }))
     } finally {
@@ -1477,22 +1522,59 @@ const SUBJECT_COLOURS = {
 }
 
 function MyPlansPage({ onNavigate }) {
+  const [plans, setPlans] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
   const [openBooks, setOpenBooks] = useState({})
 
-  const allSubjects = ['All', ...Array.from(new Set(DUMMY_PLANS.flatMap(g => g.plans.map(p => p.subject)))).sort()]
-  const allYears = ['All', ...Array.from(new Set(DUMMY_PLANS.map(g => g.yearGroup))).sort()]
+  useEffect(() => {
+    async function loadPlans() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('plans')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (!error && data) {
+        // Group by book
+        const groups = []
+        data.forEach(plan => {
+          const existing = groups.find(g => g.book.title === plan.book_title)
+          const planEntry = {
+            id: plan.id,
+            title: plan.title,
+            subject: plan.subject,
+            lessons: plan.lesson_count,
+            topic: plan.title,
+            created: new Date(plan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+          }
+          if (existing) {
+            existing.plans.push(planEntry)
+          } else {
+            groups.push({
+              book: { title: plan.book_title, author: plan.book_author || '', emoji: plan.book_emoji || '📚' },
+              yearGroup: plan.year_group,
+              plans: [planEntry]
+            })
+          }
+        })
+        setPlans(groups)
+      }
+      setLoading(false)
+    }
+    loadPlans()
+  }, [])
 
-  // Filter groups and their plans
-  const filteredGroups = DUMMY_PLANS.map(group => {
+  const allSubjects = ['All', ...Array.from(new Set(plans.flatMap(g => g.plans.map(p => p.subject)))).sort()]
+  const allYears = ['All', ...Array.from(new Set(plans.map(g => g.yearGroup))).sort()]
+
+  const filteredGroups = plans.map(group => {
     const filteredPlans = group.plans.filter(plan => {
       if (filterSubject !== 'All' && plan.subject !== filterSubject) return false
       if (filterYear !== 'All' && group.yearGroup !== filterYear) return false
       if (search && !plan.title.toLowerCase().includes(search.toLowerCase()) &&
-          !group.book.title.toLowerCase().includes(search.toLowerCase()) &&
-          !plan.topic.toLowerCase().includes(search.toLowerCase())) return false
+          !group.book.title.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
     return { ...group, plans: filteredPlans }
@@ -1567,8 +1649,13 @@ function MyPlansPage({ onNavigate }) {
           </span>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div style={{ textAlign: "center", padding: "3rem", color: MUTED, fontSize: 14 }}>Loading your plans...</div>
+        )}
+
         {/* Empty state */}
-        {filteredGroups.length === 0 && (
+        {!loading && filteredGroups.length === 0 && (
           <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
             <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 6 }}>
@@ -1585,7 +1672,7 @@ function MyPlansPage({ onNavigate }) {
         )}
 
         {/* Book groups */}
-        {filteredGroups.map(group => {
+        {!loading && filteredGroups.map(group => {
           const isOpen = openBooks[group.book.title]
           return (
             <div key={group.book.title} style={{ marginBottom: 12 }}>
@@ -1839,6 +1926,21 @@ For all other types: use appropriate sections for the resource type.`
     try {
       const result = await callAPI(apiPrompt, true)
       setResource(result)
+      // Save resource to Supabase
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase.from('resources').insert({
+            user_id: user.id,
+            plan_id: selectedPlan?.id || null,
+            title: result.title,
+            meta: result.meta,
+            resource_type: selectedResourceType,
+            sections: result.sections,
+            prompt: apiPrompt,
+          })
+        }
+      } catch (e) { console.warn('Could not save resource:', e) }
     } catch { setError('Something went wrong. Please try again.') }
     setGenerating(false)
   }
@@ -1865,6 +1967,20 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
     try {
       const result = await callAPI(apiPrompt, true)
       setResource(result)
+      // Save resource to Supabase
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase.from('resources').insert({
+            user_id: user.id,
+            title: result.title,
+            meta: result.meta,
+            resource_type: 'adhoc',
+            sections: result.sections,
+            prompt: prompt,
+          })
+        }
+      } catch (e) { console.warn('Could not save resource:', e) }
     } catch { setError('Something went wrong. Please try again.') }
     setGenerating(false)
   }
@@ -2519,52 +2635,111 @@ function BookModal({ book, onClose, onSave, isEdit }) {
 }
 
 function MyLibraryPage({ onNavigate, onSelectBook }) {
-  const [library, setLibrary] = useState(DUMMY_LIBRARY)
-  const [bookPlans, setBookPlans] = useState(DUMMY_BOOK_PLANS_INIT)
-  const [modal, setModal] = useState(null) // null | { mode: 'add' } | { mode: 'edit', book } | { mode: 'plans', book }
+  const [library, setLibrary] = useState([])
+  const [bookPlans, setBookPlans] = useState({})
+  const [modal, setModal] = useState(null)
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
   const [search, setSearch] = useState('')
-
-  function getPlans(bookId) { return bookPlans[bookId] || [] }
-
-  function handleEditPlan(bookId, updatedPlan) {
-    setBookPlans(prev => ({
-      ...prev,
-      [bookId]: (prev[bookId] || []).map(p => p.id === updatedPlan.id ? updatedPlan : p)
-    }))
-  }
-
-  function handleDeletePlan(bookId, planId) {
-    setBookPlans(prev => ({
-      ...prev,
-      [bookId]: (prev[bookId] || []).filter(p => p.id !== planId)
-    }))
-  }
+  const [loading, setLoading] = useState(true)
 
   const allSubjects = ['All', ...Array.from(new Set(library.map(b => b.subject))).sort()]
-  const allYears = ['All', ...Array.from(new Set(library.map(b => b.yearGroup))).sort()]
+  const allYears = ['All', ...Array.from(new Set(library.map(b => b.year_group))).sort()]
+
+  const loadLibrary = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('library_books')
+      .select('*')
+      .order('added_at', { ascending: false })
+    if (!error) setLibrary(data || [])
+    setLoading(false)
+  }, [])
+
+  const loadPlansForBooks = useCallback(async (books) => {
+    if (!books.length) return
+    const { data, error } = await supabase
+      .from('plans')
+      .select('id, title, subject, year_group, lesson_count, created_at, book_title')
+      .order('created_at', { ascending: false })
+    if (!error && data) {
+      const grouped = {}
+      books.forEach(b => {
+        grouped[b.id] = data
+          .filter(p => p.book_title === b.title)
+          .map(p => ({ id: p.id, title: p.title, subject: p.subject, lessons: p.lesson_count, created: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }))
+      })
+      setBookPlans(grouped)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadLibrary()
+  }, [loadLibrary])
+
+  useEffect(() => {
+    if (library.length) loadPlansForBooks(library)
+  }, [library, loadPlansForBooks])
 
   const filtered = library.filter(b => {
     if (filterSubject !== 'All' && b.subject !== filterSubject) return false
-    if (filterYear !== 'All' && b.yearGroup !== filterYear) return false
+    if (filterYear !== 'All' && b.year_group !== filterYear) return false
     if (search && !b.title.toLowerCase().includes(search.toLowerCase()) && !b.author.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
   const filtersActive = filterSubject !== 'All' || filterYear !== 'All' || search
 
-  function handleSave(book) {
+  function getPlans(bookId) { return bookPlans[bookId] || [] }
+
+  async function handleSave(book) {
     if (modal?.mode === 'edit') {
-      setLibrary(prev => prev.map(b => b.id === book.id ? book : b))
+      const { error } = await supabase
+        .from('library_books')
+        .update({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: book.copies, notes: book.notes })
+        .eq('id', book.id)
+      if (!error) await loadLibrary()
     } else {
-      setLibrary(prev => [book, ...prev])
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase
+        .from('library_books')
+        .insert({ user_id: user?.id, title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
+      if (!error) await loadLibrary()
     }
     setModal(null)
   }
 
-  function handleDelete(id) {
-    setLibrary(prev => prev.filter(b => b.id !== id))
+  async function handleDelete(id) {
+    const { error } = await supabase.from('library_books').delete().eq('id', id)
+    if (!error) setLibrary(prev => prev.filter(b => b.id !== id))
+  }
+
+  async function handleEditPlan(bookId, updatedPlan) {
+    const { error } = await supabase
+      .from('plans')
+      .update({ title: updatedPlan.title, subject: updatedPlan.subject })
+      .eq('id', updatedPlan.id)
+    if (!error) {
+      setBookPlans(prev => ({
+        ...prev,
+        [bookId]: (prev[bookId] || []).map(p => p.id === updatedPlan.id ? updatedPlan : p)
+      }))
+    }
+  }
+
+  async function handleDeletePlan(bookId, planId) {
+    const { error } = await supabase.from('plans').delete().eq('id', planId)
+    if (!error) {
+      setBookPlans(prev => ({
+        ...prev,
+        [bookId]: (prev[bookId] || []).filter(p => p.id !== planId)
+      }))
+    }
+  }
+
+  // Normalise field names from DB (snake_case) to component expectations
+  function normaliseBook(b) {
+    return { ...b, yearGroup: b.year_group, addedDate: new Date(b.added_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
   }
 
   const selectStyle = { height: 32, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 12px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
@@ -2573,7 +2748,6 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
     <div style={{ ...s.page, maxWidth: "100%" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 1rem" }}>
 
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>🏫</div>
@@ -2588,7 +2762,6 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
           </button>
         </div>
 
-        {/* Filter bar */}
         <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
             <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: MUTED }}>🔍</span>
@@ -2606,14 +2779,13 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
               {allYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
             </select>
           </div>
-          {filtersActive && (
-            <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>Clear</span>
-          )}
+          {filtersActive && <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}>Clear</span>}
           <span style={{ fontSize: 12, color: MUTED, marginLeft: "auto", whiteSpace: "nowrap" }}>{filtered.length} book{filtered.length !== 1 ? 's' : ''}</span>
         </div>
 
-        {/* Grid */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "3rem", color: MUTED, fontSize: 14 }}>Loading your library...</div>
+        ) : filtered.length === 0 ? (
           <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🏫</div>
             <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 6 }}>
@@ -2632,7 +2804,7 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
             {filtered.map(book => (
               <LibraryBookCard
                 key={book.id}
-                book={book}
+                book={normaliseBook(book)}
                 plans={getPlans(book.id)}
                 onCreatePlan={onSelectBook}
                 onViewPlans={b => setModal({ mode: 'plans', book: b })}
