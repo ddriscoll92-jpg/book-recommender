@@ -2332,6 +2332,14 @@ function ResourcesPage({ onNavigate }) {
     if (tab === 'catalogue') loadCatalogue()
   }, [tab])
 
+  // After generating, switch to catalogue to show the new resource
+  useEffect(() => {
+    if (resource) {
+      // Refresh catalogue in background so it's ready when user navigates there
+      loadCatalogue()
+    }
+  }, [resource])
+
   async function loadCatalogue() {
     setCatalogueLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -2407,6 +2415,7 @@ For all other types: use appropriate sections for the resource type.`
             prompt: apiPrompt,
           })
         }
+        if (tab === 'catalogue') loadCatalogue()
       } catch (e) { console.warn('Could not save resource:', e) }
     } catch { setError('Something went wrong. Please try again.') }
     setGenerating(false)
@@ -2447,6 +2456,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
             prompt: prompt,
           })
         }
+        if (tab === 'catalogue') loadCatalogue()
       } catch (e) { console.warn('Could not save resource:', e) }
     } catch { setError('Something went wrong. Please try again.') }
     setGenerating(false)
