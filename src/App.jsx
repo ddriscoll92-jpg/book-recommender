@@ -3297,7 +3297,7 @@ function BookInfoModal({ book, onClose }) {
 
 // ── My Books Page ─────────────────────────────────────────────────────────────
 
-function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onViewPlans }) {
+function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onViewPlans, onCreatePlan }) {
   const [hovered, setHovered] = useState(false)
   const subjectMeta = SUBJECTS.find(s => s.name === book.subject)
 
@@ -3337,10 +3337,17 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
           style={{ flex: 1, height: 30, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
           View book
         </button>
-        <button onClick={() => book.planCount > 0 && onViewPlans && onViewPlans(book)}
-          style={{ flex: 1, height: 30, background: book.planCount > 0 ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${book.planCount > 0 ? GREEN : BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: book.planCount > 0 ? "#085041" : MUTED, cursor: book.planCount > 0 ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif" }}>
-          {book.planCount > 0 ? `View plans (${book.planCount})` : "No plans yet"}
-        </button>
+        {book.planCount > 0 ? (
+          <button onClick={() => onViewPlans && onViewPlans(book)}
+            style={{ flex: 1, height: 30, background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            View plans ({book.planCount})
+          </button>
+        ) : (
+          <button onClick={() => onCreatePlan && onCreatePlan(book)}
+            style={{ flex: 1, height: 30, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: GREEN, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            ✨ Create plan
+          </button>
+        )}
       </div>
     </div>
   )
@@ -3485,7 +3492,8 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                     {filteredFavourites.slice(0, favVisible).map(book => (
                       <BookGridCard key={book.id} book={book} isFavourite={true} onToggleFavourite={toggleFavourite}
                         onViewBook={b => setViewingBook(b)}
-                        onViewPlans={b => setViewingPlans(b)} />
+                        onViewPlans={b => setViewingPlans(b)}
+                        onCreatePlan={b => onSelectBook && onSelectBook({ title: b.title, author: b.author, reason: b.reason || '' })} />
                     ))}
                   </div>
                   {filteredFavourites.length > favVisible && (
@@ -3523,7 +3531,8 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                     {filteredRecent.slice(0, recentVisible).map(book => (
                       <BookGridCard key={book.id} book={book} isFavourite={false} onToggleFavourite={toggleFavourite}
                         onViewBook={b => setViewingBook(b)}
-                        onViewPlans={b => setViewingPlans(b)} />
+                        onViewPlans={b => setViewingPlans(b)}
+                        onCreatePlan={b => onSelectBook && onSelectBook({ title: b.title, author: b.author, reason: b.reason || '' })} />
                     ))}
                   </div>
                   {filteredRecent.length > recentVisible && (
