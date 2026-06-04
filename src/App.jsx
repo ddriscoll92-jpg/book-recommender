@@ -2699,12 +2699,13 @@ function MyLibraryPage({ onNavigate, onSelectBook }) {
         .update({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: book.copies, notes: book.notes })
         .eq('id', book.id)
       if (!error) await loadLibrary()
+      else console.error('Update error:', error)
     } else {
-      const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase
         .from('library_books')
-        .insert({ user_id: user?.id, title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
+        .insert({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
       if (!error) await loadLibrary()
+      else console.error('Insert error:', error)
     }
     setModal(null)
   }
