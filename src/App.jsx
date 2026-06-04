@@ -2162,7 +2162,6 @@ function ResourceOutput({ resource }) {
         const { Document, Packer, Paragraph, TextRun, ShadingType, AlignmentType } = window.docx
         const saveAsRes = window.saveAs || (window.FileSaver && window.FileSaver.saveAs)
         if (!Document || !Packer) throw new Error('docx not loaded')
-        const saveAsRes = window.saveAs || (window.FileSaver && window.FileSaver.saveAs)
         const children = [
           new Paragraph({ children: [new TextRun({ text: resource.title, bold: true, color: '1E2433', size: 36 })], spacing: { after: 80 } }),
           new Paragraph({ children: [new TextRun({ text: resource.meta || '', color: '5F5E5A', size: 18, italics: true })], spacing: { after: 400 } }),
