@@ -1819,6 +1819,7 @@ function MyPlansPage({ onNavigate }) {
   const selectStyle = { height: 32, fontSize: 12, borderRadius: 20, border: `0.5px solid ${BORDER}`, padding: "0 12px", background: BG, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none" }
 
   return (
+    <>
     <div style={{ ...s.page, maxWidth: "100%" }}>
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
 
@@ -1976,8 +1977,6 @@ function MyPlansPage({ onNavigate }) {
         <div style={s.footer}>Book Recommender · For UK primary school teachers</div>
       </div>
     </div>
-
-    {/* Plan detail modal */}
     {viewingPlan && (
       <PlanDetailModal
         plan={viewingPlan.plan}
@@ -1985,6 +1984,7 @@ function MyPlansPage({ onNavigate }) {
         onClose={() => setViewingPlan(null)}
       />
     )}
+    </>
   )
 }
 
