@@ -2324,6 +2324,7 @@ function ResourcesPage({ onNavigate }) {
   const [viewingResource, setViewingResource] = useState(null)
 
   async function loadCatalogue() {
+    console.log('loadCatalogue called')
     setCatalogueLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { data, error } = await supabase
@@ -2331,7 +2332,9 @@ function ResourcesPage({ onNavigate }) {
       .select('*')
       .eq('user_id', user?.id)
       .order('created_at', { ascending: false })
+    console.log('loadCatalogue result:', data?.length, 'error:', error)
     if (!error) setCatalogue(data || [])
+    else console.error('loadCatalogue error:', error)
     setCatalogueLoading(false)
   }
 
@@ -2402,8 +2405,8 @@ For all other types: use appropriate sections for the resource type.`
           })
           loadCatalogue()
         }
-      } catch (e) { console.warn('Could not save resource:', e) }
-    } catch { setError('Something went wrong. Please try again.') }
+      } catch (e) { console.error('Plan resource save error:', JSON.stringify(e)); }
+    } catch (err) { console.error('generateFromPlan error:', err); setError('Something went wrong. Please try again.') }
     setGenerating(false)
   }
 
@@ -2443,8 +2446,8 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
           })
           loadCatalogue()
         }
-      } catch (e) { console.warn('Could not save resource:', e) }
-    } catch { setError('Something went wrong. Please try again.') }
+      } catch (e) { console.error('Adhoc resource save error:', JSON.stringify(e)); }
+    } catch (err) { console.error('generateAdhoc error:', err); setError('Something went wrong. Please try again.') }
     setGenerating(false)
   }
 
