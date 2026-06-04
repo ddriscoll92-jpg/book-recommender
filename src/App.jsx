@@ -3089,11 +3089,6 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
     const filtered = applyFilters(books, filters)
     return (
       <div>
-        {books.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-            <SectionFilters books={books} filters={filters} setFilters={setFilters} />
-          </div>
-        )}
         {books.length === 0 ? (
           <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '2rem', textAlign: 'center', color: MUTED, fontSize: 14 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>{emptyIcon}</div>{emptyMsg}
