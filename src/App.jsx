@@ -3199,6 +3199,88 @@ function MyBooksPage({ onNavigate }) {
   )
 }
 
+// ── Auth Page ─────────────────────────────────────────────────────────────────
+function AuthPage({ onAuth }) {
+  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  async function handleSubmit() {
+    if (!email || !password) { setError('Please fill in all fields.'); return }
+    if (mode === 'signup' && !name) { setError('Please enter your name.'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      if (mode === 'signup') {
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } })
+        if (error) throw error
+        setSuccess('Account created! You can now sign in.')
+        setMode('login')
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        onAuth()
+      }
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const inputStyle = { width: '100%', height: 44, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 14px', fontSize: 15, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" }
+
+  return (
+    <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' }}>
+        <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📚</div>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 26, fontWeight: 500, color: TEXT }}>TeachReads</div>
+          <div style={{ fontSize: 13, color: MUTED }}>Lesson planning for UK primary teachers</div>
+        </div>
+      </div>
+
+      <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 14, padding: '2rem', width: '100%', maxWidth: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: '1.5rem', background: PAGE_BG, borderRadius: 8, padding: 4 }}>
+          {[['login', 'Sign in'], ['signup', 'Create account']].map(([id, label]) => (
+            <button key={id} onClick={() => { setMode(id); setError(''); setSuccess('') }}
+              style={{ flex: 1, height: 36, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : 'transparent', color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {mode === 'signup' && (
+            <div>
+              <label style={{ ...s.label, marginBottom: 6 }}>Your name</label>
+              <input style={inputStyle} placeholder="e.g. Sarah Jones" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+          )}
+          <div>
+            <label style={{ ...s.label, marginBottom: 6 }}>Email address</label>
+            <input style={inputStyle} type="email" placeholder="your@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          <div>
+            <label style={{ ...s.label, marginBottom: 6 }}>Password</label>
+            <input style={inputStyle} type="password" placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13 }}>{error}</div>}
+          {success && <div style={{ background: LIGHT_GREEN, color: '#085041', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13 }}>{success}</div>}
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ height: 44, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
+            {loading ? '⏳ Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+          </button>
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: MUTED, marginTop: '1.5rem', textAlign: 'center' }}>TeachReads · For UK primary school teachers</p>
+    </div>
+  )
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 const initialSearchState = {
   subject: '', topic: '', yearGroup: '', focus: '',
@@ -3207,10 +3289,23 @@ const initialSearchState = {
 }
 
 export default function App() {
+  const [session, setSession] = useState(undefined)
   const [page, setPage] = useState('search')
   const [selectedBook, setSelectedBook] = useState(null)
   const [selectedIdeas, setSelectedIdeas] = useState([])
   const [searchState, setSearchState] = useState(initialSearchState)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    setSession(null)
+    setPage('search')
+  }
 
   function handleNavigate(dest) {
     if (dest === 'search') { setSelectedBook(null); setPage('search') }
@@ -3218,48 +3313,41 @@ export default function App() {
     if (dest === 'plans') { setPage('plans') }
     if (dest === 'library') { setPage('library') }
     if (dest === 'resources') { setPage('resources') }
+    if (dest === 'signout') { handleSignOut() }
   }
 
-  // map internal page names to nav highlight
+  if (session === undefined) {
+    return (
+      <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: 14, color: MUTED }}>Loading...</div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return <AuthPage onAuth={() => supabase.auth.getSession().then(({ data: { session } }) => setSession(session))} />
+  }
+
   const navPage = page === 'book' || page === 'lessonresources' ? 'search' : page === 'books' ? 'books' : page === 'plans' ? 'plans' : page === 'library' ? 'library' : page === 'resources' ? 'resources' : page
+  const userName = session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
+  const userEmail = session?.user?.email || ''
 
   return (
     <div>
-      <NavBar currentPage={navPage} onNavigate={handleNavigate} />
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} />
+      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
+      {page === 'library' && <MyLibraryPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
+      {page === 'books' && <MyBooksPage onNavigate={handleNavigate} />}
+      {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
-        <ResourcePage
-          book={selectedBook}
-          yearGroup={searchState.yearGroup}
-          ideas={selectedIdeas}
-          onBack={() => setPage('book')}
-        />
+        <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />
       )}
       {page === 'book' && (
-        <BookDetailPage
-          book={selectedBook}
-          yearGroup={searchState.yearGroup}
-          onBack={() => setPage('search')}
-          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }}
-        />
-      )}
-      {page === 'books' && (
-        <MyBooksPage onNavigate={handleNavigate} />
-      )}
-      {page === 'plans' && (
-        <MyPlansPage onNavigate={handleNavigate} />
-      )}
-      {page === 'resources' && (
-        <ResourcesPage onNavigate={handleNavigate} />
-      )}
-      {page === 'library' && (
-        <MyLibraryPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />
+        <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setPage('search')}
+          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} />
       )}
       {page === 'search' && (
-        <SearchPage
-          onSelectBook={(book) => { setSelectedBook(book); setPage('book') }}
-          searchState={searchState}
-          setSearchState={setSearchState}
-        />
+        <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} />
       )}
     </div>
   )
