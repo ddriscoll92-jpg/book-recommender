@@ -2609,6 +2609,7 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [viewingPlan, setViewingPlan] = useState(null)
 
   function startEdit(plan) {
     setEditingId(plan.id)
@@ -2621,6 +2622,16 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
   }
 
   const inputStyle = { height: 30, fontSize: 12, border: `0.5px solid ${BORDER}`, borderRadius: 6, padding: "0 8px", fontFamily: "'DM Sans', sans-serif", color: TEXT, background: BG, outline: "none" }
+
+  if (viewingPlan) {
+    return (
+      <PlanDetailModal
+        plan={viewingPlan}
+        group={{ book, yearGroup: book.yearGroup || '' }}
+        onClose={() => setViewingPlan(null)}
+      />
+    )
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
@@ -2674,7 +2685,7 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
                         <div style={{ fontSize: 11, color: MUTED }}>{plan.lessons} lessons · Created {plan.created}</div>
                       </div>
                       <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                        <button onClick={() => onViewPlan(plan)} style={{ height: 26, padding: "0 10px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>View</button>
+                        <button onClick={() => setViewingPlan(plan)} style={{ height: 26, padding: "0 10px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>View</button>
                         <button onClick={() => startEdit(plan)} style={{ height: 26, padding: "0 8px", background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
                         {isConfirmingDelete ? (
                           <>
