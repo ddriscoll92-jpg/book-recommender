@@ -3947,10 +3947,28 @@ export default function App() {
   const [searchState, setSearchState] = useState(initialSearchState)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session))
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session) loadProfilePreferences(session.user.id)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (session) loadProfilePreferences(session.user.id)
+    })
     return () => subscription.unsubscribe()
   }, [])
+
+  async function loadProfilePreferences(userId) {
+    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name').eq('id', userId).single()
+    if (data) {
+      if (data.display_name) setDisplayName(data.display_name)
+      setSearchState(prev => ({
+        ...prev,
+        yearGroup: data.default_year || prev.yearGroup,
+        subject: data.default_subject || prev.subject,
+      }))
+    }
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -3986,7 +4004,7 @@ export default function App() {
     <div>
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} />
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
-      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={name => setDisplayName(name)} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name) => { setDisplayName(name); loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
