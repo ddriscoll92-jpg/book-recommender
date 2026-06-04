@@ -2342,6 +2342,7 @@ function ResourcesPage({ onNavigate }) {
   useEffect(() => { if (tab === 'catalogue') loadCatalogue() }, [tab])
 
   // Plan-based state
+  const [realPlans, setRealPlans] = useState([])
   const [selectedPlanGroup, setSelectedPlanGroup] = useState(null)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [selectedLesson, setSelectedLesson] = useState(null)
@@ -2350,6 +2351,46 @@ function ResourcesPage({ onNavigate }) {
   const [planFilterSubject, setPlanFilterSubject] = useState('All')
   const [planFilterYear, setPlanFilterYear] = useState('All')
   const [planDropdownOpen, setPlanDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    async function loadRealPlans() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: plans } = await supabase
+        .from('plans')
+        .select('id, title, subject, year_group, lesson_count, book_title, book_author')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+      if (plans) {
+        // Group by book into same shape as DUMMY_PLANS
+        const groups = []
+        plans.forEach(plan => {
+          const existing = groups.find(g => g.book.title === plan.book_title)
+          const planEntry = {
+            id: plan.id,
+            title: plan.title,
+            subject: plan.subject,
+            lessons: plan.lesson_count,
+            topic: plan.title,
+            group: null,
+          }
+          if (existing) {
+            planEntry.group = existing
+            existing.plans.push(planEntry)
+          } else {
+            const newGroup = {
+              book: { title: plan.book_title, author: plan.book_author || '', emoji: '📚' },
+              yearGroup: plan.year_group,
+              plans: [planEntry],
+            }
+            planEntry.group = newGroup
+            groups.push(newGroup)
+          }
+        })
+        setRealPlans(groups)
+      }
+    }
+    loadRealPlans()
+  }, [])
 
   // Ad-hoc state
   const [prompt, setPrompt] = useState('')
@@ -2528,7 +2569,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
             {/* ── Plan-based tab ── */}
             {tab === 'plan' && (() => {
               // Flatten all plans with their group context
-              const allPlans = DUMMY_PLANS.flatMap(group =>
+              const allPlans = realPlans.flatMap(group =>
                 group.plans.map(plan => ({ ...plan, group }))
               )
               // Derive filter options
@@ -2543,16 +2584,16 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
                 return true
               })
 
-              // Dummy lesson context — in real app these come from the saved plan
-              const DUMMY_LESSON_CONTEXT = [
-                { num: 1, title: 'Introduction & exploration', type: 'Explore', intention: 'Understand the key features and context of the topic' },
-                { num: 2, title: 'Analyse key examples', type: 'Analyse', intention: 'Identify and describe specific features from real examples' },
-                { num: 3, title: 'Teach the core skill', type: 'Teach', intention: 'Learn and practise the main skill or technique for this unit' },
-                { num: 4, title: 'Practise independently', type: 'Practise', intention: 'Apply the skill independently with scaffolded support' },
-                { num: 5, title: 'Plan and structure', type: 'Apply', intention: 'Plan the structure of the final piece of work' },
-                { num: 6, title: 'Create the final piece', type: 'Create', intention: 'Produce a complete, polished final piece of work' },
-              ]
-              const lessonContext = DUMMY_LESSON_CONTEXT.slice(0, selectedPlan?.lessons || 0)
+              // Use real lesson data from selectedPlan if available
+              const [realLessons, setRealLessons] = useState([])
+              useEffect(() => {
+                if (!selectedPlan?.id) return
+                supabase.from('lessons').select('lesson_number, title, type, learning_intention').eq('plan_id', selectedPlan.id).order('lesson_number')
+                  .then(({ data }) => { if (data) setRealLessons(data) })
+              }, [selectedPlan?.id])
+              const lessonContext = realLessons.length > 0
+                ? realLessons.map(l => ({ num: l.lesson_number, title: l.title, type: l.type, intention: l.learning_intention || '' }))
+                : Array.from({ length: selectedPlan?.lessons || 0 }, (_, i) => ({ num: i+1, title: `Lesson ${i+1}`, type: '', intention: '' }))
 
               const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
               const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
