@@ -4034,7 +4034,7 @@ export default function App() {
     <div>
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} />
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
-      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
