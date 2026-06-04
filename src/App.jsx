@@ -3045,6 +3045,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
       if (globalYear !== 'All' && b.yearGroup !== globalYear) return false
       if (globalSearch && !b.title.toLowerCase().includes(globalSearch.toLowerCase()) &&
           !b.author.toLowerCase().includes(globalSearch.toLowerCase())) return false
+      if (globalHasPlans && !b.planCount) return false
       return true
     })
   }
