@@ -2328,18 +2328,6 @@ function ResourcesPage({ onNavigate }) {
   const [catalogueType, setCatalogueType] = useState('All')
   const [viewingResource, setViewingResource] = useState(null)
 
-  useEffect(() => {
-    if (tab === 'catalogue') loadCatalogue()
-  }, [tab])
-
-  // After generating, switch to catalogue to show the new resource
-  useEffect(() => {
-    if (resource) {
-      // Refresh catalogue in background so it's ready when user navigates there
-      loadCatalogue()
-    }
-  }, [resource])
-
   async function loadCatalogue() {
     setCatalogueLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
