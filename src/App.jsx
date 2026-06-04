@@ -1483,11 +1483,7 @@ function ModelExampleTab({ modelExample }) {
 function ResourcePage({ book, yearGroup, ideas, onBack }) {
   const [plans, setPlans] = useState({})
   const [generating, setGenerating] = useState({})
-  const [openAccordions, setOpenAccordions] = useState(() => {
-    const init = {}
-    ideas.forEach((idea, i) => { init[idea.title] = i === 0 })
-    return init
-  })
+  const [openAccordions, setOpenAccordions] = useState({})
   // active tab per idea: 0..n-1 = lesson index, "model" = model example
   const [activeTabs, setActiveTabs] = useState({})
 
@@ -3087,7 +3083,7 @@ function BookInfoModal({ book, onClose }) {
               </div>
             </div>
           )}
-          {book.notes && <div style={{ background: PAGE_BG, borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13, color: MUTED, fontStyle: 'italic' }}>📌 {book.notes}</div>}
+          {book.notes && <div style={{ background: PAGE_BG, borderRadius: 8, padding: '10px 14px', marginBottom: 12, marginTop: 8, fontSize: 13, color: MUTED, fontStyle: 'italic' }}>📌 {book.notes}</div>}
           {book.reason && (
             <div style={{ background: PAGE_BG, borderRadius: 8, padding: '10px 12px' }}>
               <div style={{ fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Why it was recommended</div>
