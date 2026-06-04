@@ -395,11 +395,11 @@ async function downloadPdf(book, yearGroup, idea, plan) {
 }
 
 async function downloadDocx(book, yearGroup, idea, plan) {
-  await loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js')
+  await loadScript('https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js')
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType } = window.docx
-  const PageBreak = window.docx.PageBreak || (() => ({ type: 'pageBreak' }))
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType, PageBreak } = window.docx
   const saveAs = window.saveAs || (window.FileSaver && window.FileSaver.saveAs)
+  if (!Document || !Packer || !saveAs) { console.error('docx libs not loaded', { Document: !!Document, saveAs: !!saveAs }); return }
 
   const greenColor = '1D9E75'
   const navyColor = '1E2433'
@@ -444,7 +444,7 @@ async function downloadDocx(book, yearGroup, idea, plan) {
 
   // Each lesson
   plan.lessons?.forEach((lesson, li) => {
-    children.push(mkPara([new PageBreak()]))
+    children.push(new Paragraph({ children: [new TextRun({ break: 1 })] }))
     // Lesson header
     children.push(mkPara(
       [mkRun(`Lesson ${lesson.lessonNumber}: ${lesson.title}`, { bold: true, color: 'FFFFFF', size: 28 }),
@@ -483,7 +483,7 @@ async function downloadDocx(book, yearGroup, idea, plan) {
   })
 
   // Model example
-  children.push(mkPara([new PageBreak()]))
+  children.push(new Paragraph({ children: [new TextRun({ break: 1 })] }))
   children.push(mkPara(
     [mkRun('Model Example', { bold: true, color: 'FFFFFF', size: 28 }),
      mkRun('   End goal — what pupils work towards', { color: 'B4B2A9', size: 18 })],
@@ -2160,8 +2160,9 @@ function ResourceOutput({ resource }) {
         await loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js')
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
         const { Document, Packer, Paragraph, TextRun, ShadingType, AlignmentType } = window.docx
-        if (!Document) throw new Error('docx not loaded')
-        const { saveAs } = window
+        const saveAsRes = window.saveAs || (window.FileSaver && window.FileSaver.saveAs)
+        if (!Document || !Packer) throw new Error('docx not loaded')
+        const saveAsRes = window.saveAs || (window.FileSaver && window.FileSaver.saveAs)
         const children = [
           new Paragraph({ children: [new TextRun({ text: resource.title, bold: true, color: '1E2433', size: 36 })], spacing: { after: 80 } }),
           new Paragraph({ children: [new TextRun({ text: resource.meta || '', color: '5F5E5A', size: 18, italics: true })], spacing: { after: 400 } }),
@@ -2173,7 +2174,7 @@ function ResourceOutput({ resource }) {
         ]
         const docFile = new Document({ sections: [{ properties: {}, children }] })
         const blob = await Packer.toBlob(docFile)
-        saveAs(blob, `${resource.title.replace(/[^a-z0-9]/gi, '_')}.docx`)
+        ;(window.saveAs || (window.FileSaver && window.FileSaver.saveAs))(blob, `${resource.title.replace(/[^a-z0-9]/gi, '_')}.docx`)
       }
     } finally { setDownloading(null) }
   }
