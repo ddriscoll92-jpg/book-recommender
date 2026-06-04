@@ -3074,9 +3074,8 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
     setLibraryBooks(prev => prev.filter(b => b.id !== id))
   }
 
-  function SectionGrid({ books, visible, setVisible, filters, setFilters, emptyMsg, emptyIcon, filterSlot }) {
+  function renderSection(books, visible, setVisible, filters, setFilters, emptyMsg, emptyIcon) {
     const filtered = applyFilters(books, filters)
-    const active = filters.subject !== 'All' || filters.yearGroup !== 'All' || filters.hasPlans
     return (
       <div>
         {books.length > 0 && (
@@ -3154,8 +3153,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                 </div>
                 <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Your top books — starred for quick access</p>
               </div>
-              <SectionGrid books={favouriteBooks} visible={favVisible} setVisible={setFavVisible} filters={favFilters} setFilters={setFavFilters}
-                emptyMsg="Star a book from your recommendations to add it here" emptyIcon="☆" />
+              {renderSection(favouriteBooks, favVisible, setFavVisible, favFilters, setFavFilters, "Star a book from your recommendations to add it here", "☆")}
             </div>
 
             <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, marginBottom: '2rem' }} />
@@ -3170,8 +3168,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                 </div>
                 <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Books you own — add, edit and create plans from your physical collection</p>
               </div>
-              <SectionGrid books={allLib} visible={libVisible} setVisible={setLibVisible} filters={libFilters} setFilters={setLibFilters}
-                emptyMsg="Add the books you own to quickly create plans from them" emptyIcon="🏫" />
+              {renderSection(allLib, libVisible, setLibVisible, libFilters, setLibFilters, "Add the books you own to quickly create plans from them", "🏫")}
             </div>
 
             <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, marginBottom: '2rem' }} />
@@ -3186,8 +3183,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
                 </div>
                 <p style={{ fontSize: 13, color: MUTED, marginLeft: 26 }}>Books you've found and used through the book recommender</p>
               </div>
-              <SectionGrid books={recentBooks} visible={recentVisible} setVisible={setRecentVisible} filters={recentFilters} setFilters={setRecentFilters}
-                emptyMsg="Books you find through the recommender will appear here" emptyIcon="📚" />
+              {renderSection(recentBooks, recentVisible, setRecentVisible, recentFilters, setRecentFilters, "Books you find through the recommender will appear here", "📚")}
             </div>
           </>
         )}
