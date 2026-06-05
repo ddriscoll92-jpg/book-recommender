@@ -4720,14 +4720,25 @@ export default function App() {
   useEffect(() => {
     // Handle Stripe success redirect
     const params = new URLSearchParams(window.location.search)
-    if (params.get('session_id')) {
+    const isSuccess = params.get('session_id')
+    if (isSuccess) {
       window.history.replaceState({}, '', '/')
-      setPage('upgrade_success')
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session) loadProfilePreferences(session.user.id)
+      if (session) {
+        if (isSuccess) {
+          // Wait for webhook to update plan then reload preferences
+          setTimeout(() => {
+            loadProfilePreferences(session.user.id).then(() => {
+              setPage('upgrade_success')
+            })
+          }, 2000)
+        } else {
+          loadProfilePreferences(session.user.id)
+        }
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
@@ -4807,7 +4818,8 @@ export default function App() {
   }
 
   if (session === undefined) return null
-  if (!session) return <AuthPage onAuth={async () => {
+  // Allow success page to show even if session is briefly null after redirect
+  if (!session && page !== 'upgrade_success') return <AuthPage onAuth={async () => {
       const { data: { session: newSession } } = await supabase.auth.getSession()
       setSession(newSession || true)
     }} onLegal={t => setLegalPage(t)} />
