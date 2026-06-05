@@ -3861,8 +3861,9 @@ function ProfileModal({ session, onClose, onUpdated }) {
   async function removeAvatar() {
     setUploading(true)
     try {
-      // Remove from storage
-      const ext = avatarUrl?.split('?')[0].split('.').pop()
+      // Remove from storage - try common extensions
+      const cleanUrl = avatarUrl?.split('?')[0] || ''
+      const ext = cleanUrl.split('.').pop() || 'jpg'
       await supabase.storage.from('avatars').remove([`${session.user.id}/avatar.${ext}`])
       // Clear from profile
       await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: null })
@@ -4126,8 +4127,8 @@ function UpgradeSuccessPage({ onNavigate }) {
 
 // ── Stripe Checkout Button ────────────────────────────────────────────────────
 const STRIPE_PRICES = {
-  basic: import.meta.env.VITE_STRIPE_BASIC_PRICE_ID,
-  premium: import.meta.env.VITE_STRIPE_PREMIUM_PRICE_ID,
+  basic: import.meta.env.VITE_STRIPE_BASIC_PRICE_ID || 'price_1TeyTtLDd6xSXwi01VHyNRy6',
+  premium: import.meta.env.VITE_STRIPE_PREMIUM_PRICE_ID || 'price_1TeyUKLDd6xSXwi0ImE2F0su',
 }
 
 function StripeCheckoutButton({ plan, label, style }) {
@@ -4821,7 +4822,7 @@ export default function App() {
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
       {legalPage && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
-      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
+      {profileModalOpen && session?.user && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
     </div>
   )
 }
