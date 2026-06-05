@@ -4070,7 +4070,7 @@ function UpgradePage({ onNavigate, trialInfo }) {
           <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.6 }}>
             {expired
               ? 'Your 5-day free trial has expired. Upgrade to Pro to keep planning.'
-              : 'You've used up this feature's trial allowance. Upgrade to Pro for unlimited access.'}
+              : "You've used up this feature's trial allowance. Upgrade to Pro for unlimited access."}
           </p>
         </div>
 
