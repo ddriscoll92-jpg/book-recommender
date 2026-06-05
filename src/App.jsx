@@ -662,8 +662,11 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
             {trialInfo?.expired && (
               <div style={{ fontSize: 10, color: '#F87171', fontWeight: 600, cursor: 'pointer' }} onClick={() => onNavigate('upgrade')}>Trial expired</div>
             )}
-            {trialInfo?.plan === 'paid' && (
-              <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Pro plan</div>
+            {trialInfo?.plan === 'basic' && (
+              <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Basic plan</div>
+            )}
+            {trialInfo?.plan === 'premium' && (
+              <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Premium plan</div>
             )}
             {!trialInfo && (
               <div style={{ fontSize: 11, color: NAVY_MUTED }}>{ userEmail?.split('@')[1] || 'Teacher' }</div>
