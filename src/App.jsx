@@ -4092,6 +4092,87 @@ function ProfileModal({ session, onClose, onUpdated }) {
   )
 }
 
+// ── Upgrade Success Page ─────────────────────────────────────────────────────
+function UpgradeSuccessPage({ onNavigate }) {
+  useEffect(() => {
+    // Reload profile to get new plan
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) supabase.from('profiles').select('plan').eq('id', user.id).single()
+        .then(({ data }) => { if (data?.plan) console.log('New plan:', data.plan) })
+    })
+  }, [])
+
+  return (
+    <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+        <div style={{ fontSize: 64, marginBottom: 20 }}>🎉</div>
+        <h1 style={{ fontFamily: "'Lora', serif", fontSize: 28, fontWeight: 500, color: TEXT, marginBottom: 12 }}>
+          Welcome to TeachReads Pro!
+        </h1>
+        <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 32 }}>
+          Your subscription is now active. You now have full access to all features. Happy planning!
+        </p>
+        <button onClick={() => onNavigate('search')}
+          style={{ height: 48, padding: '0 32px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+          Start planning →
+        </button>
+        <p style={{ fontSize: 12, color: MUTED, marginTop: 16 }}>
+          A confirmation email has been sent by Stripe. Manage your subscription at any time from Profile & settings.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ── Stripe Checkout Button ────────────────────────────────────────────────────
+const STRIPE_PRICES = {
+  basic: import.meta.env.VITE_STRIPE_BASIC_PRICE_ID,
+  premium: import.meta.env.VITE_STRIPE_PREMIUM_PRICE_ID,
+}
+
+function StripeCheckoutButton({ plan, label, style }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleCheckout() {
+    setLoading(true); setError('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setError('Please sign in first.'); setLoading(false); return }
+      const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId: STRIPE_PRICES[plan],
+          userId: user.id,
+          userEmail: user.email,
+          plan,
+        }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error || 'Could not start checkout.')
+      }
+    } catch (e) {
+      setError('Something went wrong. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const isOutline = style === 'outline'
+  return (
+    <div>
+      <button onClick={handleCheckout} disabled={loading}
+        style={{ width: '100%', height: 46, background: isOutline ? 'transparent' : GREEN, color: isOutline ? GREEN : LIGHT_GREEN, border: isOutline ? `1.5px solid ${GREEN}` : 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: loading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+        {loading ? '⏳ Redirecting to checkout...' : label}
+      </button>
+      {error && <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 6, textAlign: 'center' }}>{error}</div>}
+    </div>
+  )
+}
+
 // ── Upgrade Page ─────────────────────────────────────────────────────────────
 function UpgradePage({ onNavigate, trialInfo }) {
   const usage = trialInfo?.usage || {}
@@ -4174,12 +4255,10 @@ function UpgradePage({ onNavigate, trialInfo }) {
               </div>
             ))}
           </div>
-          <button
-            style={{ width: '100%', height: 46, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-            onClick={() => alert('Payment integration coming soon — contact us at hello@teachreads.co.uk to upgrade manually.')}
-          >
-            Upgrade to Pro →
-          </button>
+          <StripeCheckoutButton plan="basic" label="Upgrade to Basic — £4.99/month" />
+          <div style={{ marginTop: 8 }}>
+            <StripeCheckoutButton plan="premium" label="Upgrade to Premium — £9.99/month" style="outline" />
+          </div>
         </div>
 
         <button
@@ -4629,6 +4708,13 @@ export default function App() {
   })
 
   useEffect(() => {
+    // Handle Stripe success redirect
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('session_id')) {
+      window.history.replaceState({}, '', '/')
+      setPage('upgrade_success')
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) loadProfilePreferences(session.user.id)
@@ -4731,6 +4817,7 @@ export default function App() {
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
+      {page === 'upgrade_success' && <UpgradeSuccessPage onNavigate={handleNavigate} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
       {legalPage && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
