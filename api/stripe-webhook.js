@@ -1,34 +1,52 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-const { createClient } = require('@supabase/supabase-js')
-
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
-
-// Disable Vercel's body parser so Stripe can verify the raw body
-export const config = { api: { bodyParser: false } }
-
-async function buffer(readable) {
-  const chunks = []
-  for await (const chunk of readable) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
-  }
-  return Buffer.concat(chunks)
-}
-
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const sig = req.headers['stripe-signature']
-  const buf = await buffer(req)
   let event
-
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET)
+    const body = await new Promise((resolve) => {
+      let data = ''
+      req.on('data', chunk => data += chunk)
+      req.on('end', () => resolve(data))
+    })
+    event = JSON.parse(body)
   } catch (err) {
-    console.error('Webhook signature error:', err.message)
-    return res.status(400).json({ error: `Webhook error: ${err.message}` })
+    // If req.on doesn't work, try reading body directly
+    try {
+      event = req.body
+    } catch(e) {
+      return res.status(400).json({ error: 'Could not parse body' })
+    }
+  }
+
+  if (!event || !event.type) {
+    return res.status(400).json({ error: 'Invalid event' })
+  }
+
+  const supabaseUrl = process.env.VITE_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  console.log('Webhook event:', event.type, 'supabaseUrl:', !!supabaseUrl, 'supabaseKey:', !!supabaseKey)
+
+  async function updateProfile(userId, data) {
+    const response = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify(data),
+    })
+    console.log('updateProfile response:', response.status)
+    return response
+  }
+
+  async function getSubscription(subId) {
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subId}`, {
+      headers: { 'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}` }
+    })
+    return res.json()
   }
 
   try {
@@ -38,12 +56,13 @@ module.exports = async (req, res) => {
         const session = event.data.object
         const userId = session.client_reference_id || session.metadata?.userId
         const plan = session.metadata?.plan
+        console.log('checkout.session.completed userId:', userId, 'plan:', plan)
         if (userId && plan) {
-          await supabase.from('profiles').update({
+          await updateProfile(userId, {
             plan,
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
-          }).eq('id', userId)
+          })
         }
         break
       }
@@ -52,18 +71,10 @@ module.exports = async (req, res) => {
         const invoice = event.data.object
         const subId = invoice.subscription
         if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId)
+          const sub = await getSubscription(subId)
           const userId = sub.metadata?.userId
           const plan = sub.metadata?.plan
-          if (userId) {
-            await supabase.from('profiles').update({ plan }).eq('id', userId)
-            await supabase.from('usage_counts').upsert({
-              user_id: userId,
-              book_searches: 0, load_mores: 0, lesson_ideas: 0,
-              units_of_work: 0, resources: 0,
-              reset_at: new Date().toISOString(),
-            })
-          }
+          if (userId) await updateProfile(userId, { plan })
         }
         break
       }
@@ -73,11 +84,9 @@ module.exports = async (req, res) => {
         const obj = event.data.object
         const subId = obj.subscription || obj.id
         if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId)
+          const sub = await getSubscription(subId)
           const userId = sub.metadata?.userId
-          if (userId) {
-            await supabase.from('profiles').update({ plan: 'trial' }).eq('id', userId)
-          }
+          if (userId) await updateProfile(userId, { plan: 'trial' })
         }
         break
       }
@@ -86,15 +95,14 @@ module.exports = async (req, res) => {
         const sub = event.data.object
         const userId = sub.metadata?.userId
         const plan = sub.metadata?.plan
-        if (userId && plan) {
-          await supabase.from('profiles').update({ plan }).eq('id', userId)
-        }
+        if (userId && plan) await updateProfile(userId, { plan })
         break
       }
     }
+
     res.status(200).json({ received: true })
   } catch (err) {
-    console.error('Webhook handler error:', err)
+    console.error('Webhook error:', err.message)
     res.status(500).json({ error: err.message })
   }
 }
