@@ -3,17 +3,29 @@ const { createClient } = require('@supabase/supabase-js')
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // Service role key — bypasses RLS
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 )
+
+// Disable Vercel's body parser so Stripe can verify the raw body
+export const config = { api: { bodyParser: false } }
+
+async function buffer(readable) {
+  const chunks = []
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+  }
+  return Buffer.concat(chunks)
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const sig = req.headers['stripe-signature']
+  const buf = await buffer(req)
   let event
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET)
   } catch (err) {
     console.error('Webhook signature error:', err.message)
     return res.status(400).json({ error: `Webhook error: ${err.message}` })
@@ -32,7 +44,6 @@ module.exports = async (req, res) => {
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
           }).eq('id', userId)
-          console.log(`Upgraded user ${userId} to ${plan}`)
         }
         break
       }
@@ -46,7 +57,6 @@ module.exports = async (req, res) => {
           const plan = sub.metadata?.plan
           if (userId) {
             await supabase.from('profiles').update({ plan }).eq('id', userId)
-            // Reset monthly usage on successful renewal
             await supabase.from('usage_counts').upsert({
               user_id: userId,
               book_searches: 0, load_mores: 0, lesson_ideas: 0,
@@ -67,7 +77,6 @@ module.exports = async (req, res) => {
           const userId = sub.metadata?.userId
           if (userId) {
             await supabase.from('profiles').update({ plan: 'trial' }).eq('id', userId)
-            console.log(`Downgraded user ${userId} to trial (payment failed/cancelled)`)
           }
         }
         break
@@ -83,7 +92,6 @@ module.exports = async (req, res) => {
         break
       }
     }
-
     res.status(200).json({ received: true })
   } catch (err) {
     console.error('Webhook handler error:', err)
