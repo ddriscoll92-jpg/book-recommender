@@ -3722,7 +3722,6 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
 // ── Profile Modal ────────────────────────────────────────────────────────────
 function ProfileModal({ session, onClose, onUpdated }) {
-  console.log('ProfileModal rendering, session:', session?.user?.id, typeof session)
   const [activeTab, setActiveTab] = useState('personal')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null) // { type: 'success'|'error', text }
@@ -3756,13 +3755,10 @@ function ProfileModal({ session, onClose, onUpdated }) {
   }, [])
 
   async function loadProfile() {
-    console.log('ProfileModal loadProfile START, session:', session?.user?.id)
     const { data: { user }, error: userErr } = await supabase.auth.getUser()
-    console.log('getUser result:', user?.id, userErr)
     const uid = user?.id || session?.user?.id
-    if (!uid) { console.log('No uid found'); return }
+    if (!uid) return
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
-    console.log('profile query:', { data, error })
     if (data) {
       setSchoolName(data.school || '')
       setRegion(data.region || '')
@@ -3771,7 +3767,6 @@ function ProfileModal({ session, onClose, onUpdated }) {
       setDefaultSubject(data.default_subject || '')
       setAvatarUrl(data.avatar_url || null)
     } else if (error) {
-      console.log('Profile missing, creating...')
       await supabase.from('profiles').upsert({ id: uid, display_name: user?.user_metadata?.display_name || '' })
     }
   }
@@ -4816,7 +4811,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => { if (session?.user) setProfileModalOpen(true) }} avatarUrl={avatarUrl} trialInfo={trialInfo} />
       {page === 'search' && (
         <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
       )}
