@@ -681,7 +681,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
             </div>
             {[
               { label: '👤  Profile & settings', note: '', dest: 'profile' },
-              ...(userEmail === 'dd.driscoll92@gmail.com' ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
+              ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
               <div key={i}
@@ -4261,6 +4261,355 @@ function LegalPage({ type, onClose }) {
   )
 }
 
+
+// ── Admin Dashboard ───────────────────────────────────────────────────────────
+const ADMIN_EMAIL = 'dd.driscoll92@gmail.com'
+
+function AdminDashboard({ onNavigate, userEmail }) {
+  const [stats, setStats] = useState(null)
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { loadStats() }, [])
+
+  async function loadStats() {
+    setLoading(true)
+    const [{ data: profiles }, { data: usageCounts }, { data: plans }, { data: resources }] = await Promise.all([
+      supabase.from('profiles').select('id, plan, trial_expires_at, trial_started_at, display_name, school, created_at'),
+      supabase.from('usage_counts').select('*'),
+      supabase.from('plans').select('id, created_at, subject'),
+      supabase.from('resources').select('id, created_at, resource_type'),
+    ])
+    const now = new Date()
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000)
+    const planCounts = { trial: 0, basic: 0, premium: 0, expired: 0 }
+    ;(profiles || []).forEach(p => {
+      if (p.plan === 'premium') planCounts.premium++
+      else if (p.plan === 'basic') planCounts.basic++
+      else if (new Date(p.trial_expires_at) < now) planCounts.expired++
+      else planCounts.trial++
+    })
+    const totalUsage = (usageCounts || []).reduce((acc, u) => ({
+      book_searches: acc.book_searches + (u.book_searches || 0),
+      units_of_work: acc.units_of_work + (u.units_of_work || 0),
+      resources: acc.resources + (u.resources || 0),
+    }), { book_searches: 0, units_of_work: 0, resources: 0 })
+    const apiCost = (totalUsage.book_searches * 0.0044) + (totalUsage.units_of_work * 0.0068) + (totalUsage.resources * 0.0030)
+    const revenue = (planCounts.basic * 4.99) + (planCounts.premium * 9.99)
+    setStats({
+      totalUsers: (profiles || []).length,
+      newThisWeek: (profiles || []).filter(p => new Date(p.created_at) > weekAgo).length,
+      planCounts, totalPlans: (plans || []).length,
+      totalResources: (resources || []).length,
+      plansThisWeek: (plans || []).filter(p => new Date(p.created_at) > weekAgo).length,
+      resourcesThisWeek: (resources || []).filter(r => new Date(r.created_at) > weekAgo).length,
+      apiCost: apiCost.toFixed(2), revenue: revenue.toFixed(2), totalUsage,
+    })
+    setUsers((profiles || []).map(p => {
+      const usage = (usageCounts || []).find(u => u.user_id === p.id) || {}
+      const expired = p.plan === 'trial' && new Date(p.trial_expires_at) < now
+      const daysLeft = p.plan === 'trial' ? Math.max(0, Math.ceil((new Date(p.trial_expires_at) - now) / (1000*60*60*24))) : null
+      return { ...p, usage, expired, daysLeft }
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+    setLoading(false)
+  }
+
+  if (userEmail !== ADMIN_EMAIL) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: PAGE_BG }}>
+        <div style={{ textAlign: 'center', color: MUTED }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+          <div style={{ fontSize: 16, color: TEXT }}>Admin access only</div>
+          <button onClick={() => onNavigate('search')} style={{ marginTop: 16, height: 36, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>← Back</button>
+        </div>
+      </div>
+    )
+  }
+
+  const planBadge = (plan, expired) => {
+    if (expired) return { bg: '#FCEBEB', color: '#A32D2D', label: 'Expired' }
+    if (plan === 'premium') return { bg: '#EEF2FF', color: '#3730A3', label: 'Premium' }
+    if (plan === 'basic') return { bg: LIGHT_GREEN, color: '#085041', label: 'Basic' }
+    return { bg: '#FEF3C7', color: '#92400E', label: 'Trial' }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: NAVY, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 32, height: 32, background: GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📊</div>
+          <div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 18, color: '#fff' }}>TeachReads Admin</div>
+            <div style={{ fontSize: 11, color: NAVY_MUTED }}>Dashboard</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={loadStats} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>↺ Refresh</button>
+          <button onClick={() => onNavigate('search')} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>← App</button>
+        </div>
+      </div>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
+        {loading ? <div style={{ textAlign: 'center', padding: '3rem', color: MUTED }}>Loading stats...</div> : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              {[
+                { label: 'Total users', value: stats.totalUsers, sub: `+${stats.newThisWeek} this week` },
+                { label: 'Monthly revenue', value: `£${stats.revenue}`, sub: `${stats.planCounts.basic} Basic · ${stats.planCounts.premium} Premium` },
+                { label: 'API costs (all time)', value: `£${stats.apiCost}`, sub: `${stats.totalUsage.book_searches} searches` },
+                { label: 'Plans created', value: stats.totalPlans, sub: `+${stats.plansThisWeek} this week` },
+              ].map((card, i) => (
+                <div key={i} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem' }}>
+                  <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>{card.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 500, color: TEXT, marginBottom: 4 }}>{card.value}</div>
+                  <div style={{ fontSize: 11, color: MUTED }}>{card.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+              <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 14 }}>Users by plan</div>
+                {[
+                  { label: 'Trial (active)', count: stats.planCounts.trial, color: '#F59E0B', bg: '#FEF3C7' },
+                  { label: 'Trial (expired)', count: stats.planCounts.expired, color: '#A32D2D', bg: '#FCEBEB' },
+                  { label: 'Basic', count: stats.planCounts.basic, color: '#085041', bg: LIGHT_GREEN },
+                  { label: 'Premium', count: stats.planCounts.premium, color: '#3730A3', bg: '#EEF2FF' },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: row.color }} />
+                      <span style={{ fontSize: 13, color: TEXT }}>{row.label}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, background: row.bg, color: row.color, padding: '2px 10px', borderRadius: 20 }}>{row.count}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 14 }}>Activity this week</div>
+                {[
+                  { label: 'New signups', value: stats.newThisWeek },
+                  { label: 'Plans created', value: stats.plansThisWeek },
+                  { label: 'Resources generated', value: stats.resourcesThisWeek },
+                  { label: 'Total resources', value: stats.totalResources },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: MUTED }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.25rem', borderBottom: `0.5px solid ${BORDER}` }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>All users ({users.length})</div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: PAGE_BG }}>
+                      {['Name', 'Plan', 'Trial', 'Searches', 'Units', 'Resources', 'Joined'].map(h => (
+                        <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500, color: MUTED, borderBottom: `0.5px solid ${BORDER}`, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user, i) => {
+                      const badge = planBadge(user.plan, user.expired)
+                      return (
+                        <tr key={user.id} style={{ borderBottom: i < users.length - 1 ? `0.5px solid ${BORDER}` : 'none' }}
+                          onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <td style={{ padding: '10px 14px', color: TEXT, fontWeight: 500 }}>{user.display_name || '—'}</td>
+                          <td style={{ padding: '10px 14px' }}><span style={{ background: badge.bg, color: badge.color, padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{badge.label}</span></td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.plan === 'trial' ? (user.expired ? 'Expired' : `${user.daysLeft}d left`) : '—'}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.usage.book_searches || 0}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.usage.units_of_work || 0}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.usage.resources || 0}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED, whiteSpace: 'nowrap' }}>{new Date(user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Auth Page ─────────────────────────────────────────────────────────────────
+function AuthPage({ onAuth, onLegal }) {
+  const [mode, setMode] = useState('signup')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  async function handleSubmit() {
+    if (!email || !password) { setError('Please fill in all fields.'); return }
+    if (mode === 'signup' && !name) { setError('Please enter your name.'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      if (mode === 'signup') {
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } })
+        if (error) throw error
+        setSuccess('Account created! You can now sign in.')
+        setMode('login')
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        onAuth()
+      }
+    } catch (err) { setError(err.message || 'Something went wrong.') }
+    setLoading(false)
+  }
+
+  const inputStyle = { width: '100%', height: 42, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 14px', fontSize: 14, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" }
+  const benefits = [
+    { icon: '📚', title: 'Smart book recommendations', desc: 'matched to your topic and year group' },
+    { icon: '📋', title: 'Full units of work', desc: 'with NC links, SEND adaptations and model examples' },
+    { icon: '🛠️', title: 'Classroom resources', desc: 'worksheets, starters, exit tickets and more' },
+    { icon: '🏫', title: 'Your school library', desc: 'manage books, track plans and reuse resources' },
+  ]
+  const steps = [
+    { n: '1', title: 'Find the perfect book', desc: 'Search by subject, topic and year group. AI recommends books matched to your curriculum.' },
+    { n: '2', title: 'Generate a unit of work', desc: 'One click creates a full lesson sequence with NC links, SEND adaptations and model examples.' },
+    { n: '3', title: 'Create resources', desc: 'Generate differentiated worksheets, starters, exit tickets and more. Download as PDF or Word.' },
+  ]
+
+  return (
+    <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: NAVY, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, background: GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📚</div>
+          <span style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: '#fff' }}>TeachReads</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <span style={{ fontSize: 13, color: NAVY_MUTED, cursor: 'pointer' }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>How it works</span>
+          <button onClick={() => { setMode('login'); document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth' }) }} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 13, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Sign in</button>
+          <button onClick={() => { setMode('signup'); document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth' }) }} style={{ height: 32, padding: '0 14px', background: GREEN, border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 500, color: LIGHT_GREEN, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Get started free</button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 56px)', maxWidth: 1200, margin: '0 auto', padding: '0 2rem', gap: '3rem', alignItems: 'center' }}>
+        <div style={{ padding: '3rem 0' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: GREEN, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>For UK primary school teachers</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#FEF3C7', border: '0.5px solid #F59E0B', borderRadius: 20, padding: '5px 14px', marginBottom: 18, width: 'fit-content' }}>
+            <span style={{ fontSize: 14 }}>🎁</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: '#92400E' }}>5-day free trial — no credit card required</span>
+          </div>
+          <h1 style={{ fontFamily: "'Lora', serif", fontSize: 38, fontWeight: 500, color: TEXT, lineHeight: 1.25, marginBottom: 18 }}>Lesson planning,<br /><span style={{ color: GREEN }}>powered by AI</span></h1>
+          <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 36, maxWidth: 440 }}>Find books, generate full units of work and create classroom resources — all in one place. Save hours of planning every week.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 40 }}>
+            {benefits.map((b, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 32, height: 32, background: LIGHT_GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0, marginTop: 1 }}>{b.icon}</div>
+                <div><span style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{b.title} </span><span style={{ fontSize: 14, color: MUTED }}>{b.desc}</span></div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex' }}>
+              {['S','J','R','M'].map((l, i) => (
+                <div key={i} style={{ width: 28, height: 28, borderRadius: '50%', background: [GREEN, '#534AB7', '#BA7517', '#D85A30'][i], border: `2px solid ${PAGE_BG}`, marginLeft: i === 0 ? 0 : -8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#fff' }}>{l}</div>
+              ))}
+            </div>
+            <span style={{ fontSize: 13, color: MUTED }}>Trusted by UK primary teachers</span>
+          </div>
+        </div>
+        <div id="auth-card" style={{ padding: '2rem 0' }}>
+          <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 16, padding: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
+            <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, color: TEXT, marginBottom: 4 }}>{mode === 'signup' ? 'Get started free' : 'Welcome back'}</h2>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>{mode === 'signup' ? '5-day free trial · No credit card required' : 'Sign in to your TeachReads account'}</p>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
+              {[['signup', 'Create account'], ['login', 'Sign in']].map(([id, label]) => (
+                <button key={id} onClick={() => { setMode(id); setError(''); setSuccess('') }}
+                  style={{ flex: 1, height: 34, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: mode === id ? 500 : 400, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : 'transparent', color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {mode === 'signup' && <div><label style={{ ...s.label, marginBottom: 5 }}>Your name</label><input style={inputStyle} placeholder="e.g. Sarah Jones" value={name} onChange={e => setName(e.target.value)} /></div>}
+              <div><label style={{ ...s.label, marginBottom: 5 }}>Email address</label><input style={inputStyle} type="email" placeholder="your@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
+              <div><label style={{ ...s.label, marginBottom: 5 }}>Password</label><input style={inputStyle} type="password" placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
+              {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>{error}</div>}
+              {success && <div style={{ background: LIGHT_GREEN, color: '#085041', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>{success}</div>}
+              {mode === 'signup' && (
+                <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: '10px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#085041', width: '100%', marginBottom: 2 }}>Your trial includes:</span>
+                  {['10 book searches', '10 units of work', '15 resources', '20 load mores'].map((f, i) => (
+                    <span key={i} style={{ fontSize: 11, color: '#085041', background: 'rgba(29,158,117,0.15)', padding: '2px 8px', borderRadius: 20 }}>✓ {f}</span>
+                  ))}
+                </div>
+              )}
+              <button onClick={handleSubmit} disabled={loading} style={{ height: 44, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
+                {loading ? '⏳ Please wait...' : mode === 'login' ? 'Sign in' : 'Start free 5-day trial'}
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, height: '0.5px', background: BORDER }} />
+                <span style={{ fontSize: 11, color: MUTED }}>or</span>
+                <div style={{ flex: 1, height: '0.5px', background: BORDER }} />
+              </div>
+              <button disabled style={{ height: 40, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'not-allowed', opacity: 0.6 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                <span style={{ fontSize: 13, color: MUTED }}>Continue with Google (coming soon)</span>
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
+              By signing up you agree to our{' '}
+              <span style={{ color: GREEN, cursor: 'pointer' }} onClick={() => onLegal && onLegal('privacy')}>Terms of Service</span> and{' '}
+              <span style={{ color: GREEN, cursor: 'pointer' }} onClick={() => onLegal && onLegal('terms')}>Privacy Policy</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div id="how-it-works" style={{ background: BG, borderTop: `0.5px solid ${BORDER}`, padding: '4rem 2rem' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <h2 style={{ fontFamily: "'Lora', serif", fontSize: 26, fontWeight: 500, color: TEXT, textAlign: 'center', marginBottom: 8 }}>How it works</h2>
+          <p style={{ fontSize: 15, color: MUTED, textAlign: 'center', marginBottom: 40 }}>Three steps from finding a book to having a full unit of work ready to teach</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            {steps.map((step, i) => (
+              <div key={i} style={{ background: PAGE_BG, borderRadius: 12, padding: '1.5rem', position: 'relative' }}>
+                <div style={{ width: 32, height: 32, background: GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: LIGHT_GREEN, marginBottom: 14 }}>{step.n}</div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 8 }}>{step.title}</div>
+                <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{step.desc}</div>
+                {i < steps.length - 1 && <div style={{ position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: BORDER }}>→</div>}
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 40 }}>
+            <button onClick={() => { setMode('signup'); document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth' }) }} style={{ height: 48, padding: '0 32px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Start your free 5-day trial →</button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: 16, flexWrap: 'wrap' }}>
+              {['5-day free trial', 'No credit card needed', 'Cancel anytime'].map((t, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ color: GREEN, fontSize: 13 }}>✓</span>
+                  <span style={{ fontSize: 13, color: MUTED }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style={{ background: NAVY, padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 24, height: 24, background: GREEN, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>📚</div>
+          <span style={{ fontFamily: "'Lora', serif", fontSize: 15, color: '#fff' }}>TeachReads</span>
+        </div>
+        <span style={{ fontSize: 12, color: NAVY_MUTED }}>For UK primary school teachers</span>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[['Privacy', 'privacy'], ['Terms', 'terms'], ['Contact', 'contact']].map(([l, t]) => (
+            <span key={l} onClick={() => t === 'contact' ? window.location.href='mailto:hello@teachreads.co.uk' : onLegal && onLegal(t)} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 // ── Root App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [session, setSession] = useState(undefined)
