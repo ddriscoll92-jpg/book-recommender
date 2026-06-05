@@ -4233,4 +4233,159 @@ function LegalPage({ type, onClose }) {
     ]
   }
 
+  const page = isPrivacy ? privacy : terms
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: TEXT }}>{page.title}</div>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Last updated {page.updated}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED, lineHeight: 1, marginLeft: 12 }}>×</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {page.sections.map((sec, i) => (
+            <div key={i} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>{sec.heading}</div>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7 }}>{sec.body}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: `0.5px solid ${BORDER}`, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ height: 36, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Root App ──────────────────────────────────────────────────────────────────
+export default function App() {
+  const [session, setSession] = useState(undefined)
+  const [page, setPage] = useState('search')
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [displayName, setDisplayName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [trialInfo, setTrialInfo] = useState(null)
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [legalPage, setLegalPage] = useState(null)
+  const [selectedBook, setSelectedBook] = useState(null)
+  const [selectedIdeas, setSelectedIdeas] = useState([])
+  const [searchState, setSearchState] = useState({
+    subject: '', topic: '', yearGroup: '', focus: '',
+    accordionOpen: false, contentType: 'Any', bookType: 'Any', readingLevel: 'Any', starRating: 0,
+    books: [], loading: false, loadingMore: false, error: '', searched: false, searchMeta: {},
+  })
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session) loadProfilePreferences(session.user.id)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (session) loadProfilePreferences(session.user.id)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function loadProfilePreferences(userId) {
+    try {
+    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url, plan, trial_expires_at').eq('id', userId).single()
+    if (data) {
+      if (data.display_name) setDisplayName(data.display_name)
+      if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
+      setSearchState(prev => ({
+        ...prev,
+        yearGroup: data.default_year || prev.yearGroup,
+        subject: data.default_subject || prev.subject,
+      }))
+      const plan = data.plan || 'trial'
+      const expiresAt = data.trial_expires_at ? new Date(data.trial_expires_at) : null
+      const now = new Date()
+      const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))) : 0
+      const expired = plan === 'trial' && expiresAt && now > expiresAt
+      const { data: usage } = await supabase.from('usage_counts').select('*').eq('user_id', userId).single()
+      setTrialInfo({ plan, daysLeft, expired, usage: usage || {} })
+    }
+    } catch(e) { console.error('loadProfilePreferences error:', e) }
+  }
+
+  async function checkTrial(action) {
+    if (!trialInfo) return true
+    const { plan } = trialInfo
+    if (plan === 'premium') return true
+    if (plan === 'trial' && trialInfo.expired) { setPage('upgrade'); return false }
+    const limits = plan === 'premium' ? PREMIUM_LIMITS : plan === 'basic' ? BASIC_LIMITS : TRIAL_LIMITS
+    const limit = limits[action] || 999
+    let usage = trialInfo.usage
+    if (plan === 'basic') {
+      const resetAt = trialInfo.usage.reset_at ? new Date(trialInfo.usage.reset_at) : null
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      if (!resetAt || resetAt < monthStart) {
+        const { data: { user } } = await supabase.auth.getUser()
+        const freshUsage = { user_id: user.id, book_searches: 0, load_mores: 0, lesson_ideas: 0, units_of_work: 0, resources: 0, reset_at: monthStart.toISOString() }
+        await supabase.from('usage_counts').upsert(freshUsage)
+        usage = freshUsage
+        setTrialInfo(prev => ({ ...prev, usage: freshUsage }))
+      }
+    }
+    const count = usage[action] || 0
+    if (count >= limit) { setPage('upgrade'); return false }
+    const { data: { user } } = await supabase.auth.getUser()
+    const newUsage = { ...usage, [action]: count + 1 }
+    await supabase.from('usage_counts').upsert({ user_id: user.id, ...newUsage })
+    setTrialInfo(prev => ({ ...prev, usage: newUsage }))
+    return true
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    setSession(null)
+    setPage('search')
+    setTrialInfo(null)
+    setDisplayName('')
+    setAvatarUrl('')
+  }
+
+  function handleNavigate(dest) {
+    if (dest === 'search') setPage('search')
+    if (dest === 'plans') setPage('plans')
+    if (dest === 'books') setPage('books')
+    if (dest === 'resources') setPage('resources')
+    if (dest === 'signout') { handleSignOut() }
+    if (dest === 'upgrade') { setPage('upgrade') }
+    if (dest === 'admin') { setShowAdmin(true) }
+  }
+
+  if (session === undefined) return null
+  if (!session) return <AuthPage onAuth={() => setSession('pending')} onLegal={t => setLegalPage(t)} />
+
+  const userName = displayName || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
+  const userEmail = session?.user?.email || ''
+  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'books' ? 'books' : page === 'resources' ? 'resources' : ''
+
+  return (
+    <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      {page === 'search' && (
+        <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
+      )}
+      {page === 'book' && (
+        <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setPage('search')}
+          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} checkTrial={checkTrial} />
+      )}
+      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />}
+      {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
+      {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
+      {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
+      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
+      {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
+      {legalPage && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
+    </div>
+  )
 }
