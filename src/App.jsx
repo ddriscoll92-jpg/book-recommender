@@ -686,11 +686,12 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
               { label: '👤  Profile & settings', note: '', dest: 'profile' },
               { label: '⭐  Plan options', note: '', dest: 'upgrade' },
               ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
+              { label: '📋  Privacy & Terms', note: '', dest: 'legal' },
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
               <div key={i}
-                onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
-                style={{ padding: '10px 14px', fontSize: 13, color: i === 2 ? '#A32D2D' : TEXT, cursor: item.dest ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 2 ? `0.5px solid ${BORDER}` : 'none' }}
+                onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest === 'legal') { setProfileOpen(false); onNavigate('legal') } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
+                style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: item.dest ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
                 onMouseEnter={e => { if (item.dest) e.currentTarget.style.background = PAGE_BG }}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -4649,7 +4650,7 @@ function AuthPage({ onAuth, onLegal }) {
         <span style={{ fontSize: 12, color: NAVY_MUTED }}>For UK primary school teachers</span>
         <div style={{ display: 'flex', gap: 20 }}>
           {[['Privacy', 'privacy'], ['Terms', 'terms'], ['Contact', 'contact']].map(([l, t]) => (
-            <span key={l} onClick={() => t === 'contact' ? window.location.href='mailto:hello@teachreads.co.uk' : onLegal && onLegal(t)} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
+            <span key={l} onClick={() => onLegal && onLegal(t)} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
           ))}
         </div>
       </div>
@@ -4773,6 +4774,7 @@ export default function App() {
     if (dest === 'signout') { handleSignOut() }
     if (dest === 'upgrade') { setPage('upgrade') }
     if (dest === 'admin') { setShowAdmin(true) }
+    if (dest === 'legal') { setLegalPage('privacy') }
   }
 
   if (session === undefined) return null
@@ -4803,7 +4805,8 @@ export default function App() {
       {page === 'upgrade_success' && <UpgradeSuccessPage onNavigate={handleNavigate} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
-      {legalPage && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
+      {legalPage && legalPage !== 'contact' && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
+      {legalPage === 'contact' && <ContactModal onClose={() => setLegalPage(null)} />}
       {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); if (session?.user?.id) loadProfilePreferences(session.user.id) }} />}
     </div>
   )
