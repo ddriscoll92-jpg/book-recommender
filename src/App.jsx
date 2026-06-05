@@ -3187,6 +3187,30 @@ function BookInfoModal({ book, onClose }) {
   )
 }
 
+function BookGridStarRating({ bookId, initialRating }) {
+  const [rating, setRating] = useState(initialRating)
+  const [hover, setHover] = useState(0)
+
+  async function handleRate(star) {
+    const newRating = star === rating ? 0 : star
+    setRating(newRating)
+    await supabase.from('saved_books').update({ star_rating: newRating }).eq('id', bookId)
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 1, marginBottom: 4 }} onMouseLeave={() => setHover(0)}>
+      {[1,2,3,4,5].map(star => (
+        <span key={star}
+          onClick={e => { e.stopPropagation(); handleRate(star) }}
+          onMouseEnter={() => setHover(star)}
+          style={{ fontSize: 12, cursor: 'pointer', color: star <= (hover || rating) ? '#F59E0B' : '#D1D0C9', lineHeight: 1, userSelect: 'none' }}>
+          ★
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onViewPlans, onCreatePlan, onEdit, onDelete }) {
   const [hovered, setHovered] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -3222,10 +3246,8 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
           {book.yearGroup && <span style={{ fontSize: 9, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: '1px 6px', borderRadius: 20 }}>{book.yearGroup}</span>}
           {book.copies > 0 && <span style={{ fontSize: 9, fontWeight: 500, background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: 20 }}>{book.copies} {book.copies === 1 ? 'copy' : 'copies'}</span>}
         </div>
-        {book.starRating > 0 && (
-          <div style={{ display: 'flex', gap: 1, marginBottom: 4 }}>
-            {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 11, color: s <= book.starRating ? '#F59E0B' : '#D1D0C9' }}>★</span>)}
-          </div>
+        {book.source === 'saved' && (
+          <BookGridStarRating bookId={book.id} initialRating={book.starRating || 0} />
         )}
         {book.lastAccessed && (
           <div style={{ fontSize: 10, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Accessed: </span>{book.lastAccessed}</div>
