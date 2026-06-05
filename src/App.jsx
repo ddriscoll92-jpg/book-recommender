@@ -4159,13 +4159,14 @@ function StripeCheckoutButton({ plan, label, style }) {
         }),
       })
       const data = await res.json()
+      console.log('Checkout response:', res.status, data)
       if (data.url) {
         window.location.href = data.url
       } else {
-        setError(data.error || 'Could not start checkout.')
+        setError(data.error || `Checkout failed (${res.status})`)
       }
     } catch (e) {
-      setError('Something went wrong. Please try again.')
+      setError(e.message || 'Something went wrong. Please try again.')
     }
     setLoading(false)
   }
