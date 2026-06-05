@@ -126,6 +126,15 @@ async function callAPI(prompt, raw = false) {
   return raw ? data.result : data.books
 }
 
+// ── Trial limits ─────────────────────────────────────────────────────────────
+const TRIAL_LIMITS = {
+  book_searches: 10,
+  load_mores: 20,
+  lesson_ideas: 15,
+  units_of_work: 10,
+  resources: 15,
+}
+
 // ── Download Utilities ────────────────────────────────────────────────────────
 // ── Script loader helper ──────────────────────────────────────────────────────
 function loadScript(src) {
@@ -572,7 +581,7 @@ function DownloadDropdown({ book, yearGroup, idea, plan }) {
 }
 
 // ── Nav Bar ───────────────────────────────────────────────────────────────────
-function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl }) {
+function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo }) {
   const [profileOpen, setProfileOpen] = useState(false)
 
   const navItems = [
@@ -629,7 +638,20 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
           </div>
           <div style={{ lineHeight: 1.2 }}>
             <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
-            <div style={{ fontSize: 11, color: NAVY_MUTED }}>{ userEmail?.split('@')[1] || 'Teacher' }</div>
+            {trialInfo?.plan === 'trial' && !trialInfo?.expired && (
+              <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600 }}>
+                {trialInfo.daysLeft === 0 ? 'Trial expires today' : `${trialInfo.daysLeft}d trial left`}
+              </div>
+            )}
+            {trialInfo?.expired && (
+              <div style={{ fontSize: 10, color: '#F87171', fontWeight: 600, cursor: 'pointer' }} onClick={() => onNavigate('upgrade')}>Trial expired</div>
+            )}
+            {trialInfo?.plan === 'paid' && (
+              <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Pro plan</div>
+            )}
+            {!trialInfo && (
+              <div style={{ fontSize: 11, color: NAVY_MUTED }}>{ userEmail?.split('@')[1] || 'Teacher' }</div>
+            )}
           </div>
           <span style={{ fontSize: 11, color: NAVY_MUTED, marginLeft: 2 }}>▼</span>
         </div>
@@ -663,7 +685,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
 }
 
 // ── Book Detail Page ──────────────────────────────────────────────────────────
-function BookDetailPage({ book, yearGroup, onBack, onCreateResources }) {
+function BookDetailPage({ book, yearGroup, onBack, onCreateResources, checkTrial }) {
   const [details, setDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
   const [coverError, setCoverError] = useState(false)
@@ -1205,7 +1227,7 @@ function PlanDetailModal({ plan, group, onClose }) {
 }
 
 // ── Search Page ───────────────────────────────────────────────────────────────
-function SearchPage({ onSelectBook, searchState, setSearchState }) {
+function SearchPage({ onSelectBook, searchState, setSearchState, checkTrial }) {
   const { subject, topic, yearGroup, focus, accordionOpen, contentType, bookType, readingLevel, starRating, books, loading, loadingMore, error, searched, searchMeta } = searchState
   const set = (key, val) => setSearchState(prev => ({ ...prev, [key]: val }))
   const activeFilterCount = [contentType !== 'Any', bookType !== 'Any', readingLevel !== 'Any', starRating > 0].filter(Boolean).length
@@ -1562,6 +1584,8 @@ function ResourcePage({ book, yearGroup, ideas, onBack }) {
   }
 
   async function generatePlan(idea) {
+    const allowed = await checkTrial?.('units_of_work')
+    if (allowed === false) return
     const key = idea.title
     setGenerating(prev => ({ ...prev, [key]: true }))
     const prompt = `You are an expert UK primary school teacher creating a detailed unit of work broken into individual lessons.
@@ -2381,7 +2405,7 @@ function ResourceDownloadButton({ resource }) {
   )
 }
 
-function ResourcesPage({ onNavigate }) {
+function ResourcesPage({ onNavigate, checkTrial }) {
   const [tab, setTab] = useState('adhoc') // 'adhoc' | 'plan' | 'catalogue'
   const [catalogue, setCatalogue] = useState([])
   const [catalogueLoading, setCatalogueLoading] = useState(false)
@@ -2461,6 +2485,8 @@ function ResourcesPage({ onNavigate }) {
 
   async function generateFromPlan() {
     if (!selectedPlan || !selectedLesson || !selectedResourceType) return
+    const allowed = await checkTrial?.('resources')
+    if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
     const rt = RESOURCE_TYPES.find(r => r.id === selectedResourceType)
     const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
@@ -2512,6 +2538,8 @@ For all other types: use appropriate sections for the resource type.`
 
   async function generateAdhoc() {
     if (!prompt.trim()) return
+    const allowed = await checkTrial?.('resources')
+    if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
     const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
 
@@ -4015,6 +4043,110 @@ function ProfileModal({ session, onClose, onUpdated }) {
   )
 }
 
+// ── Upgrade Page ─────────────────────────────────────────────────────────────
+function UpgradePage({ onNavigate, trialInfo }) {
+  const usage = trialInfo?.usage || {}
+  const expired = trialInfo?.expired
+  const daysLeft = trialInfo?.daysLeft || 0
+
+  const usageRows = [
+    { label: 'Book searches', key: 'book_searches', limit: TRIAL_LIMITS.book_searches },
+    { label: 'Load more results', key: 'load_mores', limit: TRIAL_LIMITS.load_mores },
+    { label: 'Lesson ideas', key: 'lesson_ideas', limit: TRIAL_LIMITS.lesson_ideas },
+    { label: 'Units of work', key: 'units_of_work', limit: TRIAL_LIMITS.units_of_work },
+    { label: 'Resources generated', key: 'resources', limit: TRIAL_LIMITS.resources },
+  ]
+
+  return (
+    <div style={{ ...s.page, maxWidth: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: PAGE_BG }}>
+      <div style={{ maxWidth: 560, width: '100%', padding: '0 1rem' }}>
+
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>{expired ? '⏰' : '🚀'}</div>
+          <h1 style={{ fontFamily: "'Lora', serif", fontSize: 28, fontWeight: 500, color: TEXT, marginBottom: 10 }}>
+            {expired ? 'Your trial has ended' : 'You've reached your trial limit'}
+          </h1>
+          <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.6 }}>
+            {expired
+              ? 'Your 5-day free trial has expired. Upgrade to Pro to keep planning.'
+              : 'You've used up this feature's trial allowance. Upgrade to Pro for unlimited access.'}
+          </p>
+        </div>
+
+        {/* Trial usage summary */}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Your trial usage</div>
+          {usageRows.map(row => {
+            const used = usage[row.key] || 0
+            const pct = Math.min(100, Math.round((used / row.limit) * 100))
+            const full = used >= row.limit
+            return (
+              <div key={row.key} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, color: TEXT }}>{row.label}</span>
+                  <span style={{ fontSize: 12, color: full ? '#A32D2D' : MUTED, fontWeight: full ? 600 : 400 }}>
+                    {used} / {row.limit}
+                  </span>
+                </div>
+                <div style={{ height: 5, background: PAGE_BG, borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: full ? '#A32D2D' : GREEN, borderRadius: 10, transition: 'width 0.3s' }} />
+                </div>
+              </div>
+            )
+          })}
+          {!expired && daysLeft > 0 && (
+            <div style={{ marginTop: 10, fontSize: 12, color: MUTED, borderTop: `0.5px solid ${BORDER}`, paddingTop: 10 }}>
+              {daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining on your trial
+            </div>
+          )}
+        </div>
+
+        {/* Pro plan card */}
+        <div style={{ background: NAVY, borderRadius: 14, padding: '1.75rem', marginBottom: '1rem', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 12, right: 14, background: GREEN, color: LIGHT_GREEN, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Most popular</div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 22, color: '#fff', marginBottom: 6 }}>TeachReads Pro</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+            <span style={{ fontSize: 36, fontWeight: 600, color: '#fff' }}>£5</span>
+            <span style={{ fontSize: 14, color: NAVY_MUTED }}>/ month</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {[
+              'Unlimited book searches',
+              'Unlimited units of work',
+              'Unlimited resources',
+              'Full lesson plan downloads (PDF, Word)',
+              'Community star ratings',
+              'Priority support',
+            ].map((f, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: GREEN, fontSize: 14 }}>✓</span>
+                <span style={{ fontSize: 13, color: '#C8CCDA' }}>{f}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            style={{ width: '100%', height: 46, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+            onClick={() => alert('Payment integration coming soon — contact us at hello@teachreads.co.uk to upgrade manually.')}
+          >
+            Upgrade to Pro →
+          </button>
+        </div>
+
+        <button
+          onClick={() => onNavigate('search')}
+          style={{ width: '100%', height: 40, background: 'transparent', border: `0.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+          ← Back to TeachReads
+        </button>
+
+        <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 14 }}>
+          Questions? Email us at <span style={{ color: GREEN }}>hello@teachreads.co.uk</span>
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ── Auth Page ─────────────────────────────────────────────────────────────────
 function AuthPage({ onAuth }) {
   const [mode, setMode] = useState('signup')
@@ -4250,6 +4382,7 @@ export default function App() {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [trialInfo, setTrialInfo] = useState(null) // { plan, daysLeft, expired, usage }
   const [selectedBook, setSelectedBook] = useState(null)
   const [selectedIdeas, setSelectedIdeas] = useState([])
   const [searchState, setSearchState] = useState(initialSearchState)
@@ -4267,7 +4400,7 @@ export default function App() {
   }, [])
 
   async function loadProfilePreferences(userId) {
-    const { data, error } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url').eq('id', userId).single()
+    const { data, error } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url, plan, trial_expires_at').eq('id', userId).single()
     if (data) {
       if (data.display_name) setDisplayName(data.display_name)
         if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
@@ -4277,6 +4410,21 @@ export default function App() {
         subject: data.default_subject || prev.subject,
       }))
     }
+  }
+
+  async function checkTrial(action) {
+    if (!trialInfo) return true
+    if (trialInfo.plan !== 'trial') return true // paid users unlimited
+    if (trialInfo.expired) { setPage('upgrade'); return false }
+    const count = trialInfo.usage[action] || 0
+    const limit = TRIAL_LIMITS[action] || 999
+    if (count >= limit) { setPage('upgrade'); return false }
+    // Increment usage
+    const { data: { user } } = await supabase.auth.getUser()
+    const newUsage = { ...trialInfo.usage, [action]: count + 1 }
+    await supabase.from('usage_counts').upsert({ user_id: user.id, ...newUsage })
+    setTrialInfo(prev => ({ ...prev, usage: newUsage }))
+    return true
   }
 
   async function handleSignOut() {
@@ -4291,6 +4439,7 @@ export default function App() {
     if (dest === 'plans') { setPage('plans') }
     if (dest === 'resources') { setPage('resources') }
     if (dest === 'signout') { handleSignOut() }
+    if (dest === 'upgrade') { setPage('upgrade') }
   }
 
   if (session === undefined) {
@@ -4311,8 +4460,9 @@ export default function App() {
 
   return (
     <div>
-      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} />
-      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} />}
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
+      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { console.log('onUpdated called:', name, url); if (name) setDisplayName(name); if (url) { console.log('setting avatarUrl:', url); setAvatarUrl(url); } loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
@@ -4321,10 +4471,10 @@ export default function App() {
       )}
       {page === 'book' && (
         <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setPage('search')}
-          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} />
+          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} checkTrial={checkTrial} />
       )}
       {page === 'search' && (
-        <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} />
+        <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
       )}
     </div>
   )
