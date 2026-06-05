@@ -681,6 +681,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
             </div>
             {[
               { label: '👤  Profile & settings', note: '', dest: 'profile' },
+              ...(userEmail === 'dd.driscoll92@gmail.com' ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
               <div key={i}
@@ -1910,11 +1911,20 @@ function MyPlanDownloadButton({ plan, group, size }) {
     setDownloading(null)
   }
 
-  const formats = [
+  const [planType, setPlanType] = useState('trial')
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) supabase.from('profiles').select('plan').eq('id', user.id).single()
+        .then(({ data }) => { if (data?.plan) setPlanType(data.plan) })
+    })
+  }, [])
+
+  const allFormats = [
     { id: 'pdf', label: '📄 PDF', desc: 'Print-ready' },
-    { id: 'docx', label: '📝 Word', desc: 'Editable' },
-    { id: 'txt', label: '📃 Text', desc: 'Plain text' },
+    { id: 'docx', label: '📝 Word', desc: 'Editable', premiumOnly: true },
+    { id: 'txt', label: '📃 Text', desc: 'Plain text', premiumOnly: true },
   ]
+  const formats = allFormats.filter(f => !f.premiumOnly || planType === 'premium')
 
   const isSmall = size === 'sm'
   return (
@@ -1931,15 +1941,18 @@ function MyPlanDownloadButton({ plan, group, size }) {
       {open && (
         <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, transform: 'translate(-100%, -100%)', background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden', zIndex: 9999 }}>
           <div style={{ padding: '7px 12px 5px', fontSize: 10, color: MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `0.5px solid ${BORDER}` }}>Choose format</div>
-          {formats.map(f => (
-            <div key={f.id} onClick={() => handle(f.id)}
-              style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <span style={{ fontSize: 12, color: TEXT, fontWeight: 500 }}>{f.label}</span>
-              <span style={{ fontSize: 10, color: MUTED }}>{f.desc}</span>
-            </div>
-          ))}
+          {allFormats.map(f => {
+            const locked = f.premiumOnly && planType !== 'premium'
+            return (
+              <div key={f.id} onClick={() => !locked && handle(f.id)}
+                style={{ padding: '9px 12px', cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: locked ? 0.5 : 1 }}
+                onMouseEnter={e => { if (!locked) e.currentTarget.style.background = PAGE_BG }}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <span style={{ fontSize: 12, color: TEXT, fontWeight: 500 }}>{f.label}</span>
+                <span style={{ fontSize: 10, color: MUTED }}>{locked ? '🔒 Premium' : f.desc}</span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -3512,6 +3525,17 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
   async function handleLibrarySave(book) {
     const { data: { user } } = await supabase.auth.getUser()
+    // Check library limit for basic plan
+    if (modal?.mode !== 'edit') {
+      const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user?.id).single()
+      if (profile?.plan === 'basic') {
+        const { count } = await supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('user_id', user?.id)
+        if (count >= 50) {
+          alert('Basic plan allows up to 50 library books. Upgrade to Premium for unlimited.')
+          return
+        }
+      }
+    }
     if (modal?.mode === 'edit') {
       await supabase.from('library_books').update({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '' }).eq('id', book.id).eq('user_id', user?.id)
     } else {
@@ -4172,6 +4196,281 @@ function UpgradePage({ onNavigate, trialInfo }) {
   )
 }
 
+// ── Legal Pages ──────────────────────────────────────────────────────────────
+function LegalPage({ type, onClose }) {
+  const isPrivacy = type === 'privacy'
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const privacy = {
+    title: 'Privacy Policy',
+    updated: today,
+    sections: [
+      { heading: 'Who we are', body: 'TeachReads is operated by Daniel Driscoll ("we", "us", "our"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at hello@teachreads.co.uk.' },
+      { heading: 'What data we collect', body: 'We collect: your name and email address when you create an account; usage data including lesson plans, resources and book searches you generate; profile information you choose to provide (school name, region, year groups); your profile picture if you upload one; subscription and billing information if you upgrade to a paid plan.' },
+      { heading: 'How we use your data', body: 'We use your data to: provide and improve the TeachReads service; personalise your experience (pre-filling year group and subject preferences); send transactional emails (account confirmation, password reset); communicate about your subscription; analyse usage patterns to improve the product. We do not sell your data to third parties or use it for advertising.' },
+      { heading: 'Data storage', body: 'Your data is stored securely using Supabase (PostgreSQL database hosted on AWS in the EU). Profile pictures are stored in Supabase Storage. We use Anthropic's Claude API to generate lesson plans and resources — prompts and responses are not stored by Anthropic beyond their standard processing.' },
+      { heading: 'Data retention', body: 'We retain your data for as long as you have an account. If you delete your account, all your data is permanently deleted within 30 days. You can delete your account at any time from Profile & settings → Account.' },
+      { heading: 'Your rights', body: 'Under UK GDPR you have the right to: access your personal data; correct inaccurate data; delete your data ("right to be forgotten"); restrict or object to processing; data portability. To exercise any of these rights, contact us at hello@teachreads.co.uk.' },
+      { heading: 'Cookies', body: 'We use only essential cookies required for authentication (session management). We do not use tracking, advertising or analytics cookies.' },
+      { heading: 'Changes to this policy', body: 'We may update this policy from time to time. We will notify you of significant changes by email or by a notice in the app.' },
+    ]
+  }
+
+  const terms = {
+    title: 'Terms of Service',
+    updated: today,
+    sections: [
+      { heading: '1. Acceptance', body: 'By creating a TeachReads account, you agree to these Terms of Service. If you do not agree, please do not use the service. These terms are governed by the laws of England and Wales.' },
+      { heading: '2. The service', body: 'TeachReads provides AI-powered book recommendations, lesson planning and classroom resource generation for UK primary school teachers. The service is provided "as is". AI-generated content may occasionally contain inaccuracies — always review content before using it in the classroom.' },
+      { heading: '3. Accounts', body: 'You must provide accurate information when creating your account. You are responsible for maintaining the security of your password. You must be at least 18 years old to create an account. One account per person — do not share your account credentials.' },
+      { heading: '4. Free trial', body: 'New accounts receive a 5-day free trial with limited usage. Trial limits are enforced per feature. At the end of the trial period you must upgrade to a paid plan to continue using the service.' },
+      { heading: '5. Paid plans', body: 'Paid plans are billed monthly. You can cancel at any time from your account settings — access continues until the end of the billing period. We reserve the right to change pricing with 30 days notice. No refunds are provided for partial months.' },
+      { heading: '6. Your content', body: 'You retain ownership of any content you create using TeachReads (lesson plans, resources etc.). You grant us a limited licence to store and display your content to provide the service. You may not use TeachReads to generate content that is unlawful, harmful or infringes third-party rights.' },
+      { heading: '7. Intellectual property', body: 'TeachReads, its logo and the software are owned by us and protected by intellectual property law. You may not copy, modify or distribute the TeachReads software.' },
+      { heading: '8. Limitation of liability', body: 'To the maximum extent permitted by law, TeachReads shall not be liable for any indirect, incidental or consequential damages arising from use of the service. Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.' },
+      { heading: '9. Changes to terms', body: 'We may update these terms. Continued use of the service after changes constitutes acceptance. We will notify you of material changes by email.' },
+      { heading: '10. Contact', body: 'For questions about these terms, contact us at hello@teachreads.co.uk.' },
+    ]
+  }
+
+  const page = isPrivacy ? privacy : terms
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: TEXT }}>{page.title}</div>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Last updated {page.updated}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED, lineHeight: 1, marginLeft: 12 }}>×</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {page.sections.map((sec, i) => (
+            <div key={i} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>{sec.heading}</div>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7 }}>{sec.body}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: `0.5px solid ${BORDER}`, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ height: 36, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Admin Dashboard ───────────────────────────────────────────────────────────
+const ADMIN_EMAIL = 'dd.driscoll92@gmail.com' // Change to your email
+
+function AdminDashboard({ onNavigate, userEmail }) {
+  const [stats, setStats] = useState(null)
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { loadStats() }, [])
+
+  async function loadStats() {
+    setLoading(true)
+    const [
+      { data: profiles },
+      { data: usageCounts },
+      { data: plans },
+      { data: resources },
+    ] = await Promise.all([
+      supabase.from('profiles').select('id, plan, trial_expires_at, trial_started_at, display_name, school, created_at'),
+      supabase.from('usage_counts').select('*'),
+      supabase.from('plans').select('id, created_at, subject'),
+      supabase.from('resources').select('id, created_at, resource_type'),
+    ])
+
+    const now = new Date()
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000)
+    const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000)
+
+    const planCounts = { trial: 0, basic: 0, premium: 0, expired: 0 }
+    ;(profiles || []).forEach(p => {
+      if (p.plan === 'premium') planCounts.premium++
+      else if (p.plan === 'basic') planCounts.basic++
+      else if (new Date(p.trial_expires_at) < now) planCounts.expired++
+      else planCounts.trial++
+    })
+
+    // API cost estimates (£)
+    const totalUsage = (usageCounts || []).reduce((acc, u) => ({
+      book_searches: acc.book_searches + (u.book_searches || 0),
+      units_of_work: acc.units_of_work + (u.units_of_work || 0),
+      resources: acc.resources + (u.resources || 0),
+    }), { book_searches: 0, units_of_work: 0, resources: 0 })
+
+    const apiCost = (totalUsage.book_searches * 0.0044) + (totalUsage.units_of_work * 0.0068) + (totalUsage.resources * 0.0030)
+    const revenue = (planCounts.basic * 4.99) + (planCounts.premium * 9.99)
+
+    setStats({
+      totalUsers: (profiles || []).length,
+      newThisWeek: (profiles || []).filter(p => new Date(p.created_at) > weekAgo).length,
+      newThisMonth: (profiles || []).filter(p => new Date(p.created_at) > monthAgo).length,
+      planCounts,
+      totalPlans: (plans || []).length,
+      totalResources: (resources || []).length,
+      plansThisWeek: (plans || []).filter(p => new Date(p.created_at) > weekAgo).length,
+      resourcesThisWeek: (resources || []).filter(r => new Date(r.created_at) > weekAgo).length,
+      apiCost: apiCost.toFixed(2),
+      revenue: revenue.toFixed(2),
+      totalUsage,
+    })
+
+    setUsers((profiles || []).map(p => {
+      const usage = (usageCounts || []).find(u => u.user_id === p.id) || {}
+      const expired = p.plan === 'trial' && new Date(p.trial_expires_at) < now
+      const daysLeft = p.plan === 'trial' ? Math.max(0, Math.ceil((new Date(p.trial_expires_at) - now) / (1000*60*60*24))) : null
+      return { ...p, usage, expired, daysLeft }
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+
+    setLoading(false)
+  }
+
+  if (userEmail !== ADMIN_EMAIL) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: PAGE_BG }}>
+        <div style={{ textAlign: 'center', color: MUTED }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+          <div style={{ fontSize: 16, color: TEXT }}>Admin access only</div>
+          <button onClick={() => onNavigate('search')} style={{ marginTop: 16, height: 36, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>← Back</button>
+        </div>
+      </div>
+    )
+  }
+
+  const planBadge = (plan, expired) => {
+    if (expired) return { bg: '#FCEBEB', color: '#A32D2D', label: 'Expired' }
+    if (plan === 'premium') return { bg: '#EEF2FF', color: '#3730A3', label: 'Premium' }
+    if (plan === 'basic') return { bg: LIGHT_GREEN, color: '#085041', label: 'Basic' }
+    return { bg: '#FEF3C7', color: '#92400E', label: 'Trial' }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: NAVY, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 32, height: 32, background: GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📊</div>
+          <div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 18, color: '#fff' }}>TeachReads Admin</div>
+            <div style={{ fontSize: 11, color: NAVY_MUTED }}>Dashboard</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={loadStats} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>↺ Refresh</button>
+          <button onClick={() => onNavigate('search')} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>← App</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: MUTED }}>Loading stats...</div>
+        ) : (
+          <>
+            {/* Stat cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              {[
+                { label: 'Total users', value: stats.totalUsers, sub: `+${stats.newThisWeek} this week` },
+                { label: 'Monthly revenue', value: `£${stats.revenue}`, sub: `${stats.planCounts.basic} Basic · ${stats.planCounts.premium} Premium` },
+                { label: 'API costs (all time)', value: `£${stats.apiCost}`, sub: `${stats.totalUsage.book_searches} searches · ${stats.totalUsage.units_of_work} units` },
+                { label: 'Plans created', value: stats.totalPlans, sub: `+${stats.plansThisWeek} this week` },
+              ].map((card, i) => (
+                <div key={i} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem' }}>
+                  <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>{card.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 500, color: TEXT, marginBottom: 4 }}>{card.value}</div>
+                  <div style={{ fontSize: 11, color: MUTED }}>{card.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Plan breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+              <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 14 }}>Users by plan</div>
+                {[
+                  { label: 'Trial (active)', count: stats.planCounts.trial, color: '#F59E0B', bg: '#FEF3C7' },
+                  { label: 'Trial (expired)', count: stats.planCounts.expired, color: '#A32D2D', bg: '#FCEBEB' },
+                  { label: 'Basic', count: stats.planCounts.basic, color: '#085041', bg: LIGHT_GREEN },
+                  { label: 'Premium', count: stats.planCounts.premium, color: '#3730A3', bg: '#EEF2FF' },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: row.color }} />
+                      <span style={{ fontSize: 13, color: TEXT }}>{row.label}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, background: row.bg, color: row.color, padding: '2px 10px', borderRadius: 20 }}>{row.count}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 14 }}>Activity this week</div>
+                {[
+                  { label: 'New signups', value: stats.newThisWeek },
+                  { label: 'Plans created', value: stats.plansThisWeek },
+                  { label: 'Resources generated', value: stats.resourcesThisWeek },
+                  { label: 'Total resources', value: stats.totalResources },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: MUTED }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* User table */}
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.25rem', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>All users ({users.length})</div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: PAGE_BG }}>
+                      {['Name', 'Plan', 'Trial', 'Searches', 'Units', 'Resources', 'Joined'].map(h => (
+                        <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500, color: MUTED, borderBottom: `0.5px solid ${BORDER}`, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user, i) => {
+                      const badge = planBadge(user.plan, user.expired)
+                      return (
+                        <tr key={user.id} style={{ borderBottom: i < users.length - 1 ? `0.5px solid ${BORDER}` : 'none' }}
+                          onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <td style={{ padding: '10px 14px', color: TEXT, fontWeight: 500 }}>{user.display_name || '—'}</td>
+                          <td style={{ padding: '10px 14px' }}>
+                            <span style={{ background: badge.bg, color: badge.color, padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{badge.label}</span>
+                          </td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>
+                            {user.plan === 'trial' ? (user.expired ? 'Expired' : `${user.daysLeft}d left`) : '—'}
+                          </td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.usage.book_searches || 0}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.usage.units_of_work || 0}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED }}>{user.usage.resources || 0}</td>
+                          <td style={{ padding: '10px 14px', color: MUTED, whiteSpace: 'nowrap' }}>
+                            {new Date(user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Auth Page ─────────────────────────────────────────────────────────────────
 function AuthPage({ onAuth }) {
   const [mode, setMode] = useState('signup')
@@ -4397,8 +4696,8 @@ function AuthPage({ onAuth }) {
         </div>
         <span style={{ fontSize: 12, color: NAVY_MUTED }}>For UK primary school teachers</span>
         <div style={{ display: 'flex', gap: 20 }}>
-          {['Privacy', 'Terms', 'Contact'].map(l => (
-            <span key={l} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
+          {[['Privacy', 'privacy'], ['Terms', 'terms'], ['Contact', 'contact']].map(([l, t]) => (
+            <span key={l} onClick={() => t === 'contact' ? window.location.href='mailto:hello@teachreads.co.uk' : onLegal && onLegal(t)} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
           ))}
         </div>
       </div>
@@ -4419,7 +4718,9 @@ export default function App() {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
-  const [trialInfo, setTrialInfo] = useState(null) // { plan, daysLeft, expired, usage }
+  const [trialInfo, setTrialInfo] = useState(null)
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [legalPage, setLegalPage] = useState(null) // 'privacy' | 'terms' // { plan, daysLeft, expired, usage }
   const [selectedBook, setSelectedBook] = useState(null)
   const [selectedIdeas, setSelectedIdeas] = useState([])
   const [searchState, setSearchState] = useState(initialSearchState)
@@ -4513,6 +4814,7 @@ export default function App() {
     if (dest === 'resources') { setPage('resources') }
     if (dest === 'signout') { handleSignOut() }
     if (dest === 'upgrade') { setPage('upgrade') }
+    if (dest === 'admin') { setShowAdmin(true) }
   }
 
   if (session === undefined) {
@@ -4535,6 +4837,8 @@ export default function App() {
     <div>
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
+      {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
+      {legalPage && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
