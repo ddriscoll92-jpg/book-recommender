@@ -3722,6 +3722,8 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
 // ── Profile Modal ────────────────────────────────────────────────────────────
 function ProfileModal({ session, onClose, onUpdated }) {
+  const [pmUserId, setPmUserId] = useState(session?.user?.id || null)
+  const [pmUserEmail, setPmUserEmail] = useState(session?.user?.email || '')
   const [activeTab, setActiveTab] = useState('personal')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null) // { type: 'success'|'error', text }
@@ -3730,7 +3732,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
 
   // Personal
   const [pmDisplayName, setPmDisplayName] = useState(session?.user?.user_metadata?.display_name || '')
-  const [newEmail, setNewEmail] = useState(pmUserEmail || '')
+  const [newEmail, setNewEmail] = useState(session?.user?.email || '')
 
   // School
   const [schoolName, setSchoolName] = useState('')
@@ -3758,7 +3760,6 @@ function ProfileModal({ session, onClose, onUpdated }) {
     const { data: { user } } = await supabase.auth.getUser()
     const uid = user?.id || pmUserId
     if (!uid) return
-    setCurrentUser(user)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
     if (data) {
       setSchoolName(data.school || '')
@@ -4105,7 +4106,7 @@ function UpgradeSuccessPage({ onNavigate }) {
     // Reload profile to get new plan
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) supabase.from('profiles').select('plan').eq('id', user.id).single()
-        .then(({ data }) => { if (data?.plan) console.log('New plan:', data.plan) })
+        .then(() => {})
     })
   }, [])
 
@@ -4804,7 +4805,10 @@ export default function App() {
   }
 
   if (session === undefined) return null
-  if (!session) return <AuthPage onAuth={() => setSession('pending')} onLegal={t => setLegalPage(t)} />
+  if (!session) return <AuthPage onAuth={async () => {
+      const { data: { session: newSession } } = await supabase.auth.getSession()
+      setSession(newSession || true)
+    }} onLegal={t => setLegalPage(t)} />
 
   const userName = displayName || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
   const userEmail = session?.user?.email || ''
