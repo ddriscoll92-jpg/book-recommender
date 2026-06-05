@@ -921,7 +921,9 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
 // ── Favourite Button ─────────────────────────────────────────────────────────
 // ── Star Rating ──────────────────────────────────────────────────────────────
 function StarRating({ title, author, subject, yearGroup, reason }) {
-  const [rating, setRating] = useState(0)
+  const [myRating, setMyRating] = useState(0)
+  const [avgRating, setAvgRating] = useState(null)
+  const [ratingCount, setRatingCount] = useState(0)
   const [hover, setHover] = useState(0)
   const [saving, setSaving] = useState(false)
 
@@ -929,39 +931,54 @@ function StarRating({ title, author, subject, yearGroup, reason }) {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('saved_books').select('star_rating').eq('user_id', user.id).eq('title', title).single()
-      if (data?.star_rating) setRating(data.star_rating)
+      // Load my rating
+      const { data: mine } = await supabase.from('book_ratings').select('rating').eq('user_id', user.id).eq('book_title', title).single()
+      if (mine) setMyRating(mine.rating)
+      // Load community average
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
     }
     load()
   }, [title])
 
   async function handleRate(stars) {
     if (saving) return
+    const newRating = stars === myRating ? 0 : stars
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data: existing } = await supabase.from('saved_books').select('id').eq('user_id', user.id).eq('title', title).single()
-      if (existing) {
-        await supabase.from('saved_books').update({ star_rating: stars }).eq('id', existing.id)
+      if (newRating === 0) {
+        await supabase.from('book_ratings').delete().eq('user_id', user.id).eq('book_title', title)
       } else {
-        await supabase.from('saved_books').insert({ user_id: user.id, title, author, subject, year_group: yearGroup, reason, is_favourite: false, star_rating: stars, last_accessed: new Date().toISOString() })
+        await supabase.from('book_ratings').upsert({ user_id: user.id, book_title: title, book_author: author, rating: newRating }, { onConflict: 'user_id,book_title' })
       }
-      setRating(stars)
+      setMyRating(newRating)
+      // Refresh community average
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
+      else { setAvgRating(null); setRatingCount(0) }
     } catch(e) { console.warn('Star rating error:', e) }
     setSaving(false)
   }
 
   return (
-    <div style={{ display: 'flex', gap: 2 }} onMouseLeave={() => setHover(0)}>
-      {[1,2,3,4,5].map(star => (
-        <span key={star}
-          onClick={e => { e.stopPropagation(); handleRate(star === rating ? 0 : star) }}
-          onMouseEnter={() => setHover(star)}
-          style={{ fontSize: 14, cursor: 'pointer', color: star <= (hover || rating) ? '#F59E0B' : '#D1D0C9', lineHeight: 1 }}>
-          ★
-        </span>
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }} onClick={e => e.stopPropagation()}>
+      <div style={{ display: 'flex', gap: 2 }} onMouseLeave={() => setHover(0)}>
+        {[1,2,3,4,5].map(star => (
+          <span key={star}
+            onClick={() => handleRate(star)}
+            onMouseEnter={() => setHover(star)}
+            style={{ fontSize: 14, cursor: 'pointer', color: star <= (hover || myRating) ? '#F59E0B' : '#D1D0C9', lineHeight: 1, userSelect: 'none' }}>
+            ★
+          </span>
+        ))}
+      </div>
+      {avgRating && (
+        <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>
+          ⭐ {avgRating.toFixed(1)} <span style={{ color: MUTED }}>({ratingCount})</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -3187,26 +3204,56 @@ function BookInfoModal({ book, onClose }) {
   )
 }
 
-function BookGridStarRating({ bookId, initialRating }) {
-  const [rating, setRating] = useState(initialRating)
+function BookGridStarRating({ title, author }) {
+  const [myRating, setMyRating] = useState(0)
+  const [avgRating, setAvgRating] = useState(null)
+  const [ratingCount, setRatingCount] = useState(0)
   const [hover, setHover] = useState(0)
 
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: mine } = await supabase.from('book_ratings').select('rating').eq('user_id', user.id).eq('book_title', title).single()
+      if (mine) setMyRating(mine.rating)
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
+    }
+    load()
+  }, [title])
+
   async function handleRate(star) {
-    const newRating = star === rating ? 0 : star
-    setRating(newRating)
-    await supabase.from('saved_books').update({ star_rating: newRating }).eq('id', bookId)
+    const newRating = star === myRating ? 0 : star
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      if (newRating === 0) {
+        await supabase.from('book_ratings').delete().eq('user_id', user.id).eq('book_title', title)
+      } else {
+        await supabase.from('book_ratings').upsert({ user_id: user.id, book_title: title, book_author: author, rating: newRating }, { onConflict: 'user_id,book_title' })
+      }
+      setMyRating(newRating)
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
+      else { setAvgRating(null); setRatingCount(0) }
+    } catch(e) { console.warn('Star rating error:', e) }
   }
 
   return (
-    <div style={{ display: 'flex', gap: 1, marginBottom: 4 }} onMouseLeave={() => setHover(0)}>
-      {[1,2,3,4,5].map(star => (
-        <span key={star}
-          onClick={e => { e.stopPropagation(); handleRate(star) }}
-          onMouseEnter={() => setHover(star)}
-          style={{ fontSize: 12, cursor: 'pointer', color: star <= (hover || rating) ? '#F59E0B' : '#D1D0C9', lineHeight: 1, userSelect: 'none' }}>
-          ★
-        </span>
-      ))}
+    <div style={{ marginBottom: 4 }} onClick={e => e.stopPropagation()}>
+      <div style={{ display: 'flex', gap: 1 }} onMouseLeave={() => setHover(0)}>
+        {[1,2,3,4,5].map(star => (
+          <span key={star}
+            onClick={() => handleRate(star)}
+            onMouseEnter={() => setHover(star)}
+            style={{ fontSize: 12, cursor: 'pointer', color: star <= (hover || myRating) ? '#F59E0B' : '#D1D0C9', lineHeight: 1, userSelect: 'none' }}>
+            ★
+          </span>
+        ))}
+      </div>
+      {avgRating && (
+        <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>⭐ {avgRating.toFixed(1)} ({ratingCount})</div>
+      )}
     </div>
   )
 }
@@ -3247,7 +3294,7 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
           {book.copies > 0 && <span style={{ fontSize: 9, fontWeight: 500, background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: 20 }}>{book.copies} {book.copies === 1 ? 'copy' : 'copies'}</span>}
         </div>
         {book.source === 'saved' && (
-          <BookGridStarRating bookId={book.id} initialRating={book.starRating || 0} />
+          <BookGridStarRating title={book.title} author={book.author} />
         )}
         {book.lastAccessed && (
           <div style={{ fontSize: 10, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Accessed: </span>{book.lastAccessed}</div>
