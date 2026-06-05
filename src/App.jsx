@@ -681,6 +681,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
             </div>
             {[
               { label: '👤  Profile & settings', note: '', dest: 'profile' },
+              { label: '⭐  Upgrade plan', note: '', dest: 'upgrade' },
               ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
