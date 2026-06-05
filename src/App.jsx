@@ -3722,6 +3722,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
 
 // ── Profile Modal ────────────────────────────────────────────────────────────
 function ProfileModal({ session, onClose, onUpdated }) {
+  console.log('ProfileModal rendering, session:', session?.user?.id, typeof session)
   const [activeTab, setActiveTab] = useState('personal')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null) // { type: 'success'|'error', text }
@@ -4831,7 +4832,7 @@ export default function App() {
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
       {legalPage && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
-      {profileModalOpen && session?.user && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); if (session?.user?.id) loadProfilePreferences(session.user.id) }} />}
     </div>
   )
 }
