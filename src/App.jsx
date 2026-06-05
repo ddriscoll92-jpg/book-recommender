@@ -3755,10 +3755,13 @@ function ProfileModal({ session, onClose, onUpdated }) {
   }, [])
 
   async function loadProfile() {
-    const { data: { user } } = await supabase.auth.getUser()
+    console.log('ProfileModal loadProfile START, session:', session?.user?.id)
+    const { data: { user }, error: userErr } = await supabase.auth.getUser()
+    console.log('getUser result:', user?.id, userErr)
     const uid = user?.id || session?.user?.id
-    if (!uid) return
+    if (!uid) { console.log('No uid found'); return }
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
+    console.log('profile query:', { data, error })
     if (data) {
       setSchoolName(data.school || '')
       setRegion(data.region || '')
@@ -3767,7 +3770,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
       setDefaultSubject(data.default_subject || '')
       setAvatarUrl(data.avatar_url || null)
     } else if (error) {
-      // Profile row may not exist yet — create it
+      console.log('Profile missing, creating...')
       await supabase.from('profiles').upsert({ id: uid, display_name: user?.user_metadata?.display_name || '' })
     }
   }
