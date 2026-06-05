@@ -1882,7 +1882,8 @@ function MyPlanDownloadButton({ plan, group, size }) {
 
   async function loadFullPlan() {
     const { data: lessons } = await supabase.from('lessons').select('*').eq('plan_id', plan.id).order('lesson_number')
-    const { data: planData } = await supabase.from('plans').select('*').eq('id', plan.id).single()
+    const { data: { user: planUser } } = await supabase.auth.getUser()
+      const { data: planData } = await supabase.from('plans').select('*').eq('id', plan.id).eq('user_id', planUser?.id).single()
     return { ...planData, lessons: lessons || [] }
   }
 
@@ -3502,10 +3503,10 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   async function toggleFavourite(book) {
     const newVal = !book.is_favourite
     if (book.source === 'saved') {
-      await supabase.from('saved_books').update({ is_favourite: newVal }).eq('id', book.id)
+      await supabase.from('saved_books').update({ is_favourite: newVal }).eq('id', book.id).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       setSavedBooks(prev => prev.map(b => b.id === book.id ? { ...b, is_favourite: newVal } : b))
     } else if (book.source === 'library') {
-      await supabase.from('library_books').update({ is_favourite: newVal }).eq('id', book.id)
+      await supabase.from('library_books').update({ is_favourite: newVal }).eq('id', book.id).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       setLibraryBooks(prev => prev.map(b => b.id === book.id ? { ...b, is_favourite: newVal } : b))
     }
   }
@@ -3513,7 +3514,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   async function handleLibrarySave(book) {
     const { data: { user } } = await supabase.auth.getUser()
     if (modal?.mode === 'edit') {
-      await supabase.from('library_books').update({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '' }).eq('id', book.id)
+      await supabase.from('library_books').update({ title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '' }).eq('id', book.id).eq('user_id', user?.id)
     } else {
       await supabase.from('library_books').insert({ user_id: user?.id, title: book.title, author: book.author, subject: book.subject, year_group: book.yearGroup || book.year_group, copies: parseInt(book.copies) || 1, notes: book.notes || '', emoji: '📚' })
     }
@@ -3522,7 +3523,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   }
 
   async function handleLibraryDelete(id) {
-    await supabase.from('library_books').delete().eq('id', id)
+    await supabase.from('library_books').delete().eq('id', id).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
     setLibraryBooks(prev => prev.filter(b => b.id !== id))
   }
 
@@ -3680,11 +3681,11 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         onAddPlan={() => { setModal(null); onSelectBook && onSelectBook({ title: modal.book.title, author: modal.book.author, reason: '' }) }}
         onViewPlan={() => {}}
         onEditPlan={async (plan) => {
-          await supabase.from('plans').update({ title: plan.title, subject: plan.subject }).eq('id', plan.id)
+          await supabase.from('plans').update({ title: plan.title, subject: plan.subject }).eq('id', plan.id).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
           loadAll()
         }}
         onDeletePlan={async (planId) => {
-          await supabase.from('plans').delete().eq('id', planId)
+          await supabase.from('plans').delete().eq('id', planId).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
           loadAll()
         }}
       />
