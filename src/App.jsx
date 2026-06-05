@@ -919,6 +919,53 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
 }
 
 // ── Favourite Button ─────────────────────────────────────────────────────────
+// ── Star Rating ──────────────────────────────────────────────────────────────
+function StarRating({ title, author, subject, yearGroup, reason }) {
+  const [rating, setRating] = useState(0)
+  const [hover, setHover] = useState(0)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('saved_books').select('star_rating').eq('user_id', user.id).eq('title', title).single()
+      if (data?.star_rating) setRating(data.star_rating)
+    }
+    load()
+  }, [title])
+
+  async function handleRate(stars) {
+    if (saving) return
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: existing } = await supabase.from('saved_books').select('id').eq('user_id', user.id).eq('title', title).single()
+      if (existing) {
+        await supabase.from('saved_books').update({ star_rating: stars }).eq('id', existing.id)
+      } else {
+        await supabase.from('saved_books').insert({ user_id: user.id, title, author, subject, year_group: yearGroup, reason, is_favourite: false, star_rating: stars, last_accessed: new Date().toISOString() })
+      }
+      setRating(stars)
+    } catch(e) { console.warn('Star rating error:', e) }
+    setSaving(false)
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 2 }} onMouseLeave={() => setHover(0)}>
+      {[1,2,3,4,5].map(star => (
+        <span key={star}
+          onClick={e => { e.stopPropagation(); handleRate(star === rating ? 0 : star) }}
+          onMouseEnter={() => setHover(star)}
+          style={{ fontSize: 14, cursor: 'pointer', color: star <= (hover || rating) ? '#F59E0B' : '#D1D0C9', lineHeight: 1 }}>
+          ★
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function FavouriteButton({ title, author, subject, yearGroup, reason }) {
   const [isFav, setIsFav] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -1347,7 +1394,10 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
                   <div style={s.bookTitle}>{book.title}</div>
                   <div style={s.bookAuthor}>{book.author}</div>
                   <div style={s.bookReason}>{book.reason}</div>
-                  <div style={s.viewBtn}>View book details →</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                    <div style={s.viewBtn}>View book details →</div>
+                    <StarRating title={book.title} author={book.author} subject={searchMeta.subject} yearGroup={searchMeta.yearGroup} reason={book.reason} />
+                  </div>
                 </div>
               </div>
             ))}
@@ -2320,6 +2370,8 @@ function ResourcesPage({ onNavigate }) {
   const [catalogueLoading, setCatalogueLoading] = useState(false)
   const [catalogueSearch, setCatalogueSearch] = useState('')
   const [catalogueType, setCatalogueType] = useState('All')
+  const [catalogueSubject, setCatalogueSubject] = useState('All')
+  const [catalogueYear, setCatalogueYear] = useState('All')
   const [viewingResource, setViewingResource] = useState(null)
 
   async function loadCatalogue() {
@@ -2732,8 +2784,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
                     onChange={e => setCatalogueSearch(e.target.value)}
                   />
                   {catalogueSearch && <span onClick={() => setCatalogueSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
-                  <select
-                    style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueType !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueType !== 'All' ? LIGHT_GREEN : BG, color: catalogueType !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', flexShrink: 0 }}
+                  <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueType !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueType !== 'All' ? LIGHT_GREEN : BG, color: catalogueType !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', flexShrink: 0 }}
                     value={catalogueType} onChange={e => setCatalogueType(e.target.value)}>
                     <option value="All">All types</option>
                     <option value="worksheet">Worksheet</option>
@@ -2745,7 +2796,17 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
                     <option value="comprehension">Reading comprehension</option>
                     <option value="adhoc">Quick resource</option>
                   </select>
-                  <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }} onClick={loadCatalogue} title="Refresh" style={{ cursor: 'pointer' }}>↺</span>
+                  <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueSubject !== 'All' ? LIGHT_GREEN : BG, color: catalogueSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', flexShrink: 0 }}
+                    value={catalogueSubject} onChange={e => setCatalogueSubject(e.target.value)}>
+                    <option value="All">All subjects</option>
+                    {['Art','Computing','DT','Geography','History','Literacy','Maths','Music','PE','PSHE','RE','Science'].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueYear !== 'All' ? LIGHT_GREEN : BG, color: catalogueYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', flexShrink: 0 }}
+                    value={catalogueYear} onChange={e => setCatalogueYear(e.target.value)}>
+                    <option value="All">All years</option>
+                    {['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  <span onClick={loadCatalogue} title="Refresh" style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>↺</span>
                 </div>
 
                 {catalogueLoading ? (
@@ -2753,6 +2814,8 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
                 ) : (() => {
                   const filtered = catalogue.filter(r => {
                     if (catalogueType !== 'All' && r.resource_type !== catalogueType) return false
+                    if (catalogueSubject !== 'All' && !(r.meta || '').toLowerCase().includes(catalogueSubject.toLowerCase())) return false
+                    if (catalogueYear !== 'All' && !(r.meta || '').toLowerCase().includes(catalogueYear.toLowerCase())) return false
                     if (catalogueSearch && !r.title.toLowerCase().includes(catalogueSearch.toLowerCase()) &&
                         !(r.meta || '').toLowerCase().includes(catalogueSearch.toLowerCase())) return false
                     return true
@@ -3159,6 +3222,11 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
           {book.yearGroup && <span style={{ fontSize: 9, fontWeight: 500, background: PAGE_BG, color: MUTED, border: `0.5px solid ${BORDER}`, padding: '1px 6px', borderRadius: 20 }}>{book.yearGroup}</span>}
           {book.copies > 0 && <span style={{ fontSize: 9, fontWeight: 500, background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: 20 }}>{book.copies} {book.copies === 1 ? 'copy' : 'copies'}</span>}
         </div>
+        {book.starRating > 0 && (
+          <div style={{ display: 'flex', gap: 1, marginBottom: 4 }}>
+            {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 11, color: s <= book.starRating ? '#F59E0B' : '#D1D0C9' }}>★</span>)}
+          </div>
+        )}
         {book.lastAccessed && (
           <div style={{ fontSize: 10, color: MUTED }}><span style={{ fontWeight: 500, color: TEXT }}>Accessed: </span>{book.lastAccessed}</div>
         )}
@@ -3297,7 +3365,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
   function normaliseSaved(b) {
     return { ...b, yearGroup: b.year_group, source: 'saved',
       lastAccessed: b.last_accessed ? new Date(b.last_accessed).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-      planCount: planCounts[b.title] || 0, copies: 0 }
+      planCount: planCounts[b.title] || 0, copies: 0, starRating: b.star_rating || 0 }
   }
 
   function normaliseLib(b) {
