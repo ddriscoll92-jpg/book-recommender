@@ -4065,7 +4065,7 @@ function UpgradePage({ onNavigate, trialInfo }) {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>{expired ? '⏰' : '🚀'}</div>
           <h1 style={{ fontFamily: "'Lora', serif", fontSize: 28, fontWeight: 500, color: TEXT, marginBottom: 10 }}>
-            {expired ? 'Your trial has ended' : 'You've reached your trial limit'}
+            {expired ? 'Your trial has ended' : "You've reached your trial limit"}
           </h1>
           <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.6 }}>
             {expired
