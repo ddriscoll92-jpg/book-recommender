@@ -3725,12 +3725,12 @@ function ProfileModal({ session, onClose, onUpdated }) {
   const [activeTab, setActiveTab] = useState('personal')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null) // { type: 'success'|'error', text }
-  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [pmAvatarUrl, setPmAvatarUrl] = useState(null)
   const [uploading, setUploading] = useState(false)
 
   // Personal
-  const [displayName, setDisplayName] = useState(session?.user?.user_metadata?.display_name || '')
-  const [newEmail, setNewEmail] = useState(userEmail || '')
+  const [pmDisplayName, setPmDisplayName] = useState(session?.user?.user_metadata?.display_name || '')
+  const [newEmail, setNewEmail] = useState(pmUserEmail || '')
 
   // School
   const [schoolName, setSchoolName] = useState('')
@@ -3756,7 +3756,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser()
-    const uid = user?.id || userId
+    const uid = user?.id || pmUserId
     if (!uid) return
     setCurrentUser(user)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
@@ -3766,7 +3766,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
       setYearGroups(data.year_groups || [])
       setDefaultYear(data.default_year || '')
       setDefaultSubject(data.default_subject || '')
-      setAvatarUrl(data.avatar_url || null)
+      setPmAvatarUrl(data.avatar_url || null)
     } else if (error) {
       await supabase.from('profiles').upsert({ id: uid, display_name: user?.user_metadata?.display_name || '' })
     }
@@ -3781,17 +3781,17 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setSaving(true)
     try {
       // Update display name
-      const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: displayName } })
+      const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: pmDisplayName } })
       if (authErr) throw authErr
       // Update email if changed
-      if (newEmail !== userEmail) {
+      if (newEmail !== pmUserEmail) {
         const { error: emailErr } = await supabase.auth.updateUser({ email: newEmail })
         if (emailErr) throw emailErr
         flash('success', 'Profile updated. Check your new email to confirm the change.')
       } else {
         flash('success', 'Profile updated successfully.')
       }
-      onUpdated && onUpdated(displayName)
+      onUpdated && onUpdated(pmDisplayName)
     } catch (e) { flash('error', e.message || 'Could not update profile.') }
     setSaving(false)
   }
@@ -3800,7 +3800,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setSaving(true)
     try {
       const { error } = await supabase.from('profiles').upsert({
-        id: userId,
+        id: pmUserId,
         school: schoolName,
         region,
         year_groups: yearGroups,
@@ -3817,7 +3817,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setSaving(true)
     try {
       const { error } = await supabase.from('profiles').upsert({
-        id: userId,
+        id: pmUserId,
         default_year: defaultYear,
         default_subject: defaultSubject,
       })
@@ -3847,15 +3847,15 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setUploading(true)
     try {
       const ext = file.name.split('.').pop().toLowerCase()
-      const path = `${userId}/avatar.${ext}`
+      const path = `${pmUserId}/avatar.${ext}`
       const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
       if (uploadErr) throw uploadErr
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
       // Store clean URL in DB, add cache-bust only for immediate display
-      await supabase.from('profiles').upsert({ id: userId, avatar_url: publicUrl })
+      await supabase.from('profiles').upsert({ id: pmUserId, avatar_url: publicUrl })
       const displayUrl = `${publicUrl}?t=${Date.now()}`
-      setAvatarUrl(displayUrl)
-      onUpdated && onUpdated(displayName, displayUrl)
+      setPmAvatarUrl(displayUrl)
+      onUpdated && onUpdated(pmDisplayName, displayUrl)
       flash('success', 'Profile picture updated.')
     } catch (e) {
       console.error('Avatar upload error:', e)
@@ -3868,13 +3868,13 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setUploading(true)
     try {
       // Remove from storage - try common extensions
-      const cleanUrl = avatarUrl?.split('?')[0] || ''
+      const cleanUrl = pmAvatarUrl?.split('?')[0] || ''
       const ext = cleanUrl.split('.').pop() || 'jpg'
-      await supabase.storage.from('avatars').remove([`${userId}/avatar.${ext}`])
+      await supabase.storage.from('avatars').remove([`${pmUserId}/avatar.${ext}`])
       // Clear from profile
-      await supabase.from('profiles').upsert({ id: userId, avatar_url: null })
-      setAvatarUrl(null)
-      onUpdated && onUpdated(displayName, '')
+      await supabase.from('profiles').upsert({ id: pmUserId, avatar_url: null })
+      setPmAvatarUrl(null)
+      onUpdated && onUpdated(pmDisplayName, '')
       flash('success', 'Profile picture removed.')
     } catch (e) {
       flash('error', 'Could not remove photo.')
@@ -3885,7 +3885,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
   async function deleteAccount() {
     if (deleteText !== 'DELETE') return
     try {
-      await supabase.from('profiles').delete().eq('id', userId)
+      await supabase.from('profiles').delete().eq('id', pmUserId)
       await supabase.auth.signOut()
     } catch (e) { flash('error', 'Could not delete account. Please contact support.') }
   }
@@ -3947,7 +3947,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
                 {/* Avatar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 4 }}>
                   <div style={{ width: 64, height: 64, borderRadius: '50%', background: LIGHT_GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, border: `0.5px solid ${BORDER}` }}>
-                    {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 26, fontWeight: 600, color: GREEN }}>{(displayName || 'T')[0].toUpperCase()}</span>}
+                    {pmAvatarUrl ? <img src={pmAvatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 26, fontWeight: 600, color: GREEN }}>{(pmDisplayName || 'T')[0].toUpperCase()}</span>}
                   </div>
                   <div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -3955,7 +3955,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
                         {uploading ? 'Uploading...' : '📷 Change photo'}
                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={uploadAvatar} disabled={uploading} />
                       </label>
-                      {avatarUrl && (
+                      {pmAvatarUrl && (
                         <button onClick={removeAvatar} disabled={uploading}
                           style={{ height: 32, padding: '0 12px', background: '#FCEBEB', border: `0.5px solid #A32D2D`, borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                           Remove
@@ -3967,12 +3967,12 @@ function ProfileModal({ session, onClose, onUpdated }) {
                 </div>
                 <div>
                   <label style={labelStyle}>Display name</label>
-                  <input style={inputStyle} value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name" />
+                  <input style={inputStyle} value={pmDisplayName} onChange={e => setPmDisplayName(e.target.value)} placeholder="Your name" />
                 </div>
                 <div>
                   <label style={labelStyle}>Email address</label>
                   <input style={inputStyle} type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="your@school.co.uk" />
-                  {newEmail !== userEmail && <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>You'll receive a confirmation email at the new address.</div>}
+                  {newEmail !== pmUserEmail && <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>You'll receive a confirmation email at the new address.</div>}
                 </div>
                 {saveBtn(savePersonal, 'Save changes')}
               </div>
@@ -4049,8 +4049,8 @@ function ProfileModal({ session, onClose, onUpdated }) {
                 <div style={{ borderTop: `0.5px solid ${BORDER}`, paddingTop: 14, marginTop: 4 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 6 }}>Forgotten your password?</div>
                   <button onClick={async () => {
-                    const { error } = await supabase.auth.resetPasswordForEmail(userEmail)
-                    if (!error) flash('success', `Reset link sent to ${userEmail}`)
+                    const { error } = await supabase.auth.resetPasswordForEmail(pmUserEmail)
+                    if (!error) flash('success', `Reset link sent to ${pmUserEmail}`)
                     else flash('error', 'Could not send reset email.')
                   }}
                     style={{ height: 34, padding: '0 14px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
