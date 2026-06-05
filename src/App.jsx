@@ -4226,6 +4226,10 @@ function AuthPage({ onAuth }) {
           <div style={{ fontSize: 11, fontWeight: 600, color: GREEN, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>
             For UK primary school teachers
           </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#FEF3C7', border: '0.5px solid #F59E0B', borderRadius: 20, padding: '5px 14px', marginBottom: 18, width: 'fit-content' }}>
+            <span style={{ fontSize: 14 }}>🎁</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: '#92400E' }}>5-day free trial — no credit card required</span>
+          </div>
           <h1 style={{ fontFamily: "'Lora', serif", fontSize: 38, fontWeight: 500, color: TEXT, lineHeight: 1.25, marginBottom: 18 }}>
             Lesson planning,<br />
             <span style={{ color: GREEN }}>powered by AI</span>
@@ -4265,7 +4269,7 @@ function AuthPage({ onAuth }) {
               {mode === 'signup' ? 'Get started free' : 'Welcome back'}
             </h2>
             <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>
-              {mode === 'signup' ? 'No credit card required' : 'Sign in to your TeachReads account'}
+              {mode === 'signup' ? '5-day free trial · No credit card required' : 'Sign in to your TeachReads account'}
             </p>
 
             {/* Mode tabs */}
@@ -4299,9 +4303,17 @@ function AuthPage({ onAuth }) {
 
               <button onClick={handleSubmit} disabled={loading}
                 style={{ height: 44, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
-                {loading ? '⏳ Please wait...' : mode === 'login' ? 'Sign in' : 'Create free account'}
+                {loading ? '⏳ Please wait...' : mode === 'login' ? 'Sign in' : 'Start free 5-day trial'}
               </button>
 
+              {mode === 'signup' && (
+                <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: '10px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#085041', width: '100%', marginBottom: 2 }}>Your trial includes:</span>
+                  {['10 book searches', '10 units of work', '15 resources', '20 load mores'].map((f, i) => (
+                    <span key={i} style={{ fontSize: 11, color: '#085041', background: 'rgba(29,158,117,0.15)', padding: '2px 8px', borderRadius: 20 }}>✓ {f}</span>
+                  ))}
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, height: '0.5px', background: BORDER }} />
                 <span style={{ fontSize: 11, color: MUTED }}>or</span>
