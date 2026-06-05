@@ -4728,15 +4728,16 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) {
+        loadProfilePreferences(session.user.id)
         if (isSuccess) {
-          // Wait for webhook to update plan then reload preferences
-          setTimeout(() => {
-            loadProfilePreferences(session.user.id).then(() => {
-              setPage('upgrade_success')
-            })
+          setPage('upgrade_success')
+          // Poll for webhook update — retry a few times
+          let attempts = 0
+          const poll = setInterval(async () => {
+            attempts++
+            await loadProfilePreferences(session.user.id)
+            if (attempts >= 5) clearInterval(poll)
           }, 2000)
-        } else {
-          loadProfilePreferences(session.user.id)
         }
       }
     })
