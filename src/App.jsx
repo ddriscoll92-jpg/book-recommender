@@ -3755,7 +3755,10 @@ function ProfileModal({ session, onClose, onUpdated }) {
   }, [])
 
   async function loadProfile() {
-    const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+    const { data: { user } } = await supabase.auth.getUser()
+    const uid = user?.id || session?.user?.id
+    if (!uid) return
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
     if (data) {
       setSchoolName(data.school || '')
       setRegion(data.region || '')
@@ -3763,6 +3766,9 @@ function ProfileModal({ session, onClose, onUpdated }) {
       setDefaultYear(data.default_year || '')
       setDefaultSubject(data.default_subject || '')
       setAvatarUrl(data.avatar_url || null)
+    } else if (error) {
+      // Profile row may not exist yet — create it
+      await supabase.from('profiles').upsert({ id: uid, display_name: user?.user_metadata?.display_name || '' })
     }
   }
 
