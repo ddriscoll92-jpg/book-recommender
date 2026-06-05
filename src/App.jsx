@@ -135,6 +135,22 @@ const TRIAL_LIMITS = {
   resources: 15,
 }
 
+const BASIC_LIMITS = {
+  book_searches: 30,
+  load_mores: 999,
+  lesson_ideas: 999,
+  units_of_work: 20,
+  resources: 40,
+}
+
+const PREMIUM_LIMITS = {
+  book_searches: 999,
+  load_mores: 999,
+  lesson_ideas: 999,
+  units_of_work: 999,
+  resources: 999,
+}
+
 // ── Download Utilities ────────────────────────────────────────────────────────
 // ── Script loader helper ──────────────────────────────────────────────────────
 function loadScript(src) {
@@ -1365,25 +1381,6 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
                 </div>
                 <hr style={s.filterDivider} />
                 <div>
-                  <div style={s.filterLabel}>Minimum star rating <span style={{ fontSize: 11, color: '#888780', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>— coming soon</span></div>
-                  <div style={s.pillGroup}>
-                    {STAR_OPTIONS.map(opt => (
-                      <span key={opt.val} style={s.starPill(starRating === opt.val)} onClick={() => set('starRating', opt.val)}>
-                        {opt.val > 0 && '⭐'.repeat(opt.val) + ' '}{opt.label}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={s.starNote}>Star ratings will be based on community reviews from teachers. Coming soon — we're working on it.</div>
-                </div>
-              </div>
-            )}
-          </div>
-          <button style={s.submitBtn(loading)} onClick={() => fetchBooks(false)} disabled={loading}>
-            {loading ? '⏳ Finding books...' : '✨ Find books'}
-          </button>
-          {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13, marginTop: 12 }}>{error}</div>}
-        </div>
-
         {loading && <div style={s.loadingBox}>Finding the best books for {yearGroup} {subject}...</div>}
 
         {searched && books.length > 0 && (
@@ -4462,14 +4459,40 @@ export default function App() {
 
   async function checkTrial(action) {
     if (!trialInfo) return true
-    if (trialInfo.plan !== 'trial') return true // paid users unlimited
-    if (trialInfo.expired) { setPage('upgrade'); return false }
-    const count = trialInfo.usage[action] || 0
-    const limit = TRIAL_LIMITS[action] || 999
+    const { plan } = trialInfo
+
+    // Premium — unlimited
+    if (plan === 'premium') return true
+
+    // Trial — check expiry first
+    if (plan === 'trial' && trialInfo.expired) { setPage('upgrade'); return false }
+
+    // Get limits for this plan
+    const limits = plan === 'premium' ? PREMIUM_LIMITS : plan === 'basic' ? BASIC_LIMITS : TRIAL_LIMITS
+    const limit = limits[action] || 999
+
+    // Check monthly reset for paid plans
+    let usage = trialInfo.usage
+    if (plan === 'basic') {
+      const resetAt = trialInfo.usage.reset_at ? new Date(trialInfo.usage.reset_at) : null
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      if (!resetAt || resetAt < monthStart) {
+        // Reset monthly usage
+        const { data: { user } } = await supabase.auth.getUser()
+        const freshUsage = { user_id: user.id, book_searches: 0, load_mores: 0, lesson_ideas: 0, units_of_work: 0, resources: 0, reset_at: monthStart.toISOString() }
+        await supabase.from('usage_counts').upsert(freshUsage)
+        usage = freshUsage
+        setTrialInfo(prev => ({ ...prev, usage: freshUsage }))
+      }
+    }
+
+    const count = usage[action] || 0
     if (count >= limit) { setPage('upgrade'); return false }
+
     // Increment usage
     const { data: { user } } = await supabase.auth.getUser()
-    const newUsage = { ...trialInfo.usage, [action]: count + 1 }
+    const newUsage = { ...usage, [action]: count + 1 }
     await supabase.from('usage_counts').upsert({ user_id: user.id, ...newUsage })
     setTrialInfo(prev => ({ ...prev, usage: newUsage }))
     return true
@@ -4511,7 +4534,7 @@ export default function App() {
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
-      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { console.log('onUpdated called:', name, url); if (name) setDisplayName(name); if (url) { console.log('setting avatarUrl:', url); setAvatarUrl(url); } loadProfilePreferences(session.user.id) }} />}
+      {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); loadProfilePreferences(session.user.id) }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} />}
       {page === 'lessonresources' && (
