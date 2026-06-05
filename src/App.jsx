@@ -4205,38 +4205,38 @@ function LegalPage({ type, onClose }) {
     title: 'Privacy Policy',
     updated: today,
     sections: [
-      { heading: 'Who we are', body: 'TeachReads is operated by Daniel Driscoll ("we", "us", "our"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at hello@teachreads.co.uk.' },
-      { heading: 'What data we collect', body: 'We collect: your name and email address when you create an account; usage data including lesson plans, resources and book searches you generate; profile information you choose to provide (school name, region, year groups); your profile picture if you upload one; subscription and billing information if you upgrade to a paid plan.' },
-      { heading: 'How we use your data', body: 'We use your data to: provide and improve the TeachReads service; personalise your experience (pre-filling year group and subject preferences); send transactional emails (account confirmation, password reset); communicate about your subscription; analyse usage patterns to improve the product. We do not sell your data to third parties or use it for advertising.' },
-      { heading: 'Data storage', body: 'Your data is stored securely using Supabase (PostgreSQL database hosted on AWS in the EU). Profile pictures are stored in Supabase Storage. We use Anthropic's Claude API to generate lesson plans and resources — prompts and responses are not stored by Anthropic beyond their standard processing.' },
-      { heading: 'Data retention', body: 'We retain your data for as long as you have an account. If you delete your account, all your data is permanently deleted within 30 days. You can delete your account at any time from Profile & settings → Account.' },
-      { heading: 'Your rights', body: 'Under UK GDPR you have the right to: access your personal data; correct inaccurate data; delete your data ("right to be forgotten"); restrict or object to processing; data portability. To exercise any of these rights, contact us at hello@teachreads.co.uk.' },
-      { heading: 'Cookies', body: 'We use only essential cookies required for authentication (session management). We do not use tracking, advertising or analytics cookies.' },
-      { heading: 'Changes to this policy', body: 'We may update this policy from time to time. We will notify you of significant changes by email or by a notice in the app.' },
+      { heading: 'Who we are', body: "TeachReads is operated by Daniel Driscoll (\"we\", \"us\", \"our\"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at hello@teachreads.co.uk.' },
+      { heading: "What data we collect', body: "We collect: your name and email address when you create an account; usage data including lesson plans, resources and book searches you generate; profile information you choose to provide (school name, region, year groups); your profile picture if you upload one; subscription and billing information if you upgrade to a paid plan.' },
+      { heading: "How we use your data', body: "We use your data to: provide and improve the TeachReads service; personalise your experience (pre-filling year group and subject preferences); send transactional emails (account confirmation, password reset); communicate about your subscription; analyse usage patterns to improve the product. We do not sell your data to third parties or use it for advertising.' },
+      { heading: "Data storage', body: "Your data is stored securely using Supabase (PostgreSQL database hosted on AWS in the EU). Profile pictures are stored in Supabase Storage. We use Anthropic's Claude API to generate lesson plans and resources — prompts and responses are not stored by Anthropic beyond their standard processing." },
+      { heading: 'Data retention', body: "We retain your data for as long as you have an account. If you delete your account, all your data is permanently deleted within 30 days. You can delete your account at any time from Profile & settings → Account.' },
+      { heading: "Your rights', body: "Under UK GDPR you have the right to: access your personal data; correct inaccurate data; delete your data (\"right to be forgotten\"); restrict or object to processing; data portability. To exercise any of these rights, contact us at hello@teachreads.co.uk.' },
+      { heading: "Cookies', body: "We use only essential cookies required for authentication (session management). We do not use tracking, advertising or analytics cookies.' },
+      { heading: "Changes to this policy', body: "We may update this policy from time to time. We will notify you of significant changes by email or by a notice in the app.' },
     ]
   }
 
   const terms = {
-    title: 'Terms of Service',
+    title: "Terms of Service',
     updated: today,
     sections: [
-      { heading: '1. Acceptance', body: 'By creating a TeachReads account, you agree to these Terms of Service. If you do not agree, please do not use the service. These terms are governed by the laws of England and Wales.' },
-      { heading: '2. The service', body: 'TeachReads provides AI-powered book recommendations, lesson planning and classroom resource generation for UK primary school teachers. The service is provided "as is". AI-generated content may occasionally contain inaccuracies — always review content before using it in the classroom.' },
-      { heading: '3. Accounts', body: 'You must provide accurate information when creating your account. You are responsible for maintaining the security of your password. You must be at least 18 years old to create an account. One account per person — do not share your account credentials.' },
-      { heading: '4. Free trial', body: 'New accounts receive a 5-day free trial with limited usage. Trial limits are enforced per feature. At the end of the trial period you must upgrade to a paid plan to continue using the service.' },
-      { heading: '5. Paid plans', body: 'Paid plans are billed monthly. You can cancel at any time from your account settings — access continues until the end of the billing period. We reserve the right to change pricing with 30 days notice. No refunds are provided for partial months.' },
-      { heading: '6. Your content', body: 'You retain ownership of any content you create using TeachReads (lesson plans, resources etc.). You grant us a limited licence to store and display your content to provide the service. You may not use TeachReads to generate content that is unlawful, harmful or infringes third-party rights.' },
-      { heading: '7. Intellectual property', body: 'TeachReads, its logo and the software are owned by us and protected by intellectual property law. You may not copy, modify or distribute the TeachReads software.' },
-      { heading: '8. Limitation of liability', body: 'To the maximum extent permitted by law, TeachReads shall not be liable for any indirect, incidental or consequential damages arising from use of the service. Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.' },
-      { heading: '9. Changes to terms', body: 'We may update these terms. Continued use of the service after changes constitutes acceptance. We will notify you of material changes by email.' },
-      { heading: '10. Contact', body: 'For questions about these terms, contact us at hello@teachreads.co.uk.' },
+      { heading: '1. Acceptance', body: "By creating a TeachReads account, you agree to these Terms of Service. If you do not agree, please do not use the service. These terms are governed by the laws of England and Wales.' },
+      { heading: "2. The service', body: "TeachReads provides AI-powered book recommendations, lesson planning and classroom resource generation for UK primary school teachers. The service is provided \"as is\". AI-generated content may occasionally contain inaccuracies — always review content before using it in the classroom.' },
+      { heading: "3. Accounts', body: "You must provide accurate information when creating your account. You are responsible for maintaining the security of your password. You must be at least 18 years old to create an account. One account per person — do not share your account credentials.' },
+      { heading: "4. Free trial', body: "New accounts receive a 5-day free trial with limited usage. Trial limits are enforced per feature. At the end of the trial period you must upgrade to a paid plan to continue using the service.' },
+      { heading: "5. Paid plans', body: "Paid plans are billed monthly. You can cancel at any time from your account settings — access continues until the end of the billing period. We reserve the right to change pricing with 30 days notice. No refunds are provided for partial months.' },
+      { heading: "6. Your content', body: "You retain ownership of any content you create using TeachReads (lesson plans, resources etc.). You grant us a limited licence to store and display your content to provide the service. You may not use TeachReads to generate content that is unlawful, harmful or infringes third-party rights.' },
+      { heading: "7. Intellectual property', body: "TeachReads, its logo and the software are owned by us and protected by intellectual property law. You may not copy, modify or distribute the TeachReads software.' },
+      { heading: "8. Limitation of liability', body: "To the maximum extent permitted by law, TeachReads shall not be liable for any indirect, incidental or consequential damages arising from use of the service. Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.' },
+      { heading: "9. Changes to terms', body: "We may update these terms. Continued use of the service after changes constitutes acceptance. We will notify you of material changes by email.' },
+      { heading: "10. Contact', body: "For questions about these terms, contact us at hello@teachreads.co.uk.' },
     ]
   }
 
   const page = isPrivacy ? privacy : terms
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+    <div style={{ position: "fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
         <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
