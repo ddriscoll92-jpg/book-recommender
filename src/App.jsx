@@ -3730,7 +3730,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
 
   // Personal
   const [displayName, setDisplayName] = useState(session?.user?.user_metadata?.display_name || '')
-  const [newEmail, setNewEmail] = useState(session?.user?.email || '')
+  const [newEmail, setNewEmail] = useState(currentUser?.email || '')
 
   // School
   const [schoolName, setSchoolName] = useState('')
@@ -3755,9 +3755,10 @@ function ProfileModal({ session, onClose, onUpdated }) {
   }, [])
 
   async function loadProfile() {
-    const { data: { user }, error: userErr } = await supabase.auth.getUser()
-    const uid = user?.id || session?.user?.id
+    const { data: { user } } = await supabase.auth.getUser()
+    const uid = user?.id || currentUser?.id
     if (!uid) return
+    setCurrentUser(user)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
     if (data) {
       setSchoolName(data.school || '')
@@ -3783,7 +3784,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
       const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: displayName } })
       if (authErr) throw authErr
       // Update email if changed
-      if (newEmail !== session.user.email) {
+      if (newEmail !== currentUser?.email) {
         const { error: emailErr } = await supabase.auth.updateUser({ email: newEmail })
         if (emailErr) throw emailErr
         flash('success', 'Profile updated. Check your new email to confirm the change.')
@@ -3799,7 +3800,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setSaving(true)
     try {
       const { error } = await supabase.from('profiles').upsert({
-        id: session.user.id,
+        id: currentUser?.id,
         school: schoolName,
         region,
         year_groups: yearGroups,
@@ -3816,7 +3817,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setSaving(true)
     try {
       const { error } = await supabase.from('profiles').upsert({
-        id: session.user.id,
+        id: currentUser?.id,
         default_year: defaultYear,
         default_subject: defaultSubject,
       })
@@ -3846,12 +3847,12 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setUploading(true)
     try {
       const ext = file.name.split('.').pop().toLowerCase()
-      const path = `${session.user.id}/avatar.${ext}`
+      const path = `${currentUser?.id}/avatar.${ext}`
       const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
       if (uploadErr) throw uploadErr
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
       // Store clean URL in DB, add cache-bust only for immediate display
-      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: publicUrl })
+      await supabase.from('profiles').upsert({ id: currentUser?.id, avatar_url: publicUrl })
       const displayUrl = `${publicUrl}?t=${Date.now()}`
       setAvatarUrl(displayUrl)
       onUpdated && onUpdated(displayName, displayUrl)
@@ -3869,9 +3870,9 @@ function ProfileModal({ session, onClose, onUpdated }) {
       // Remove from storage - try common extensions
       const cleanUrl = avatarUrl?.split('?')[0] || ''
       const ext = cleanUrl.split('.').pop() || 'jpg'
-      await supabase.storage.from('avatars').remove([`${session.user.id}/avatar.${ext}`])
+      await supabase.storage.from('avatars').remove([`${currentUser?.id}/avatar.${ext}`])
       // Clear from profile
-      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: null })
+      await supabase.from('profiles').upsert({ id: currentUser?.id, avatar_url: null })
       setAvatarUrl(null)
       onUpdated && onUpdated(displayName, '')
       flash('success', 'Profile picture removed.')
@@ -3884,7 +3885,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
   async function deleteAccount() {
     if (deleteText !== 'DELETE') return
     try {
-      await supabase.from('profiles').delete().eq('id', session.user.id)
+      await supabase.from('profiles').delete().eq('id', currentUser?.id)
       await supabase.auth.signOut()
     } catch (e) { flash('error', 'Could not delete account. Please contact support.') }
   }
@@ -3971,7 +3972,7 @@ function ProfileModal({ session, onClose, onUpdated }) {
                 <div>
                   <label style={labelStyle}>Email address</label>
                   <input style={inputStyle} type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="your@school.co.uk" />
-                  {newEmail !== session.user.email && <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>You'll receive a confirmation email at the new address.</div>}
+                  {newEmail !== currentUser?.email && <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>You'll receive a confirmation email at the new address.</div>}
                 </div>
                 {saveBtn(savePersonal, 'Save changes')}
               </div>
@@ -4048,8 +4049,8 @@ function ProfileModal({ session, onClose, onUpdated }) {
                 <div style={{ borderTop: `0.5px solid ${BORDER}`, paddingTop: 14, marginTop: 4 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 6 }}>Forgotten your password?</div>
                   <button onClick={async () => {
-                    const { error } = await supabase.auth.resetPasswordForEmail(session.user.email)
-                    if (!error) flash('success', `Reset link sent to ${session.user.email}`)
+                    const { error } = await supabase.auth.resetPasswordForEmail(currentUser?.email)
+                    if (!error) flash('success', `Reset link sent to ${currentUser?.email}`)
                     else flash('error', 'Could not send reset email.')
                   }}
                     style={{ height: 34, padding: '0 14px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -4811,7 +4812,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => { if (session?.user) setProfileModalOpen(true) }} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
       {page === 'search' && (
         <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
       )}
