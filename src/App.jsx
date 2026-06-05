@@ -1382,8 +1382,9 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
                 <hr style={s.filterDivider} />
               </div>
             )}
+          </div>
+        </div>
         {loading && <div style={s.loadingBox}>Finding the best books for {yearGroup} {subject}...</div>}
-
         {searched && books.length > 0 && (
           <div>
             <div style={s.disclaimer}>
