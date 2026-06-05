@@ -3835,6 +3835,23 @@ function ProfileModal({ session, onClose, onUpdated }) {
     setUploading(false)
   }
 
+  async function removeAvatar() {
+    setUploading(true)
+    try {
+      // Remove from storage
+      const ext = avatarUrl?.split('?')[0].split('.').pop()
+      await supabase.storage.from('avatars').remove([`${session.user.id}/avatar.${ext}`])
+      // Clear from profile
+      await supabase.from('profiles').upsert({ id: session.user.id, avatar_url: null })
+      setAvatarUrl(null)
+      onUpdated && onUpdated(displayName, '')
+      flash('success', 'Profile picture removed.')
+    } catch (e) {
+      flash('error', 'Could not remove photo.')
+    }
+    setUploading(false)
+  }
+
   async function deleteAccount() {
     if (deleteText !== 'DELETE') return
     try {
@@ -3903,10 +3920,18 @@ function ProfileModal({ session, onClose, onUpdated }) {
                     {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 26, fontWeight: 600, color: GREEN }}>{(displayName || 'T')[0].toUpperCase()}</span>}
                   </div>
                   <div>
-                    <label style={{ height: 32, padding: '0 12px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 12, fontWeight: 500, color: TEXT, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {uploading ? 'Uploading...' : '📷 Change photo'}
-                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={uploadAvatar} />
-                    </label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <label style={{ height: 32, padding: '0 12px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 12, fontWeight: 500, color: TEXT, cursor: uploading ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
+                        {uploading ? 'Uploading...' : '📷 Change photo'}
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={uploadAvatar} disabled={uploading} />
+                      </label>
+                      {avatarUrl && (
+                        <button onClick={removeAvatar} disabled={uploading}
+                          style={{ height: 32, padding: '0 12px', background: '#FCEBEB', border: `0.5px solid #A32D2D`, borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
                     <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>JPG or PNG, max 2MB</div>
                   </div>
                 </div>
