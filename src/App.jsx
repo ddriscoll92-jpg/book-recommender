@@ -4427,7 +4427,8 @@ export default function App() {
       const now = new Date()
       const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))) : 0
       const expired = plan === 'trial' && expiresAt && now > expiresAt
-      const { data: usage } = await supabase.from('usage_counts').select('*').eq('user_id', userId).single()
+      const { data: usage, error: usageErr } = await supabase.from('usage_counts').select('*').eq('user_id', userId).single()
+      console.log('Trial info:', { plan, daysLeft, expired, expiresAt, usageErr })
       setTrialInfo({ plan, daysLeft, expired, usage: usage || {} })
     }
   }
