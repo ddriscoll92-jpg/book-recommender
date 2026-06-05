@@ -4412,7 +4412,10 @@ export default function App() {
   }, [])
 
   async function loadProfilePreferences(userId) {
-    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url, plan, trial_expires_at').eq('id', userId).single()
+    console.log('loadProfilePreferences START', userId)
+    try {
+    const { data, error: profErr } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url, plan, trial_expires_at').eq('id', userId).single()
+    console.log('profiles query result:', { data, profErr })
     if (data) {
       if (data.display_name) setDisplayName(data.display_name)
       if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
@@ -4430,7 +4433,11 @@ export default function App() {
       const { data: usage, error: usageErr } = await supabase.from('usage_counts').select('*').eq('user_id', userId).single()
       console.log('Trial info:', { plan, daysLeft, expired, expiresAt, usageErr })
       setTrialInfo({ plan, daysLeft, expired, usage: usage || {} })
+      console.log('setTrialInfo called with:', { plan, daysLeft, expired })
+    } else {
+      console.log('No profile data found')
     }
+    } catch(e) { console.error('loadProfilePreferences ERROR:', e) }
   }
 
   async function checkTrial(action) {
