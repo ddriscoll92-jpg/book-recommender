@@ -3999,10 +3999,42 @@ function ProfileModal({ session, onClose, onUpdated }) {
 
   async function deleteAccount() {
     if (deleteText !== 'DELETE') return
+    setSaving(true)
     try {
+      // Delete all user data in order (respecting foreign keys)
+      await supabase.from('resources').delete().eq('user_id', pmUserId)
+      await supabase.from('book_ratings').delete().eq('user_id', pmUserId)
+      await supabase.from('saved_books').delete().eq('user_id', pmUserId)
+      await supabase.from('library_books').delete().eq('user_id', pmUserId)
+      await supabase.from('usage_counts').delete().eq('user_id', pmUserId)
+      // Delete lessons via plans
+      const { data: userPlans } = await supabase.from('plans').select('id').eq('user_id', pmUserId)
+      if (userPlans?.length) {
+        const planIds = userPlans.map(p => p.id)
+        await supabase.from('lessons').delete().in('plan_id', planIds)
+      }
+      await supabase.from('plans').delete().eq('user_id', pmUserId)
+      // Delete avatar from storage
+      if (pmAvatarUrl) {
+        const ext = pmAvatarUrl.split('?')[0].split('.').pop()
+        await supabase.storage.from('avatars').remove([`${pmUserId}/avatar.${ext}`])
+      }
+      // Delete profile
       await supabase.from('profiles').delete().eq('id', pmUserId)
+      // Delete auth user via API (requires service role)
+      try {
+        await fetch('/api/delete-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: pmUserId }),
+        })
+      } catch(e) { console.error('Auth user deletion failed:', e) }
       await supabase.auth.signOut()
-    } catch (e) { flash('error', 'Could not delete account. Please contact support.') }
+    } catch (e) {
+      console.error('Delete account error:', e)
+      flash('error', 'Could not delete account. Please contact support at dd.driscoll92@gmail.com')
+    }
+    setSaving(false)
   }
 
   function toggleYearGroup(yg) {
