@@ -4558,6 +4558,7 @@ function AdminDashboard({ onNavigate, userEmail }) {
   }
 
   return (
+    <>
     <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ background: NAVY, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -4677,6 +4678,7 @@ function AuthPage({ onAuth, onLegal }) {
   ]
 
   return (
+    <>
     <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ background: NAVY, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -4804,6 +4806,7 @@ function AuthPage({ onAuth, onLegal }) {
     </div>
     {localLegal && localLegal !== 'contact' && <LegalPage type={localLegal} onClose={() => setLocalLegal(null)} />}
     {localLegal === 'contact' && <ContactModal onClose={() => setLocalLegal(null)} />}
+    </>
   )
 }
 // ── Root App ──────────────────────────────────────────────────────────────────
