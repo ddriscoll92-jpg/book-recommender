@@ -3589,6 +3589,49 @@ function StripeCheckoutButton({ plan, label, style }) {
   )
 }
 
+// ── Manage Subscription Button ───────────────────────────────────────────────
+function ManageSubscriptionButton() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleManage() {
+    setLoading(true); setError('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setError('Please sign in first.'); setLoading(false); return }
+      const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
+      if (!profile?.stripe_customer_id) {
+        setError('No active subscription found.')
+        setLoading(false); return
+      }
+      const res = await fetch('/api/create-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: profile.stripe_customer_id }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error || 'Could not open billing portal.')
+      }
+    } catch (e) {
+      setError('Something went wrong. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div>
+      <button onClick={handleManage} disabled={loading}
+        style={{ height: 38, padding: '0 16px', background: '#FCEBEB', border: '0.5px solid #A32D2D', borderRadius: 8, fontSize: 13, fontWeight: 500, color: '#A32D2D', cursor: loading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+        {loading ? 'Opening portal...' : '⚙️ Manage / Cancel subscription'}
+      </button>
+      {error && <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 6 }}>{error}</div>}
+    </div>
+  )
+}
+
 // ── Upgrade Page ─────────────────────────────────────────────────────────────
 
 function UpgradeSuccessPage({ onNavigate }) {
@@ -3766,6 +3809,14 @@ function UpgradePage({ onNavigate, trialInfo }) {
             )
           })}
         </div>
+
+        {(currentPlan === 'basic' || currentPlan === 'premium') && (
+          <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem', marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 4 }}>Manage subscription</div>
+            <p style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>Cancel, update payment method or view billing history via the Stripe portal.</p>
+            <ManageSubscriptionButton />
+          </div>
+        )}
 
         <button onClick={() => onNavigate('search')}
           style={{ width: '100%', height: 40, background: 'transparent', border: `0.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
