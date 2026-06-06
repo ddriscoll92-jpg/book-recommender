@@ -4559,7 +4559,6 @@ function AdminDashboard({ onNavigate, userEmail }) {
   }
 
   return (
-    <>
     <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ background: NAVY, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
