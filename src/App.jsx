@@ -1,5 +1,5 @@
 // TeachReads App v2
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 
 // TeachReads shared constants and styles
@@ -1523,7 +1523,7 @@ function BookInfoModal({ book, onClose }) {
             illustrator: b.contributor?.find(c => c.toLowerCase().includes('illustrat')) || null,
           })
         }
-      } catch(e) {}
+      } catch(e) { console.error(e) }
       setLoadingDetails(false)
     }
     load()
@@ -2489,7 +2489,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
       if (profile?.plan === 'basic') {
         const { count } = await supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('user_id', user?.id)
         if (count >= 50) {
-          alert('Basic plan allows up to 50 library books. Upgrade to Premium for unlimited.')
+          setFlash({ type: 'error', msg: 'Basic plan allows up to 50 library books. Upgrade to Premium for unlimited.' }); setTimeout(() => setFlash(null), 4000)
           return
         }
       }
@@ -3349,7 +3349,6 @@ function StripeCheckoutButton({ plan, label, style }) {
         }),
       })
       const data = await res.json()
-      console.log('Checkout response:', res.status, data)
       if (data.url) {
         window.location.href = data.url
       } else {
