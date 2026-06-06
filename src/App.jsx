@@ -107,7 +107,23 @@ const s = {
 }
 
 
-const SUBJECTS = ['English', 'Maths', 'Science', 'History', 'Geography', 'PSHE', 'RE', 'Art', 'Music', 'PE', 'Computing', 'DT', 'MFL', 'RSHE', 'Other']
+const SUBJECTS = [
+  { name: 'English', emoji: '📖' },
+  { name: 'Maths', emoji: '🔢' },
+  { name: 'Science', emoji: '🔬' },
+  { name: 'History', emoji: '🏛️' },
+  { name: 'Geography', emoji: '🌍' },
+  { name: 'PSHE', emoji: '💚' },
+  { name: 'RE', emoji: '🕊️' },
+  { name: 'Art', emoji: '🎨' },
+  { name: 'Music', emoji: '🎵' },
+  { name: 'PE', emoji: '⚽' },
+  { name: 'Computing', emoji: '💻' },
+  { name: 'DT', emoji: '🔧' },
+  { name: 'MFL', emoji: '🗣️' },
+  { name: 'RSHE', emoji: '💛' },
+  { name: 'Other', emoji: '📚' },
+]
 
 const CONTENT_TYPES = ['Any', 'Fiction', 'Non-fiction', 'Poetry', 'Picture book', 'Graphic novel']
 
