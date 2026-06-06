@@ -107,6 +107,24 @@ const s = {
 }
 
 
+const SUBJECTS = ['English', 'Maths', 'Science', 'History', 'Geography', 'PSHE', 'RE', 'Art', 'Music', 'PE', 'Computing', 'DT', 'MFL', 'RSHE', 'Other']
+
+const CONTENT_TYPES = ['Any', 'Fiction', 'Non-fiction', 'Poetry', 'Picture book', 'Graphic novel']
+
+const BOOK_TYPES = ['Any', 'Novel', 'Short stories', 'Picture book', 'Non-fiction', 'Poetry collection', 'Graphic novel']
+
+const READING_LEVELS = ['Any', 'Below age', 'At age', 'Above age']
+
+const CHIPS = [
+  { value: 'shared reading aloud', label: '⚡ shared reading aloud' },
+  { value: 'independent reading', label: '⚡ independent reading' },
+  { value: 'inspires creative writing', label: '⚡ inspires creative writing' },
+  { value: 'supports SEND learners', label: '⚡ supports SEND learners' },
+  { value: 'guided reading', label: '⚡ guided reading' },
+  { value: 'class discussion', label: '⚡ class discussion' },
+  { value: 'supports EAL learners', label: '⚡ supports EAL learners' },
+]
+
 function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo }) {
   const [profileOpen, setProfileOpen] = useState(false)
 
