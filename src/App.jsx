@@ -4631,11 +4631,6 @@ function AdminDashboard({ onNavigate, userEmail }) {
 // ── Auth Page ─────────────────────────────────────────────────────────────────
 function AuthPage({ onAuth, onLegal }) {
   const [localLegal, setLocalLegal] = useState(null)
-
-  function handleLegal(type) {
-    setLocalLegal(type)
-    onLegal && onLegal(type)
-  }
   const [mode, setMode] = useState('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -4643,6 +4638,11 @@ function AuthPage({ onAuth, onLegal }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  function handleLegal(type) {
+    setLocalLegal(type)
+    onLegal && onLegal(type)
+  }
 
   async function handleSubmit() {
     if (!email || !password) { setError('Please fill in all fields.'); return }
