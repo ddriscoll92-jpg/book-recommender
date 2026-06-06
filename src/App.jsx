@@ -380,12 +380,20 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
           <div style={{ lineHeight: 1.2 }}>
             <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
             {trialInfo?.plan === 'trial' && !trialInfo?.expired && (
-              <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600 }}>
-                {trialInfo.daysLeft === 0 ? 'Trial expires today' : `${trialInfo.daysLeft}d trial left`}
+              <div style={{ 
+                fontSize: 10, 
+                fontWeight: 600,
+                color: trialInfo.daysLeft <= 1 ? '#DC2626' : trialInfo.daysLeft <= 2 ? '#D97706' : '#F59E0B',
+                cursor: trialInfo.daysLeft <= 2 ? 'pointer' : 'default',
+                background: trialInfo.daysLeft <= 1 ? '#FEE2E2' : trialInfo.daysLeft <= 2 ? '#FEF3C7' : 'transparent',
+                padding: trialInfo.daysLeft <= 2 ? '2px 6px' : '0',
+                borderRadius: 4,
+              }} onClick={() => trialInfo.daysLeft <= 2 && onNavigate('upgrade')}>
+                {trialInfo.daysLeft === 0 ? '⚠️ Trial expires today!' : trialInfo.daysLeft === 1 ? '⚠️ Last day of trial!' : `${trialInfo.daysLeft}d trial left`}
               </div>
             )}
             {trialInfo?.expired && (
-              <div style={{ fontSize: 10, color: '#F87171', fontWeight: 600, cursor: 'pointer' }} onClick={() => onNavigate('upgrade')}>Trial expired</div>
+              <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 600, cursor: 'pointer', background: '#FEE2E2', padding: '2px 6px', borderRadius: 4 }} onClick={() => onNavigate('upgrade')}>Trial expired — upgrade</div>
             )}
             {trialInfo?.plan === 'basic' && (
               <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Basic plan</div>
@@ -4887,6 +4895,16 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      {trialInfo?.plan === 'trial' && !trialInfo?.expired && trialInfo?.daysLeft <= 2 && (
+        <div style={{ background: trialInfo.daysLeft === 0 ? '#FEE2E2' : '#FEF3C7', borderBottom: `1px solid ${trialInfo.daysLeft === 0 ? '#FECACA' : '#FDE68A'}`, padding: '10px 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, color: trialInfo.daysLeft === 0 ? '#DC2626' : '#92400E', fontWeight: 500 }}>
+            {trialInfo.daysLeft === 0 ? '⚠️ Your trial expires today' : `⚠️ Your trial expires tomorrow`} — upgrade to keep access to all your plans and resources.
+          </span>
+          <button onClick={() => handleNavigate('upgrade')} style={{ height: 30, padding: '0 12px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0, marginLeft: 12 }}>
+            Upgrade now →
+          </button>
+        </div>
+      )}
       {page === 'search' && (
         <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
       )}
