@@ -446,10 +446,10 @@ function StarRating({ title, author, subject, yearGroup, reason }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       // Load my rating
-      const { data: mine } = await supabase.from('book_ratings').select('rating').eq('user_id', user.id).eq('book_title', title).single()
+      const { data: mine } = await supabase.from('book_ratings').select('rating').eq('user_id', user.id).eq('book_title', title).maybeSingle()
       if (mine) setMyRating(mine.rating)
       // Load community average
-      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).maybeSingle()
       if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
     }
     load()
@@ -469,7 +469,7 @@ function StarRating({ title, author, subject, yearGroup, reason }) {
       }
       setMyRating(newRating)
       // Refresh community average
-      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).maybeSingle()
       if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
       else { setAvgRating(null); setRatingCount(0) }
     } catch(e) { console.warn('Star rating error:', e) }
@@ -505,7 +505,7 @@ function FavouriteButton({ title, author, subject, yearGroup, reason }) {
     async function check() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('saved_books').select('is_favourite').eq('user_id', user.id).eq('title', title).single()
+      const { data } = await supabase.from('saved_books').select('is_favourite').eq('user_id', user.id).eq('title', title).maybeSingle()
       if (data) setIsFav(data.is_favourite)
     }
     check()
@@ -518,7 +518,7 @@ function FavouriteButton({ title, author, subject, yearGroup, reason }) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data: existing } = await supabase.from('saved_books').select('id, is_favourite').eq('user_id', user.id).eq('title', title).single()
+      const { data: existing } = await supabase.from('saved_books').select('id, is_favourite').eq('user_id', user.id).eq('title', title).maybeSingle()
       if (existing) {
         await supabase.from('saved_books').update({ is_favourite: !existing.is_favourite }).eq('id', existing.id)
         setIsFav(!existing.is_favourite)
@@ -733,7 +733,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
                   try {
                     const { data: { user } } = await supabase.auth.getUser()
                     if (user) {
-                      const { data: existing } = await supabase.from('saved_books').select('id').eq('user_id', user.id).eq('title', book.title).single()
+                      const { data: existing } = await supabase.from('saved_books').select('id').eq('user_id', user.id).eq('title', book.title).maybeSingle()
                       if (existing) {
                         await supabase.from('saved_books').update({ last_accessed: new Date().toISOString(), last_used: new Date().toISOString() }).eq('id', existing.id)
                       } else {
@@ -2323,9 +2323,9 @@ function BookGridStarRating({ title, author }) {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data: mine } = await supabase.from('book_ratings').select('rating').eq('user_id', user.id).eq('book_title', title).single()
+      const { data: mine } = await supabase.from('book_ratings').select('rating').eq('user_id', user.id).eq('book_title', title).maybeSingle()
       if (mine) setMyRating(mine.rating)
-      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).maybeSingle()
       if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
     }
     load()
@@ -2342,7 +2342,7 @@ function BookGridStarRating({ title, author }) {
         await supabase.from('book_ratings').upsert({ user_id: user.id, book_title: title, book_author: author, rating: newRating }, { onConflict: 'user_id,book_title' })
       }
       setMyRating(newRating)
-      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).single()
+      const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).maybeSingle()
       if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
       else { setAvgRating(null); setRatingCount(0) }
     } catch(e) { console.warn('Star rating error:', e) }
@@ -3113,7 +3113,6 @@ For all other types: use appropriate sections for the resource type.`
 
     try {
       const result = await callAPI(apiPrompt, true)
-      console.log('Resource result:', JSON.stringify(result)?.slice(0, 200))
       setResource(result)
       // Save resource to Supabase
       try {
@@ -4809,7 +4808,7 @@ export default function App() {
         <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
       )}
       {page === 'book' && (
-        <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} onBack={() => setPage('search')}
+        <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} checkTrial={checkTrial} onBack={() => setPage('search')}
           onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} checkTrial={checkTrial} />
       )}
       {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />}
