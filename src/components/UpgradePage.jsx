@@ -80,11 +80,6 @@ export function UpgradeSuccessPage({ onNavigate }) {
 }
 
 // ── Stripe Checkout Button ────────────────────────────────────────────────────
-const STRIPE_PRICES = {
-  basic: import.meta.env.VITE_STRIPE_BASIC_PRICE_ID || 'price_1TeyTtLDd6xSXwi01VHyNRy6',
-  premium: import.meta.env.VITE_STRIPE_PREMIUM_PRICE_ID || 'price_1TeyUKLDd6xSXwi0ImE2F0su',
-}
-
 export function UpgradePage({ onNavigate, trialInfo }) {
   const usage = trialInfo?.usage || {}
   const currentPlan = trialInfo?.plan || 'trial'
