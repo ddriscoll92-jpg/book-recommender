@@ -318,7 +318,8 @@ async function callAPI(prompt, raw = false) {
     throw new Error(err.error || `API error ${res.status}`)
   }
   const data = await res.json()
-  return data
+  // raw=true returns { result: {...} }, raw=false returns { books: [...] }
+  return raw ? data.result : data.books
 }
 
 function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo }) {
