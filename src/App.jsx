@@ -4587,7 +4587,7 @@ function AuthPage({ onAuth, onLegal }) {
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } })
         if (error) throw error
-        setSuccess('Account created! You can now sign in.')
+        setSuccess('Account created! Please check your email to confirm your account before signing in.')
         setMode('login')
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
