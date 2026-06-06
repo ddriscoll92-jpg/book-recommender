@@ -4339,7 +4339,7 @@ function UpgradePage({ onNavigate, trialInfo }) {
         </button>
 
         <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 14 }}>
-          Questions? Email us at <span style={{ color: GREEN }}>hello@teachreads.co.uk</span>
+          Questions? Email us at <span style={{ color: GREEN }}>dd.driscoll92@gmail.com</span>
         </p>
       </div>
     </div>
@@ -4352,17 +4352,26 @@ function ContactModal({ onClose }) {
   const [email, setEmail] = useState('')
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
-  function handleSend() {
+  async function handleSend() {
     if (!name || !email || !message) { setError('Please fill in all required fields.'); return }
-    const mailtoUrl = `mailto:hello@teachreads.co.uk?subject=${encodeURIComponent(subject || 'TeachReads enquiry')}&body=${encodeURIComponent(`Name: ${name}
-Email: ${email}
-
-${message}`)}`
-    window.location.href = mailtoUrl
-    setSent(true)
+    setSending(true); setError('')
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send')
+      setSent(true)
+    } catch(e) {
+      setError(e.message || 'Something went wrong. Please email us directly.')
+    }
+    setSending(false)
   }
 
   const inputStyle = { width: '100%', height: 40, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 12px', fontSize: 13, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" }
@@ -4383,7 +4392,7 @@ ${message}`)}`
             <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>✉️</div>
               <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 8 }}>Message ready to send</div>
-              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Your email client should have opened with your message pre-filled. If not, email us at <span style={{ color: GREEN }}>hello@teachreads.co.uk</span></p>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Your message has been sent. We will get back to you within 1 working day at <span style={{ color: GREEN }}>{email}</span></p>
               <button onClick={onClose} style={{ marginTop: 16, height: 36, padding: '0 16px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
             </div>
           ) : (
@@ -4410,10 +4419,10 @@ ${message}`)}`
               </div>
               {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>{error}</div>}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleSend} style={{ flex: 1, height: 40, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Send message</button>
+                <button onClick={handleSend} disabled={sending} style={{ flex: 1, height: 40, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: sending ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: sending ? 0.7 : 1 }}>{sending ? 'Sending...' : 'Send message'}</button>
                 <button onClick={onClose} style={{ height: 40, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
               </div>
-              <p style={{ fontSize: 11, color: MUTED, textAlign: 'center' }}>Or email directly: <span style={{ color: GREEN }}>hello@teachreads.co.uk</span></p>
+              <p style={{ fontSize: 11, color: MUTED, textAlign: 'center' }}>Or email directly: <span style={{ color: GREEN }}>dd.driscoll92@gmail.com</span></p>
             </div>
           )}
         </div>
@@ -4431,12 +4440,12 @@ function LegalPage({ type, onClose }) {
     title: 'Privacy Policy',
     updated: today,
     sections: [
-      { heading: 'Who we are', body: `TeachReads is operated by Daniel Driscoll ("we", "us", "our"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at hello@teachreads.co.uk.` },
+      { heading: 'Who we are', body: `TeachReads is operated by Daniel Driscoll ("we", "us", "our"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at dd.driscoll92@gmail.com.` },
       { heading: 'What data we collect', body: `We collect: your name and email address when you create an account; usage data including lesson plans, resources and book searches you generate; profile information you choose to provide (school name, region, year groups); your profile picture if you upload one; subscription and billing information if you upgrade to a paid plan.` },
       { heading: 'How we use your data', body: `We use your data to: provide and improve the TeachReads service; personalise your experience (pre-filling year group and subject preferences); send transactional emails (account confirmation, password reset); communicate about your subscription; analyse usage patterns to improve the product. We do not sell your data to third parties or use it for advertising.` },
       { heading: 'Data storage', body: `Your data is stored securely using Supabase (PostgreSQL database hosted on AWS in the EU). Profile pictures are stored in Supabase Storage. We use Anthropic's Claude API to generate lesson plans and resources — prompts and responses are not stored by Anthropic beyond their standard processing.` },
       { heading: 'Data retention', body: `We retain your data for as long as you have an account. If you delete your account, all your data is permanently deleted within 30 days. You can delete your account at any time from Profile & settings → Account.` },
-      { heading: 'Your rights', body: `Under UK GDPR you have the right to: access your personal data; correct inaccurate data; delete your data ("right to be forgotten"); restrict or object to processing; data portability. To exercise any of these rights, contact us at hello@teachreads.co.uk.` },
+      { heading: 'Your rights', body: `Under UK GDPR you have the right to: access your personal data; correct inaccurate data; delete your data ("right to be forgotten"); restrict or object to processing; data portability. To exercise any of these rights, contact us at dd.driscoll92@gmail.com.` },
       { heading: 'Cookies', body: `We use only essential cookies required for authentication (session management). We do not use tracking, advertising or analytics cookies.` },
       { heading: 'Changes to this policy', body: `We may update this policy from time to time. We will notify you of significant changes by email or by a notice in the app.` },
     ]
@@ -4455,7 +4464,7 @@ function LegalPage({ type, onClose }) {
       { heading: '7. Intellectual property', body: `TeachReads, its logo and the software are owned by us and protected by intellectual property law. You may not copy, modify or distribute the TeachReads software.` },
       { heading: '8. Limitation of liability', body: `To the maximum extent permitted by law, TeachReads shall not be liable for any indirect, incidental or consequential damages arising from use of the service. Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.` },
       { heading: '9. Changes to terms', body: `We may update these terms. Continued use of the service after changes constitutes acceptance. We will notify you of material changes by email.` },
-      { heading: '10. Contact', body: `For questions about these terms, contact us at hello@teachreads.co.uk.` },
+      { heading: '10. Contact', body: `For questions about these terms, contact us at dd.driscoll92@gmail.com.` },
     ]
   }
 
