@@ -3113,6 +3113,7 @@ For all other types: use appropriate sections for the resource type.`
 
     try {
       const result = await callAPI(apiPrompt, true)
+      console.log('Resource result:', JSON.stringify(result)?.slice(0, 200))
       setResource(result)
       // Save resource to Supabase
       try {
