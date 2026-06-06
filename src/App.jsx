@@ -688,6 +688,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
               { label: '⭐  Plan options', note: '', dest: 'upgrade' },
               ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
               { label: '📋  Privacy & Terms', note: '', dest: 'legal' },
+              { label: '✉️  Contact us', note: '', dest: 'contact' },
               { label: '🚪  Sign Out', note: '', dest: 'signout' },
             ].map((item, i) => (
               <div key={i}
@@ -4383,7 +4384,7 @@ function ContactModal({ onClose }) {
         <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: TEXT }}>Contact us</div>
-            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>We typically reply within 1 working day</div>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>We typically reply within 2 working days</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED }}>×</button>
         </div>
@@ -4392,7 +4393,7 @@ function ContactModal({ onClose }) {
             <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>✉️</div>
               <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 8 }}>Message ready to send</div>
-              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Your message has been sent. We will get back to you within 1 working day at <span style={{ color: GREEN }}>{email}</span></p>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Your message has been sent. We will get back to you within 2 working days at <span style={{ color: GREEN }}>{email}</span></p>
               <button onClick={onClose} style={{ marginTop: 16, height: 36, padding: '0 16px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
             </div>
           ) : (
@@ -4936,6 +4937,7 @@ export default function App() {
     if (dest === 'upgrade') { setPage('upgrade') }
     if (dest === 'admin') { setShowAdmin(true) }
     if (dest === 'legal') { setLegalPage('privacy') }
+    if (dest === 'contact') { setLegalPage('contact') }
   }
 
   if (session === undefined) return null
