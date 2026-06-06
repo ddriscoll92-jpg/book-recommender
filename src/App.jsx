@@ -4629,6 +4629,12 @@ function AdminDashboard({ onNavigate, userEmail }) {
 
 // ── Auth Page ─────────────────────────────────────────────────────────────────
 function AuthPage({ onAuth, onLegal }) {
+  const [localLegal, setLocalLegal] = useState(null)
+
+  function handleLegal(type) {
+    setLocalLegal(type)
+    onLegal && onLegal(type)
+  }
   const [mode, setMode] = useState('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -4750,8 +4756,8 @@ function AuthPage({ onAuth, onLegal }) {
             </div>
             <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
               By signing up you agree to our{' '}
-              <span style={{ color: GREEN, cursor: 'pointer' }} onClick={() => onLegal && onLegal('privacy')}>Terms of Service</span> and{' '}
-              <span style={{ color: GREEN, cursor: 'pointer' }} onClick={() => onLegal && onLegal('terms')}>Privacy Policy</span>
+              <span style={{ color: GREEN, cursor: 'pointer' }} onClick={() => handleLegal('privacy')}>Terms of Service</span> and{' '}
+              <span style={{ color: GREEN, cursor: 'pointer' }} onClick={() => handleLegal('terms')}>Privacy Policy</span>
             </p>
           </div>
         </div>
@@ -4791,11 +4797,13 @@ function AuthPage({ onAuth, onLegal }) {
         <span style={{ fontSize: 12, color: NAVY_MUTED }}>For UK primary school teachers</span>
         <div style={{ display: 'flex', gap: 20 }}>
           {[['Privacy', 'privacy'], ['Terms', 'terms'], ['Contact', 'contact']].map(([l, t]) => (
-            <span key={l} onClick={() => onLegal && onLegal(t)} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
+            <span key={l} onClick={() => handleLegal(t)} style={{ fontSize: 12, color: NAVY_MUTED, cursor: 'pointer' }}>{l}</span>
           ))}
         </div>
       </div>
     </div>
+    {localLegal && localLegal !== 'contact' && <LegalPage type={localLegal} onClose={() => setLocalLegal(null)} />}
+    {localLegal === 'contact' && <ContactModal onClose={() => setLocalLegal(null)} />}
   )
 }
 // ── Root App ──────────────────────────────────────────────────────────────────
