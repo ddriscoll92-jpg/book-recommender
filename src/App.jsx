@@ -1256,7 +1256,7 @@ function ResourceOutput({ resource }) {
   )
 }
 
-function ResourcePage({ book, yearGroup, ideas, onBack }) {
+function ResourcePage({ book, yearGroup, ideas, onBack, checkTrial }) {
   const [plans, setPlans] = useState({})
   const [generating, setGenerating] = useState({})
   const [openAccordions, setOpenAccordions] = useState({})
@@ -3268,8 +3268,8 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
 
               // Use realLessons from component state (loaded via useEffect)
               const lessonContext = realLessons.length > 0
-                ? realLessons.map(l => ({ num: l.lesson_number, title: l.title, type: l.type, intention: l.learning_intention || '' }))
-                : Array.from({ length: selectedPlan?.lessons || 0 }, (_, i) => ({ num: i+1, title: `Lesson ${i+1}`, type: '', intention: '' }))
+                ? realLessons.map(l => ({ num: l.lesson_number, title: l.title, type: l.type, intention: l.learning_intention || '', learningIntention: l.learning_intention || '' }))
+                : Array.from({ length: selectedPlan?.lessons || 0 }, (_, i) => ({ num: i+1, title: `Lesson ${i+1}`, type: '', intention: '', learningIntention: '' }))
 
               const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
               const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
@@ -4811,7 +4811,7 @@ export default function App() {
         <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} checkTrial={checkTrial} onBack={() => setPage('search')}
           onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} checkTrial={checkTrial} />
       )}
-      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />}
+      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
