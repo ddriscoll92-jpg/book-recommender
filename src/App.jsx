@@ -4283,6 +4283,20 @@ function AuthPage({ onAuth, onLegal }) {
   }
 
   async function handleSubmit() {
+    if (mode === 'reset') {
+      if (!email) { setError('Please enter your email address.'); return }
+      setLoading(true); setError(''); setSuccess('')
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '?reset=true',
+        })
+        if (error) throw error
+        setSuccess('Password reset email sent! Check your inbox.')
+        setMode('login')
+      } catch (err) { setError(err.message || 'Something went wrong.') }
+      setLoading(false)
+      return
+    }
     if (!email || !password) { setError('Please fill in all fields.'); return }
     if (mode === 'signup' && !name) { setError('Please enter your name.'); return }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
@@ -4362,7 +4376,7 @@ function AuthPage({ onAuth, onLegal }) {
             <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
               {[['signup', 'Create account'], ['login', 'Sign in']].map(([id, label]) => (
                 <button key={id} onClick={() => { setMode(id); setError(''); setSuccess('') }}
-                  style={{ flex: 1, height: 34, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: mode === id ? 500 : 400, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: mode === id ? BG : 'transparent', color: mode === id ? TEXT : MUTED, boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+                  style={{ flex: 1, height: 34, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: (mode === id || (mode === 'reset' && id === 'login')) ? 500 : 400, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: (mode === id || (mode === 'reset' && id === 'login')) ? BG : 'transparent', color: (mode === id || (mode === 'reset' && id === 'login')) ? TEXT : MUTED, boxShadow: (mode === id || (mode === 'reset' && id === 'login')) ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
                   {label}
                 </button>
               ))}
@@ -4370,7 +4384,7 @@ function AuthPage({ onAuth, onLegal }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {mode === 'signup' && <div><label style={{ ...s.label, marginBottom: 5 }}>Your name</label><input style={inputStyle} placeholder="e.g. Sarah Jones" value={name} onChange={e => setName(e.target.value)} /></div>}
               <div><label style={{ ...s.label, marginBottom: 5 }}>Email address</label><input style={inputStyle} type="email" placeholder="your@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
-              <div><label style={{ ...s.label, marginBottom: 5 }}>Password</label><input style={inputStyle} type="password" placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
+              {mode !== 'reset' && <div><label style={{ ...s.label, marginBottom: 5 }}>Password</label><input style={inputStyle} type="password" placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>}
               {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>{error}</div>}
               {success && <div style={{ background: LIGHT_GREEN, color: '#085041', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>{success}</div>}
               {mode === 'signup' && (
@@ -4382,8 +4396,18 @@ function AuthPage({ onAuth, onLegal }) {
                 </div>
               )}
               <button onClick={handleSubmit} disabled={loading} style={{ height: 44, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
-                {loading ? '⏳ Please wait...' : mode === 'login' ? 'Sign in' : 'Start free 5-day trial'}
+                {loading ? '⏳ Please wait...' : mode === 'reset' ? 'Send reset link' : mode === 'login' ? 'Sign in' : 'Start free 5-day trial'}
               </button>
+              {mode === 'login' && (
+                <div style={{ textAlign: 'center' }}>
+                  <span onClick={() => setMode('reset')} style={{ fontSize: 13, color: GREEN, cursor: 'pointer' }}>Forgot your password?</span>
+                </div>
+              )}
+              {mode === 'reset' && (
+                <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#085041' }}>
+                  Enter your email above and click Send reset link to receive a password reset email.
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, height: '0.5px', background: BORDER }} />
                 <span style={{ fontSize: 11, color: MUTED }}>or</span>
@@ -4459,6 +4483,8 @@ export default function App() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [trialInfo, setTrialInfo] = useState(null)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [newPassword, setNewPasswordReset] = useState('')
+  const [resetMsg, setResetMsg] = useState('')
   const [legalPage, setLegalPage] = useState(null)
   const [selectedBook, setSelectedBook] = useState(null)
   const [selectedIdeas, setSelectedIdeas] = useState([])
@@ -4472,7 +4498,8 @@ export default function App() {
     // Handle Stripe success redirect
     const params = new URLSearchParams(window.location.search)
     const isSuccess = params.get('session_id')
-    if (isSuccess) {
+    const isReset = params.get('reset')
+    if (isSuccess || isReset) {
       window.history.replaceState({}, '', '/')
     }
 
@@ -4492,9 +4519,10 @@ export default function App() {
         }
       }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       if (session) loadProfilePreferences(session.user.id)
+      if (event === 'PASSWORD_RECOVERY') setPage('password_reset')
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -4596,6 +4624,34 @@ export default function App() {
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
+      {page === 'password_reset' && (
+        <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: BG, borderRadius: 14, padding: '2rem', width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+            <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, color: TEXT, marginBottom: 8 }}>Set new password</h2>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Enter your new password below.</p>
+            <input
+              type="password"
+              placeholder="New password (min 6 characters)"
+              value={newPassword}
+              onChange={e => setNewPasswordReset(e.target.value)}
+              style={{ width: '100%', height: 42, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 14px', fontSize: 14, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}
+            />
+            {resetMsg && <div style={{ background: resetMsg.includes('✅') ? LIGHT_GREEN : '#FCEBEB', color: resetMsg.includes('✅') ? '#085041' : '#A32D2D', borderRadius: 8, padding: '10px 14px', fontSize: 13, marginBottom: 12 }}>{resetMsg}</div>}
+            <button
+              onClick={async () => {
+                if (newPassword.length < 6) { setResetMsg('Password must be at least 6 characters.'); return }
+                const { error } = await supabase.auth.updateUser({ password: newPassword })
+                if (error) { setResetMsg(error.message); return }
+                setResetMsg('✅ Password updated successfully!')
+                setTimeout(() => { setNewPasswordReset(''); setResetMsg(''); setPage('search') }, 2000)
+              }}
+              style={{ width: '100%', height: 44, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+            >
+              Update password
+            </button>
+          </div>
+        </div>
+      )}
       {page === 'upgrade_success' && <UpgradeSuccessPage onNavigate={handleNavigate} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
