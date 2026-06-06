@@ -1,3 +1,4 @@
+// TeachReads App v2
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './supabaseClient'
 
@@ -4963,6 +4964,3 @@ export default function App() {
     </div>
   )
 }
-
-
-      
