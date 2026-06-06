@@ -125,6 +125,22 @@ const CHIPS = [
   { value: 'supports EAL learners', label: '⚡ supports EAL learners' },
 ]
 
+
+// ── Shared API helper ─────────────────────────────────────────────────────────
+async function callAPI(prompt, raw = false) {
+  const res = await fetch('/api/recommend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, raw }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `API error ${res.status}`)
+  }
+  const data = await res.json()
+  return data
+}
+
 function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo }) {
   const [profileOpen, setProfileOpen] = useState(false)
 
@@ -487,6 +503,13 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
             )}
           </div>
         </div>
+        <button
+          style={{ width: '100%', height: 50, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 8 }}
+          onClick={() => fetchBooks(false)}
+          disabled={loading}
+        >
+          {loading ? '⏳ Finding books...' : '✨ Find books'}
+        </button>
         {loading && <div style={s.loadingBox}>Finding the best books for {yearGroup} {subject}...</div>}
         {searched && books.length > 0 && (
           <div>
@@ -556,6 +579,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
 // ── Resource Page ─────────────────────────────────────────────────────────────
 
 function BookDetailPage({ book, yearGroup, onBack, onCreateResources, checkTrial }) {
+  if (!book) return null
   const [details, setDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
   const [coverError, setCoverError] = useState(false)
@@ -956,7 +980,8 @@ function ResourceOutput({ resource }) {
         URL.revokeObjectURL(url)
       } else if (format === 'pdf') {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-        const { jsPDF } = window.jspdf
+        const { jsPDF } = window.jspdf || {}
+        if (!jsPDF) throw new Error('jsPDF not loaded')
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
         const GREEN_RGB = [29, 158, 117]; const NAVY_RGB = [30, 36, 51]; const MUTED_RGB = [95, 94, 90]
         const margin = 18; const pageW = 210; const contentW = pageW - margin * 2
@@ -2714,7 +2739,8 @@ function ResourceDownloadButton({ resource }) {
         URL.revokeObjectURL(url)
       } else if (format === 'pdf') {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-        const { jsPDF } = window.jspdf
+        const { jsPDF } = window.jspdf || {}
+        if (!jsPDF) throw new Error('jsPDF not loaded')
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
         const GREEN_RGB = [29,158,117], NAVY_RGB = [30,36,51], MUTED_RGB = [95,94,90]
         const margin = 18, pageW = 210, contentW = pageW - margin * 2
@@ -3628,6 +3654,8 @@ function ProfileModal({ session, onClose, onUpdated }) {
       // Update display name
       const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: pmDisplayName } })
       if (authErr) throw authErr
+      // Also update profiles table
+      await supabase.from('profiles').update({ display_name: pmDisplayName }).eq('id', pmUserId)
       // Update email if changed
       if (newEmail !== pmUserEmail) {
         const { error: emailErr } = await supabase.auth.updateUser({ email: newEmail })
@@ -4561,7 +4589,7 @@ export default function App() {
         <SearchPage onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} searchState={searchState} setSearchState={setSearchState} checkTrial={checkTrial} />
       )}
       {page === 'book' && (
-        <BookDetailPage book={selectedBook} yearGroup={searchState.yearGroup} onBack={() => setPage('search')}
+        <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} onBack={() => setPage('search')}
           onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} checkTrial={checkTrial} />
       )}
       {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} />}
