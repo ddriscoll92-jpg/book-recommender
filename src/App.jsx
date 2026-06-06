@@ -126,6 +126,170 @@ const CHIPS = [
 ]
 
 
+
+// ── Download helpers ──────────────────────────────────────────────────────────
+async function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
+    const s = document.createElement('script')
+    s.src = src; s.onload = resolve; s.onerror = reject
+    document.head.appendChild(s)
+  })
+}
+
+function downloadTxt(book, yearGroup, idea, plan) {
+  const lines = []
+  lines.push(`${idea.title}`)
+  lines.push('='.repeat(60))
+  lines.push(`Book: ${book.title} by ${book.author}`)
+  lines.push(`Year group: ${yearGroup} | Subject: ${plan?.subject || idea.subject || ''}`)
+  lines.push('')
+  if (idea.description) { lines.push(idea.description); lines.push('') }
+  if (plan?.unitOverview) { lines.push('UNIT OVERVIEW'); lines.push('-'.repeat(40)); lines.push(plan.unitOverview); lines.push('') }
+  if (plan?.lessons?.length) {
+    lines.push('LESSONS')
+    lines.push('-'.repeat(40))
+    plan.lessons.forEach(l => {
+      lines.push(`\nLesson ${l.lessonNumber}: ${l.title}`)
+      if (l.learningIntention) lines.push(`Learning intention: ${l.learningIntention}`)
+      if (l.successCriteria) lines.push(`Success criteria: ${l.successCriteria}`)
+      if (l.mainActivity) lines.push(`Main activity: ${l.mainActivity}`)
+      if (l.teacherNotes) lines.push(`Teacher notes: ${l.teacherNotes}`)
+      if (l.ncLinks) lines.push(`NC links: ${l.ncLinks}`)
+      if (l.sendAdaptations) lines.push(`SEND adaptations: ${l.sendAdaptations}`)
+    })
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `${idea.title || 'plan'}.txt`
+  a.click(); URL.revokeObjectURL(url)
+}
+
+async function downloadPdf(book, yearGroup, idea, plan) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const GREEN_RGB = [29, 158, 117]
+  const margin = 18
+  let y = margin
+
+  function addText(text, size, color, bold, maxWidth) {
+    doc.setFontSize(size)
+    doc.setTextColor(...(color || [44, 44, 42]))
+    doc.setFont('helvetica', bold ? 'bold' : 'normal')
+    const lines = doc.splitTextToSize(String(text || ''), maxWidth || 210 - margin * 2)
+    lines.forEach(line => {
+      if (y > 270) { doc.addPage(); y = margin }
+      doc.text(line, margin, y)
+      y += size * 0.45
+    })
+    y += 2
+  }
+
+  // Title
+  addText(idea.title, 18, GREEN_RGB, true)
+  addText(`${book.title} by ${book.author}`, 11, [95, 94, 90])
+  addText(`${yearGroup} · ${plan?.subject || idea.subject || ''}`, 10, [95, 94, 90])
+  y += 4
+
+  if (idea.description) { addText(idea.description, 10); y += 2 }
+  if (plan?.unitOverview) {
+    addText('Unit Overview', 12, GREEN_RGB, true)
+    addText(plan.unitOverview, 10)
+    y += 4
+  }
+  if (plan?.lessons?.length) {
+    plan.lessons.forEach(l => {
+      if (y > 250) { doc.addPage(); y = margin }
+      addText(`Lesson ${l.lessonNumber}: ${l.title}`, 12, GREEN_RGB, true)
+      if (l.learningIntention) { addText('Learning intention', 9, [95,94,90], true); addText(l.learningIntention, 10) }
+      if (l.successCriteria) { addText('Success criteria', 9, [95,94,90], true); addText(l.successCriteria, 10) }
+      if (l.mainActivity) { addText('Main activity', 9, [95,94,90], true); addText(l.mainActivity, 10) }
+      if (l.teacherNotes) { addText('Teacher notes', 9, [95,94,90], true); addText(l.teacherNotes, 10) }
+      if (l.ncLinks) { addText('NC links', 9, [95,94,90], true); addText(l.ncLinks, 10) }
+      if (l.sendAdaptations) { addText('SEND adaptations', 9, [95,94,90], true); addText(l.sendAdaptations, 10) }
+      y += 4
+    })
+  }
+  doc.save(`${idea.title || 'plan'}.pdf`)
+}
+
+async function downloadDocx(book, yearGroup, idea, plan) {
+  await loadScript('https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js')
+  await loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = window.docx || {}
+  const saveAs = window.saveAs || window.FileSaver?.saveAs
+  if (!Document || !saveAs) throw new Error('docx library not loaded')
+
+  const GREEN_COLOR = '1D9E75'
+
+  function heading(text, level) {
+    return new Paragraph({
+      text,
+      heading: level || HeadingLevel.HEADING_2,
+      thematicBreak: false,
+    })
+  }
+
+  function para(text, bold) {
+    return new Paragraph({
+      children: [new TextRun({ text: text || '', bold: !!bold, size: 22 })]
+    })
+  }
+
+  const children = []
+  children.push(new Paragraph({ children: [new TextRun({ text: idea.title, bold: true, size: 36, color: GREEN_COLOR })], heading: HeadingLevel.HEADING_1 }))
+  children.push(para(`${book.title} by ${book.author}`))
+  children.push(para(`${yearGroup} · ${plan?.subject || idea.subject || ''}`))
+  children.push(new Paragraph({}))
+
+  if (idea.description) { children.push(para(idea.description)); children.push(new Paragraph({})) }
+  if (plan?.unitOverview) {
+    children.push(heading('Unit Overview'))
+    children.push(para(plan.unitOverview))
+    children.push(new Paragraph({}))
+  }
+  if (plan?.lessons?.length) {
+    plan.lessons.forEach(l => {
+      children.push(heading(`Lesson ${l.lessonNumber}: ${l.title}`))
+      if (l.learningIntention) { children.push(para('Learning intention', true)); children.push(para(l.learningIntention)) }
+      if (l.successCriteria) { children.push(para('Success criteria', true)); children.push(para(l.successCriteria)) }
+      if (l.mainActivity) { children.push(para('Main activity', true)); children.push(para(l.mainActivity)) }
+      if (l.teacherNotes) { children.push(para('Teacher notes', true)); children.push(para(l.teacherNotes)) }
+      if (l.ncLinks) { children.push(para('NC links', true)); children.push(para(l.ncLinks)) }
+      if (l.sendAdaptations) { children.push(para('SEND adaptations', true)); children.push(para(l.sendAdaptations)) }
+      children.push(new Paragraph({}))
+    })
+  }
+
+  const doc = new Document({ sections: [{ children }] })
+  const blob = await Packer.toBlob(doc)
+  saveAs(blob, `${idea.title || 'plan'}.docx`)
+}
+
+
+async function fetchBookDetails(title, author) {
+  try {
+    const query = encodeURIComponent(`${title} ${author}`)
+    const res = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=1`)
+    const data = await res.json()
+    if (data.docs?.length > 0) {
+      const b = data.docs[0]
+      return {
+        publisher: b.publisher?.[0] || null,
+        firstPublished: b.first_publish_year || null,
+        pages: b.number_of_pages_median || null,
+        subjects: b.subject?.slice(0, 5) || [],
+        coverUrl: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-L.jpg` : null,
+        illustrator: b.contributor?.find(c => c.toLowerCase().includes('illustrat')) || null,
+      }
+    }
+  } catch(e) { console.error('fetchBookDetails error:', e) }
+  return null
+}
+
 // ── Shared API helper ─────────────────────────────────────────────────────────
 async function callAPI(prompt, raw = false) {
   const res = await fetch('/api/recommend', {
@@ -369,6 +533,13 @@ function SearchPage({ onSelectBook, searchState, setSearchState, checkTrial }) {
 
   async function fetchBooks(loadMore = false) {
     if (!subject.trim() || !topic.trim() || !yearGroup) { set('error', 'Please fill in subject, topic and year group before searching.'); return }
+    if (!loadMore) {
+      const allowed = await checkTrial('book_searches')
+      if (!allowed) return
+    } else {
+      const allowed = await checkTrial('load_mores')
+      if (!allowed) return
+    }
     set('error', '')
     const isLoadMore = loadMore && books.length > 0
     if (isLoadMore) set('loadingMore', true)
@@ -1481,7 +1652,10 @@ function MyPlanDownloadButton({ plan, group, size }) {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) supabase.from('profiles').select('plan').eq('id', user.id).single()
-        .then(({ data }) => { if (data?.plan) setPlanType(data.plan) })
+        .then(({ data }) => {
+          if (data?.plan) setPlanType(data.plan)
+          if (user.email === 'dd.driscoll92@gmail.com') setPlanType('premium')
+        })
     })
   }, [])
 
@@ -2939,7 +3113,7 @@ For all other types: use appropriate sections for the resource type.`
           loadCatalogue()
         }
       } catch (e) { console.error('Plan resource save error:', JSON.stringify(e)); }
-    } catch (err) { console.error('generateFromPlan error:', err); setError('Something went wrong. Please try again.') }
+    } catch (err) { console.error('generateFromPlan error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
     setGenerating(false)
   }
 
@@ -2982,7 +3156,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
           loadCatalogue()
         }
       } catch (e) { console.error('Adhoc resource save error:', JSON.stringify(e)); }
-    } catch (err) { console.error('generateAdhoc error:', err); setError('Something went wrong. Please try again.') }
+    } catch (err) { console.error('generateAdhoc error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
     setGenerating(false)
   }
 
