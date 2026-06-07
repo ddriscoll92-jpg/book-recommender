@@ -125,9 +125,9 @@ const SUBJECTS = [
   { name: 'Other', emoji: '📚' },
 ]
 
-const CONTENT_TYPES = ['Any', 'Fiction', 'Non-fiction', 'Poetry', 'Picture book', 'Graphic novel']
+const CONTENT_TYPES = ['Any', 'Fiction', 'Non-fiction', 'Poetry']
 
-const BOOK_TYPES = ['Any', 'Novel', 'Short stories', 'Picture book', 'Non-fiction', 'Poetry collection', 'Graphic novel']
+const BOOK_TYPES = ['Any', 'Chapter book', 'Picture book', 'Activity book', 'Novel']
 
 const READING_LEVELS = ['Any', 'Below age', 'At age', 'Above age']
 
