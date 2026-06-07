@@ -795,7 +795,11 @@ function BookDetailPage({ book, yearGroup, onBack, onCreateResources, checkTrial
   }, [])
 
   function toggleSubject(name) {
-    setSelectedSubjects(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name])
+    setSelectedSubjects(prev => {
+      if (prev.includes(name)) return prev.filter(s => s !== name)
+      if (prev.length >= 4) return prev // max 4 subjects
+      return [...prev, name]
+    })
   }
 
   function toggleCheck(key) {
@@ -928,7 +932,9 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           </div>
           <div style={s.subjectGrid}>
             {SUBJECTS.map(sub => (
-              <div key={sub.name} style={s.subjectTile(selectedSubjects.includes(sub.name))} onClick={() => toggleSubject(sub.name)}>
+              <div key={sub.name}
+                style={{ ...s.subjectTile(selectedSubjects.includes(sub.name)), opacity: !selectedSubjects.includes(sub.name) && selectedSubjects.length >= 4 ? 0.4 : 1, cursor: !selectedSubjects.includes(sub.name) && selectedSubjects.length >= 4 ? 'not-allowed' : 'pointer' }}
+                onClick={() => toggleSubject(sub.name)}>
                 <span style={s.subjectEmoji}>{sub.emoji}</span>
                 <span style={s.subjectName(selectedSubjects.includes(sub.name))}>{sub.name}</span>
               </div>
