@@ -169,21 +169,24 @@ function downloadTxt(book, yearGroup, idea, plan) {
       lines.push(`\nLesson ${l.lessonNumber}: ${l.title}`)
       if (l.lessonOverview) lines.push(`Lesson overview: ${l.lessonOverview}`)
       if (l.learningIntention) lines.push(`Learning intention: ${l.learningIntention}`)
-      if (l.successCriteria) lines.push(`Success criteria: ${l.successCriteria}`)
+      if (l.successCriteria) {
+        lines.push('Success criteria:')
+        const sc = Array.isArray(l.successCriteria) ? l.successCriteria : [l.successCriteria]
+        sc.forEach(s => lines.push(`  - ${s}`))
+      }
       if (l.mainActivity) lines.push(`Main activity: ${l.mainActivity}`)
       if (l.teacherNotes) lines.push(`Teacher notes: ${l.teacherNotes}`)
       if (l.ncLinks?.length) {
         lines.push('NC links:')
-        l.ncLinks.forEach(nc => lines.push(`  - ${nc.skill}: ${nc.curriculumLink}`))
+        const links = Array.isArray(l.ncLinks) ? l.ncLinks : []
+        links.forEach(nc => lines.push(`  - ${nc.skill || ''}: ${nc.curriculumLink || ''}`))
       }
-      if (l.sendAdaptations && typeof l.sendAdaptations === 'object') {
+      if (l.sendAdaptations && typeof l.sendAdaptations === 'object' && !Array.isArray(l.sendAdaptations)) {
         lines.push('SEND adaptations:')
         Object.entries(l.sendAdaptations).forEach(([group, items]) => {
-          if (Array.isArray(items) && items.length) lines.push(`  ${group}: ${items.join('; ')}`)
-          else if (typeof items === 'string' && items) lines.push(`  ${group}: ${items}`)
+          const itemList = Array.isArray(items) ? items.join('; ') : (items || '')
+          if (itemList) lines.push(`  ${group}: ${itemList}`)
         })
-      } else if (typeof l.sendAdaptations === 'string' && l.sendAdaptations) {
-        lines.push(`SEND adaptations: ${l.sendAdaptations}`)
       }
     })
   }
@@ -234,21 +237,23 @@ async function downloadPdf(book, yearGroup, idea, plan) {
       addText(`Lesson ${l.lessonNumber}: ${l.title}`, 12, GREEN_RGB, true)
       if (l.lessonOverview) { addText('Lesson overview', 9, [95,94,90], true); addText(l.lessonOverview, 10) }
       if (l.learningIntention) { addText('Learning intention', 9, [95,94,90], true); addText(l.learningIntention, 10) }
-      if (l.successCriteria) { addText('Success criteria', 9, [95,94,90], true); addText(l.successCriteria, 10) }
+      if (l.successCriteria) {
+        addText('Success criteria', 9, [95,94,90], true)
+        const sc = Array.isArray(l.successCriteria) ? l.successCriteria : [l.successCriteria]
+        sc.forEach(s => addText(`• ${s}`, 10))
+      }
       if (l.mainActivity) { addText('Main activity', 9, [95,94,90], true); addText(l.mainActivity, 10) }
       if (l.teacherNotes) { addText('Teacher notes', 9, [95,94,90], true); addText(l.teacherNotes, 10) }
-      if (l.ncLinks?.length) {
+      if (Array.isArray(l.ncLinks) && l.ncLinks.length) {
         addText('NC links', 9, [95,94,90], true)
-        l.ncLinks.forEach(nc => addText(`${nc.skill}: ${nc.curriculumLink}`, 10))
+        l.ncLinks.forEach(nc => addText(`• ${nc.skill || ''}: ${nc.curriculumLink || ''}`, 10))
       }
-      if (l.sendAdaptations && typeof l.sendAdaptations === 'object') {
+      if (l.sendAdaptations && typeof l.sendAdaptations === 'object' && !Array.isArray(l.sendAdaptations)) {
         addText('SEND adaptations', 9, [95,94,90], true)
         Object.entries(l.sendAdaptations).forEach(([group, items]) => {
-          if (Array.isArray(items) && items.length) addText(`${group}: ${items.join('; ')}`, 10)
-          else if (typeof items === 'string' && items) addText(`${group}: ${items}`, 10)
+          const itemList = Array.isArray(items) ? items.join('; ') : (items || '')
+          if (itemList) addText(`${group}: ${itemList}`, 10)
         })
-      } else if (typeof l.sendAdaptations === 'string' && l.sendAdaptations) {
-        addText('SEND adaptations', 9, [95,94,90], true); addText(l.sendAdaptations, 10)
       }
       y += 4
     })
@@ -296,21 +301,23 @@ async function downloadDocx(book, yearGroup, idea, plan) {
       children.push(heading(`Lesson ${l.lessonNumber}: ${l.title}`))
       if (l.lessonOverview) { children.push(para('Lesson overview', true)); children.push(para(l.lessonOverview)) }
       if (l.learningIntention) { children.push(para('Learning intention', true)); children.push(para(l.learningIntention)) }
-      if (l.successCriteria) { children.push(para('Success criteria', true)); children.push(para(l.successCriteria)) }
+      if (l.successCriteria) {
+        children.push(para('Success criteria', true))
+        const sc = Array.isArray(l.successCriteria) ? l.successCriteria : [l.successCriteria]
+        sc.forEach(s => children.push(para(`• ${s}`)))
+      }
       if (l.mainActivity) { children.push(para('Main activity', true)); children.push(para(l.mainActivity)) }
       if (l.teacherNotes) { children.push(para('Teacher notes', true)); children.push(para(l.teacherNotes)) }
-      if (l.ncLinks?.length) {
+      if (Array.isArray(l.ncLinks) && l.ncLinks.length) {
         children.push(para('NC links', true))
-        l.ncLinks.forEach(nc => children.push(para(`• ${nc.skill}: ${nc.curriculumLink}`)))
+        l.ncLinks.forEach(nc => children.push(para(`• ${nc.skill || ''}: ${nc.curriculumLink || ''}`)))
       }
-      if (l.sendAdaptations && typeof l.sendAdaptations === 'object') {
+      if (l.sendAdaptations && typeof l.sendAdaptations === 'object' && !Array.isArray(l.sendAdaptations)) {
         children.push(para('SEND adaptations', true))
         Object.entries(l.sendAdaptations).forEach(([group, items]) => {
-          if (Array.isArray(items) && items.length) children.push(para(`${group}: ${items.join('; ')}`))
-          else if (typeof items === 'string' && items) children.push(para(`${group}: ${items}`))
+          const itemList = Array.isArray(items) ? items.join('; ') : (items || '')
+          if (itemList) children.push(para(`${group}: ${itemList}`))
         })
-      } else if (typeof l.sendAdaptations === 'string' && l.sendAdaptations) {
-        children.push(para('SEND adaptations', true)); children.push(para(l.sendAdaptations))
       }
       children.push(new Paragraph({}))
     })
