@@ -1155,6 +1155,462 @@ function LessonTab({ lesson, lessonIdx, total }) {
   )
 }
 
+// ── Writing Frame PDF Download ────────────────────────────────────────────────
+
+async function downloadWritingFramePdf(wf) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210; const pageH = 297; const margin = 16; const contentW = pageW - margin * 2
+
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
+    return [r,g,b]
+  }
+
+  wf.tiers.forEach((tier, ti) => {
+    if (ti > 0) doc.addPage()
+    const [tr,tg,tb] = hexToRgb(tier.colour)
+    const [hr,hg,hb] = hexToRgb(wf.themeColour || '#7C3AED')
+    let y = 0
+
+    // Header bar
+    doc.setFillColor(hr,hg,hb)
+    doc.rect(0, 0, pageW, 26, 'F')
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+    doc.text('Uplevelling Sentences', pageW/2, 8, { align: 'center' })
+    doc.setFontSize(16); doc.setFont('helvetica','bold')
+    doc.text(wf.title, pageW/2, 18, { align: 'center' })
+
+    // Tier badge
+    doc.setFillColor(tr,tg,tb)
+    doc.roundedRect(pageW - margin - 30, 6, 30, 12, 2, 2, 'F')
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+    doc.text(`${tier.emoji} ${tier.level}`, pageW - margin - 15, 13.5, { align: 'center' })
+
+    y = 34
+
+    // Name/Date/Class row
+    doc.setFillColor(245,244,240); doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
+    doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'FD')
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+    const nfields = [{ l:'Name:', x: margin+2 },{ l:'Date:', x: margin+66 },{ l:'Class:', x: margin+130 }]
+    nfields.forEach(f => {
+      doc.text(f.l, f.x, y+6)
+      doc.setDrawColor(180,178,169); doc.setLineWidth(0.3)
+      doc.line(f.x+10, y+6.5, f.x+58, y+6.5)
+    })
+    y += 14
+
+    // Context prompt
+    doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
+    doc.text(wf.contextPrompt || '', margin, y)
+    y += 8
+
+    // Base sentence banner
+    doc.setFillColor(tr,tg,tb)
+    doc.roundedRect(margin, y, contentW, 12, 2, 2, 'F')
+    doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+    doc.text(wf.baseSentence || '', pageW/2, y+8, { align: 'center' })
+    y += 18
+
+    // Word bank (Support only)
+    if (tier.wordBank && tier.wordBank.length > 0) {
+      doc.setFillColor(255,251,235); doc.setDrawColor(217,119,6); doc.setLineWidth(0.5)
+      doc.roundedRect(margin, y, contentW, 14, 2, 2, 'FD')
+      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14)
+      doc.text('Word bank:', margin+3, y+6)
+      doc.setFont('helvetica','normal')
+      doc.text(tier.wordBank.join('  ·  '), margin+26, y+6)
+      doc.setFontSize(7.5); doc.setFont('helvetica','italic')
+      doc.text('Use these words to help describe the scene', margin+3, y+11)
+      y += 18
+    }
+
+    // Steps
+    tier.steps.forEach((step) => {
+      const stepH = step.lines * 7 + (step.scaffold ? 10 : 0) + 22
+      if (y + stepH > pageH - 20) { doc.addPage(); y = 16 }
+
+      // Step number circle
+      doc.setFillColor(tr,tg,tb)
+      doc.circle(margin + 5, y + 5, 5, 'F')
+      doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+      doc.text(String(step.number), margin+5, y+7, { align:'center' })
+
+      // Step instruction
+      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+      const instrLines = doc.splitTextToSize(step.instruction, contentW - 16)
+      doc.text(instrLines, margin+13, y+6)
+      y += instrLines.length * 5 + 6
+
+      // Scaffold (if present)
+      if (step.scaffold) {
+        doc.setFillColor(240,249,255); doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
+        doc.roundedRect(margin, y, contentW, 10, 1.5, 1.5, 'FD')
+        doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+        doc.text(step.scaffold, margin+4, y+7)
+        y += 13
+      }
+
+      // Writing lines
+      doc.setFillColor(255,255,255); doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
+      doc.roundedRect(margin, y, contentW, step.lines * 7 + 4, 1.5, 1.5, 'FD')
+      for (let li = 0; li < step.lines; li++) {
+        doc.setDrawColor(220,218,210); doc.setLineWidth(0.2)
+        doc.line(margin+4, y + 4 + (li+1)*7, margin + contentW - 4, y + 4 + (li+1)*7)
+      }
+      y += step.lines * 7 + 8
+    })
+
+    // Conjunction box
+    if (tier.conjunctions && tier.conjunctions.length > 0) {
+      if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
+      doc.setFillColor(240,240,255); doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
+      doc.roundedRect(margin, y, contentW, 14, 2, 2, 'FD')
+      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(60,52,137)
+      doc.text('Subordinating conjunctions:', margin+3, y+6)
+      doc.setFont('helvetica','normal')
+      doc.text(tier.conjunctions.join('   '), margin+56, y+6)
+      y += 18
+    }
+
+    // Challenge
+    if (tier.challenge) {
+      if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
+      doc.setFillColor(255,251,235); doc.setDrawColor(217,119,6); doc.setLineWidth(0.6)
+      doc.roundedRect(margin, y, contentW, 16, 2, 2, 'FD')
+      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14)
+      doc.text('⭐ Challenge', margin+3, y+6)
+      doc.setFont('helvetica','normal')
+      const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
+      doc.text(cLines, margin+3, y+12)
+      y += 20
+    }
+
+    // Star rating footer
+    const stars = tier.level === 'Support' ? '★' : tier.level === 'Core' ? '★★' : '★★★'
+    doc.setFillColor(tr,tg,tb)
+    doc.rect(0, pageH-10, pageW, 10, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+    doc.text(`TeachReads  ·  ${wf.title}  ·  ${tier.level}  ${stars}`, margin, pageH-4)
+    doc.text(`Page ${ti+1} of ${wf.tiers.length}`, pageW-margin, pageH-4, { align:'right' })
+  })
+
+  doc.save(`${wf.title.replace(/[^a-z0-9]/gi,'_')}_writing_frame.pdf`)
+}
+
+// ── Writing Frame Output Component ───────────────────────────────────────────
+
+function WritingFrameOutput({ writingFrame: wf }) {
+  const [downloading, setDownloading] = useState(false)
+
+  const TIER_STYLES = {
+    'Support':   { border: '#DC2626', bg: '#FEF2F2', headerBg: '#DC2626' },
+    'Core':      { border: '#D97706', bg: '#FFFBEB', headerBg: '#D97706' },
+    'Extension': { border: '#16A34A', bg: '#F0FDF4', headerBg: '#16A34A' },
+  }
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadWritingFramePdf(wf) }
+    catch(e) { console.error('Writing frame PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      {/* Header */}
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{wf.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{wf.yearGroup} · {wf.subject} · {wf.skill}</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+          {downloading ? '⏳ Generating PDF...' : '📄 Download PDF (3 worksheets)'}
+        </button>
+      </div>
+
+      {/* Tier previews */}
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+        {/* Base sentence banner */}
+        <div style={{ background: wf.themeColour || '#7C3AED', padding: '10px 16px', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginBottom: 3 }}>Base sentence</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{wf.baseSentence}</div>
+        </div>
+
+        {wf.tiers.map((tier, ti) => {
+          const ts = TIER_STYLES[tier.level] || TIER_STYLES['Core']
+          return (
+            <div key={ti} style={{ borderTop: `0.5px solid ${BORDER}` }}>
+              <div style={{ background: ts.headerBg, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14 }}>{tier.emoji}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{tier.level}</span>
+                {tier.wordBank && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginLeft: 4 }}>· includes word bank</span>}
+              </div>
+              <div style={{ background: ts.bg, padding: '10px 16px' }}>
+                {/* Steps preview */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {tier.steps.map((step, si) => (
+                    <div key={si} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: ts.headerBg, color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{step.number}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: TEXT, marginBottom: step.scaffold ? 4 : 0 }}>{step.instruction}</div>
+                        {step.scaffold && (
+                          <div style={{ fontSize: 11, color: MUTED, fontStyle: 'italic', background: '#E0F2FE', padding: '3px 8px', borderRadius: 4 }}>{step.scaffold}</div>
+                        )}
+                        <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {Array.from({ length: Math.min(step.lines, 2) }).map((_, li) => (
+                            <div key={li} style={{ height: 1, background: BORDER, width: '100%' }} />
+                          ))}
+                          {step.lines > 2 && <div style={{ fontSize: 10, color: MUTED }}>+ {step.lines - 2} more lines</div>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Conjunction box preview */}
+                {tier.conjunctions && (
+                  <div style={{ marginTop: 8, background: '#EEF2FF', border: `0.5px solid #6366F1`, borderRadius: 6, padding: '5px 10px', fontSize: 11, color: '#3730A3' }}>
+                    <span style={{ fontWeight: 600 }}>Conjunctions: </span>{tier.conjunctions.slice(0,6).join(' · ')}
+                    {tier.conjunctions.length > 6 && ` · +${tier.conjunctions.length - 6} more`}
+                  </div>
+                )}
+                {tier.challenge && (
+                  <div style={{ marginTop: 8, background: '#FFFBEB', border: '0.5px solid #D97706', borderRadius: 6, padding: '5px 10px', fontSize: 11, color: '#92400E' }}>
+                    <span style={{ fontWeight: 600 }}>⭐ Challenge: </span>{tier.challenge}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Worksheet PDF Download ────────────────────────────────────────────────────
+
+async function downloadWorksheetPdf(worksheet) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210; const pageH = 297; const margin = 16; const contentW = pageW - margin * 2
+
+  const TIER_COLORS = {
+    'Support':   { r: 220, g: 38,  b: 38  },
+    'Core':      { r: 217, g: 119, b: 6   },
+    'Extension': { r: 22,  g: 163, b: 74  },
+  }
+
+  worksheet.tiers.forEach((tier, ti) => {
+    if (ti > 0) doc.addPage()
+    const tc = TIER_COLORS[tier.level] || { r: 29, g: 158, b: 117 }
+    let y = 0
+
+    // ── Header bar ──
+    doc.setFillColor(tc.r, tc.g, tc.b)
+    doc.rect(0, 0, pageW, 28, 'F')
+
+    // Title
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+    doc.text(worksheet.title, margin, 11)
+
+    // Tier badge
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.text(`${tier.emoji || ''} ${tier.level}  ·  ${worksheet.yearGroup}  ·  ${worksheet.subject}`, margin, 20)
+
+    // TeachReads tag top right
+    doc.setFontSize(7); doc.setTextColor(220, 255, 240)
+    doc.text('TeachReads', pageW - margin, 11, { align: 'right' })
+
+    y = 36
+
+    // ── Name / Date / Class row ──
+    doc.setFillColor(245, 244, 240)
+    doc.setDrawColor(211, 209, 199)
+    doc.setLineWidth(0.3)
+    doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'FD')
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
+    const fields = [{ l: 'Name:', x: margin + 2 }, { l: 'Date:', x: margin + 66 }, { l: 'Class:', x: margin + 130 }]
+    fields.forEach(f => {
+      doc.text(f.l, f.x, y + 6)
+      doc.setDrawColor(180, 178, 169); doc.setLineWidth(0.3)
+      doc.line(f.x + 10, y + 6.5, f.x + 58, y + 6.5)
+    })
+
+    y += 15
+
+    // ── Instructions ──
+    doc.setFontSize(9); doc.setFont('helvetica', 'italic'); doc.setTextColor(95, 94, 90)
+    doc.text(tier.instructions || '', margin, y)
+    y += 8
+
+    // ── Questions ──
+    const qPerCol = 5
+    const colW = (contentW - 6) / 2
+
+    tier.questions.forEach((q, qi) => {
+      const col = qi < qPerCol ? 0 : 1
+      const row = qi % qPerCol
+      const qx = margin + col * (colW + 6)
+      const qy = y + row * 22
+
+      // Question box
+      doc.setFillColor(255, 255, 255)
+      doc.setDrawColor(211, 209, 199)
+      doc.setLineWidth(0.4)
+      doc.roundedRect(qx, qy, colW, 20, 1.5, 1.5, 'FD')
+
+      // Question number
+      doc.setFillColor(tc.r, tc.g, tc.b)
+      doc.circle(qx + 5, qy + 5, 3.5, 'F')
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+      doc.text(String(qi + 1), qx + 5, qy + 6.5, { align: 'center' })
+
+      doc.setTextColor(44, 44, 42)
+
+      if (q.type === 'column') {
+        // Column sum
+        doc.setFontSize(11); doc.setFont('helvetica', 'normal')
+        const numX = qx + colW - 20
+        doc.text(q.top || '', numX, qy + 6, { align: 'right' })
+        doc.text(`${q.op || '+'} ${q.bottom || ''}`, numX, qy + 11, { align: 'right' })
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+        doc.line(numX - 14, qy + 13, numX, qy + 13)
+        // Answer line
+        doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
+        doc.line(numX - 14, qy + 17.5, numX, qy + 17.5)
+      } else if (q.type === 'word') {
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'normal')
+        const lines = doc.splitTextToSize(q.text || '', colW - 14)
+        doc.text(lines, qx + 11, qy + 6)
+        // Answer line
+        doc.setFontSize(8)
+        doc.text(q.answer || 'Answer: ___', qx + 11, qy + 16)
+      } else {
+        // Equation / missing number
+        doc.setFontSize(11); doc.setFont('helvetica', 'normal')
+        const qText = (q.q || '').replace(/___/g, '       ')
+        doc.text(qText, qx + 11, qy + 8)
+        // Answer box
+        doc.setFillColor(245, 244, 240)
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+        doc.roundedRect(qx + colW - 20, qy + 3, 16, 9, 1, 1, 'FD')
+      }
+    })
+
+    y += qPerCol * 22 + 6
+
+    // ── Challenge box ──
+    if (tier.challenge) {
+      doc.setFillColor(255, 251, 235)
+      doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.6)
+      doc.roundedRect(margin, y, contentW, 18, 2, 2, 'FD')
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
+      doc.text('⭐ Challenge', margin + 3, y + 6)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+      const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
+      doc.text(cLines, margin + 3, y + 12)
+      y += 22
+    }
+
+    // ── Footer ──
+    doc.setFillColor(tc.r, tc.g, tc.b)
+    doc.rect(0, pageH - 10, pageW, 10, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(255, 255, 255)
+    doc.text(`TeachReads  ·  ${worksheet.title}  ·  ${tier.level}`, margin, pageH - 4)
+    doc.text(`Page ${ti + 1} of ${worksheet.tiers.length}`, pageW - margin, pageH - 4, { align: 'right' })
+  })
+
+  doc.save(`${worksheet.title.replace(/[^a-z0-9]/gi, '_')}_worksheets.pdf`)
+}
+
+// ── Worksheet Output Component ─────────────────────────────────────────────
+
+function WorksheetOutput({ worksheet }) {
+  const [downloading, setDownloading] = useState(false)
+
+  const TIER_STYLES = {
+    'Support':   { border: '#DC2626', bg: '#FEF2F2', badge: '#FEE2E2', badgeText: '#991B1B', headerBg: '#DC2626' },
+    'Core':      { border: '#D97706', bg: '#FFFBEB', badge: '#FEF3C7', badgeText: '#92400E', headerBg: '#D97706' },
+    'Extension': { border: '#16A34A', bg: '#F0FDF4', badge: '#DCFCE7', badgeText: '#166534', headerBg: '#16A34A' },
+  }
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadWorksheetPdf(worksheet) }
+    catch (e) { console.error('Worksheet PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      {/* Header */}
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{worksheet.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{worksheet.yearGroup} · {worksheet.subject} · {worksheet.skill}</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+          {downloading ? '⏳ Generating PDF...' : '📄 Download PDF (3 worksheets)'}
+        </button>
+      </div>
+
+      {/* 3 tier previews */}
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+        {worksheet.tiers.map((tier, ti) => {
+          const ts = TIER_STYLES[tier.level] || TIER_STYLES['Core']
+          return (
+            <div key={ti} style={{ borderTop: ti > 0 ? `0.5px solid ${BORDER}` : 'none' }}>
+              {/* Tier header */}
+              <div style={{ background: ts.headerBg, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>{tier.emoji}</span>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{tier.level}</span>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginLeft: 8 }}>{tier.instructions}</span>
+                </div>
+              </div>
+              {/* Questions preview */}
+              <div style={{ background: ts.bg, padding: '12px 16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {(tier.questions || []).slice(0, 6).map((q, qi) => (
+                    <div key={qi} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: ts.headerBg, color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{qi + 1}</div>
+                      <span style={{ fontSize: 12, color: TEXT, fontFamily: 'monospace' }}>
+                        {q.type === 'column'
+                          ? `${q.top} ${q.op || '+'} ${q.bottom} = ___`
+                          : q.type === 'word'
+                          ? (q.text || '').slice(0, 50) + ((q.text || '').length > 50 ? '…' : '')
+                          : q.q || ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {(tier.questions || []).length > 6 && (
+                  <div style={{ fontSize: 11, color: MUTED, marginTop: 8, textAlign: 'center' }}>+ {tier.questions.length - 6} more questions · plus a challenge task</div>
+                )}
+                {tier.challenge && (
+                  <div style={{ marginTop: 8, background: '#FFFBEB', border: '0.5px solid #D97706', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#92400E' }}>
+                    <span style={{ fontWeight: 600 }}>⭐ Challenge: </span>{tier.challenge}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function ResourceOutput({ resource }) {
   const [downloading, setDownloading] = useState(null)
 
@@ -3101,6 +3557,80 @@ function ResourcesPage({ onNavigate, checkTrial }) {
     if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
     const rt = RESOURCE_TYPES.find(r => r.id === selectedResourceType)
+
+    // Route writing_frame type to structured writing frame generator
+    if (selectedResourceType === 'writing_frame') {
+      const wfPrompt = `Create a differentiated literacy writing frame for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
+Generate a Twinkl-style uplevelling sentences writing frame with 3 differentiation tiers (Support, Core, Extension).
+The base sentence and theme should be inspired by the book and lesson topic.`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: wfPrompt, writingFrameMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const writingFrame = data.writingFrame
+        setResource({ ...writingFrame, _type: 'writing_frame' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: writingFrame.title,
+              meta: `${writingFrame.yearGroup} · ${writingFrame.subject} · ${writingFrame.skill}`,
+              resource_type: 'writing_frame',
+              sections: writingFrame.tiers.map(t => ({ heading: t.level, content: t.steps.map(s => `Step ${s.number}: ${s.instruction}`).join('\n') })),
+              prompt: wfPrompt,
+            })
+            loadCatalogue()
+          }
+        } catch(e) { console.error('Plan writing frame save error:', e) }
+      } catch(err) { console.error('generateFromPlan writing frame error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
+    // Route worksheet type to structured worksheet generator
+    if (selectedResourceType === 'worksheet') {
+      const worksheetPrompt = `Create a differentiated worksheet for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
+Generate 10 questions per tier (Support, Core, Extension) aligned to this lesson.`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: worksheetPrompt, worksheetMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const worksheet = data.worksheet
+        setResource({ ...worksheet, _type: 'worksheet' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: worksheet.title,
+              meta: `${worksheet.yearGroup} · ${worksheet.subject} · ${worksheet.skill}`,
+              resource_type: 'worksheet',
+              sections: worksheet.tiers.map(t => ({ heading: t.level, content: t.questions.map((q,i) => `${i+1}. ${q.q || q.text || ''}`).join('\n') })),
+              prompt: worksheetPrompt,
+            })
+            loadCatalogue()
+          }
+        } catch (e) { console.error('Plan worksheet save error:', e) }
+      } catch (err) { console.error('generateFromPlan worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
 
 Book: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
@@ -3120,7 +3650,6 @@ Generate a complete, classroom-ready ${rt.label} resource directly tied to this 
   ]
 }
 
-For worksheets: include Below Expectation, At Expectation and Above Expectation sections with differentiated tasks.
 For vocab cards: list each term as Term: [word] — Definition: [meaning].
 For knowledge organisers: include Key Facts, Key People/Vocabulary, and Key Dates/Events sections.
 For all other types: use appropriate sections for the resource type.`
@@ -3128,7 +3657,6 @@ For all other types: use appropriate sections for the resource type.`
     try {
       const result = await callAPI(apiPrompt, true)
       setResource(result)
-      // Save resource to Supabase
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
@@ -3143,7 +3671,7 @@ For all other types: use appropriate sections for the resource type.`
           })
           loadCatalogue()
         }
-      } catch (e) { console.error('Plan resource save error:', JSON.stringify(e)); }
+      } catch (e) { console.error('Plan resource save error:', JSON.stringify(e)) }
     } catch (err) { console.error('generateFromPlan error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
     setGenerating(false)
   }
@@ -3153,6 +3681,77 @@ For all other types: use appropriate sections for the resource type.`
     const allowed = await checkTrial?.('resources')
     if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
+
+    // Detect writing frame requests
+    const isWritingFrame = /writing frame|uplevel|uplevell|sentence|fronted adverbial|subordinat|expanded noun|literacy frame/i.test(prompt)
+    if (isWritingFrame) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, writingFrameMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const writingFrame = data.writingFrame
+        setResource({ ...writingFrame, _type: 'writing_frame' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase.from('resources').insert({
+              user_id: user.id,
+              title: writingFrame.title,
+              meta: `${writingFrame.yearGroup} · ${writingFrame.subject} · ${writingFrame.skill}`,
+              resource_type: 'writing_frame',
+              sections: writingFrame.tiers.map(t => ({ heading: t.level, content: t.steps.map((s,i) => `Step ${s.number}: ${s.instruction}`).join('\n') })),
+              prompt,
+            })
+            loadCatalogue()
+          }
+        } catch(e) { console.error('Writing frame save error:', e) }
+      } catch(err) { console.error('generateAdhoc writing frame error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
+    // Detect worksheet requests — route to differentiated 3-tier worksheet generator
+    const isWorksheet = /worksheet|activity sheet|exercise sheet|practice sheet|practise/i.test(prompt)
+
+    if (isWorksheet) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, worksheetMode: true }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || `API error ${res.status}`)
+        }
+        const data = await res.json()
+        const worksheet = data.worksheet
+        setResource({ ...worksheet, _type: 'worksheet' })
+        // Save to Supabase as worksheet resource
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase.from('resources').insert({
+              user_id: user.id,
+              title: worksheet.title,
+              meta: `${worksheet.yearGroup} · ${worksheet.subject} · ${worksheet.skill}`,
+              resource_type: 'worksheet',
+              sections: worksheet.tiers.map(t => ({ heading: t.level, content: t.questions.map((q,i) => `${i+1}. ${q.q || q.text || ''}`).join('\n') })),
+              prompt: prompt,
+            })
+            loadCatalogue()
+          }
+        } catch (e) { console.error('Worksheet save error:', e) }
+      } catch (err) { console.error('generateAdhoc worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
+    // Standard resource generation (non-worksheet)
     const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
 
 Teacher request: ${prompt}
@@ -3167,12 +3766,11 @@ Generate a complete, classroom-ready resource based on this request. Return ONLY
   ]
 }
 
-Be detailed and practical. If a worksheet is requested, differentiate for different abilities. If specific year group or subject is mentioned, align to the UK National Curriculum.`
+Be detailed and practical. If specific year group or subject is mentioned, align to the UK National Curriculum.`
 
     try {
       const result = await callAPI(apiPrompt, true)
       setResource(result)
-      // Save resource to Supabase
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
@@ -3186,7 +3784,7 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
           })
           loadCatalogue()
         }
-      } catch (e) { console.error('Adhoc resource save error:', JSON.stringify(e)); }
+      } catch (e) { console.error('Adhoc resource save error:', JSON.stringify(e)) }
     } catch (err) { console.error('generateAdhoc error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
     setGenerating(false)
   }
@@ -3547,7 +4145,12 @@ Be detailed and practical. If a worksheet is requested, differentiate for differ
         )}
 
         {/* Output */}
-        {resource && <ResourceOutput resource={resource} />}
+        {resource && resource._type === 'worksheet'
+          ? <WorksheetOutput worksheet={resource} />
+          : resource && resource._type === 'writing_frame'
+          ? <WritingFrameOutput writingFrame={resource} />
+          : resource && <ResourceOutput resource={resource} />
+        }
 
         <div style={s.footer}>TeachReads · For UK primary school teachers</div>
       </div>
@@ -4604,15 +5207,6 @@ function AuthPage({ onAuth, onLegal }) {
     setLoading(false)
   }
 
-  async function handleGoogleSignIn() {
-    setLoading(true); setError('')
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) { setError(error.message); setLoading(false) }
-  }
-
   const inputStyle = { width: '100%', height: 42, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 14px', fontSize: 14, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" }
   const benefits = [
     { icon: '📚', title: 'Smart book recommendations', desc: 'matched to your topic and year group' },
@@ -4710,9 +5304,9 @@ function AuthPage({ onAuth, onLegal }) {
                 <span style={{ fontSize: 11, color: MUTED }}>or</span>
                 <div style={{ flex: 1, height: '0.5px', background: BORDER }} />
               </div>
-              <button onClick={handleGoogleSignIn} disabled={loading} style={{ height: 40, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: loading ? 'not-allowed' : 'pointer', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+              <button disabled style={{ height: 40, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'not-allowed', opacity: 0.6 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                <span style={{ fontSize: 13, color: TEXT }}>Continue with Google</span>
+                <span style={{ fontSize: 13, color: MUTED }}>Continue with Google (coming soon)</span>
               </button>
             </div>
             <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
@@ -4968,5 +5562,3 @@ export default function App() {
     </div>
   )
 }
-
-
