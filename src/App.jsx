@@ -3579,15 +3579,16 @@ The base sentence and theme should be inspired by the book and lesson topic.`
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await supabase.from('resources').insert({
+            const { error: _saveErr } = await supabase.from('resources').insert({
               user_id: user.id, plan_id: selectedPlan?.id || null,
               title: writingFrame.title,
               meta: `${writingFrame.yearGroup} · ${writingFrame.subject} · ${writingFrame.skill}`,
               resource_type: 'writing_frame',
               sections: writingFrame.tiers.map(t => ({ heading: t.level, content: t.steps.map(s => `Step ${s.number}: ${s.instruction}`).join('\n') })),
-              prompt: wfPrompt,
+              prompt: (wfPrompt || '').slice(0, 2000),
             })
-            loadCatalogue()
+            if (_saveErr) console.error('Supabase save error:', _saveErr.message, _saveErr.details, _saveErr.hint)
+            else loadCatalogue()
           }
         } catch(e) { console.error('Plan writing frame save error:', e) }
       } catch(err) { console.error('generateFromPlan writing frame error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
@@ -3615,15 +3616,16 @@ Generate 10 questions per tier (Support, Core, Extension) aligned to this lesson
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await supabase.from('resources').insert({
+            const { error: _saveErr } = await supabase.from('resources').insert({
               user_id: user.id, plan_id: selectedPlan?.id || null,
               title: worksheet.title,
               meta: `${worksheet.yearGroup} · ${worksheet.subject} · ${worksheet.skill}`,
               resource_type: 'worksheet',
               sections: worksheet.tiers.map(t => ({ heading: t.level, content: t.questions.map((q,i) => `${i+1}. ${q.q || q.text || ''}`).join('\n') })),
-              prompt: worksheetPrompt,
+              prompt: (worksheetPrompt || '').slice(0, 2000),
             })
-            loadCatalogue()
+            if (_saveErr) console.error('Supabase save error:', _saveErr.message, _saveErr.details, _saveErr.hint)
+            else loadCatalogue()
           }
         } catch (e) { console.error('Plan worksheet save error:', e) }
       } catch (err) { console.error('generateFromPlan worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
@@ -3660,7 +3662,7 @@ For all other types: use appropriate sections for the resource type.`
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          await supabase.from('resources').insert({
+          const { error: _saveErr } = await supabase.from('resources').insert({
             user_id: user.id,
             plan_id: selectedPlan?.id || null,
             title: result.title,
@@ -3669,7 +3671,8 @@ For all other types: use appropriate sections for the resource type.`
             sections: result.sections,
             prompt: apiPrompt,
           })
-          loadCatalogue()
+          if (_saveErr) console.error('Supabase save error:', _saveErr.message, _saveErr.details, _saveErr.hint)
+          else loadCatalogue()
         }
       } catch (e) { console.error('Plan resource save error:', JSON.stringify(e)) }
     } catch (err) { console.error('generateFromPlan error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
@@ -3698,7 +3701,7 @@ For all other types: use appropriate sections for the resource type.`
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await supabase.from('resources').insert({
+            const { error: _saveErr } = await supabase.from('resources').insert({
               user_id: user.id,
               title: writingFrame.title,
               meta: `${writingFrame.yearGroup} · ${writingFrame.subject} · ${writingFrame.skill}`,
@@ -3706,7 +3709,8 @@ For all other types: use appropriate sections for the resource type.`
               sections: writingFrame.tiers.map(t => ({ heading: t.level, content: t.steps.map((s,i) => `Step ${s.number}: ${s.instruction}`).join('\n') })),
               prompt,
             })
-            loadCatalogue()
+            if (_saveErr) console.error('Supabase save error:', _saveErr.message, _saveErr.details, _saveErr.hint)
+            else loadCatalogue()
           }
         } catch(e) { console.error('Writing frame save error:', e) }
       } catch(err) { console.error('generateAdhoc writing frame error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
@@ -3735,18 +3739,13 @@ For all other types: use appropriate sections for the resource type.`
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await supabase.from('resources').insert({
+            const { error: _saveErr } = await supabase.from('resources').insert({
               user_id: user.id,
               title: worksheet.title,
               meta: `${worksheet.yearGroup} · ${worksheet.subject} · ${worksheet.skill}`,
               resource_type: 'worksheet',
               sections: worksheet.tiers.map(t => ({ heading: t.level, content: t.questions.map((q,i) => `${i+1}. ${q.q || q.text || ''}`).join('\n') })),
-              prompt: prompt,
-            })
-            loadCatalogue()
-          }
-        } catch (e) { console.error('Worksheet save error:', e) }
-      } catch (err) { console.error('generateAdhoc worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+              prompt: (prompt || '').slice(0, 2000),
       setGenerating(false)
       return
     }
@@ -3774,7 +3773,7 @@ Be detailed and practical. If specific year group or subject is mentioned, align
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          await supabase.from('resources').insert({
+          const { error: _saveErr } = await supabase.from('resources').insert({
             user_id: user.id,
             title: result.title,
             meta: result.meta,
@@ -3782,7 +3781,8 @@ Be detailed and practical. If specific year group or subject is mentioned, align
             sections: result.sections,
             prompt: prompt,
           })
-          loadCatalogue()
+          if (_saveErr) console.error('Supabase save error:', _saveErr.message, _saveErr.details, _saveErr.hint)
+          else loadCatalogue()
         }
       } catch (e) { console.error('Adhoc resource save error:', JSON.stringify(e)) }
     } catch (err) { console.error('generateAdhoc error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
