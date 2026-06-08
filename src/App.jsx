@@ -3746,6 +3746,12 @@ For all other types: use appropriate sections for the resource type.`
               resource_type: 'worksheet',
               sections: worksheet.tiers.map(t => ({ heading: t.level, content: t.questions.map((q,i) => `${i+1}. ${q.q || q.text || ''}`).join('\n') })),
               prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Supabase save error:', _saveErr.message, _saveErr.details, _saveErr.hint)
+            else loadCatalogue()
+          }
+        } catch (e) { console.error('Worksheet save error:', e?.message, JSON.stringify(e)) }
+      } catch (err) { console.error('generateAdhoc worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
