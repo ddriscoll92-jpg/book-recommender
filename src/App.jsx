@@ -5540,7 +5540,7 @@ export default function App() {
       )}
       {page === 'book' && (
         <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} checkTrial={checkTrial} onBack={() => setPage('search')}
-          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} checkTrial={checkTrial} />
+          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} />
       )}
       {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
