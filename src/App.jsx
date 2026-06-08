@@ -2638,6 +2638,7 @@ function MyPlansPage({ onNavigate }) {
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [confirmDeletePlanId, setConfirmDeletePlanId] = useState(null)
   const [filterSubject, setFilterSubject] = useState('All')
   const [filterYear, setFilterYear] = useState('All')
   const [openBooks, setOpenBooks] = useState({})
@@ -2681,6 +2682,14 @@ function MyPlansPage({ onNavigate }) {
     }
     loadPlans()
   }, [])
+
+  async function deletePlan(planId) {
+    await supabase.from('lessons').delete().eq('plan_id', planId)
+    await supabase.from('plans').delete().eq('id', planId)
+    setPlans(prev => prev.map(g => ({ ...g, plans: g.plans.filter(p => p.id !== planId) })).filter(g => g.plans.length > 0))
+    setConfirmDeletePlanId(null)
+    if (viewingPlan?.plan?.id === planId) setViewingPlan(null)
+  }
 
   const allSubjects = ['All', ...Array.from(new Set(plans.flatMap(g => g.plans.map(p => p.subject)))).sort()]
   const allYears = ['All', ...Array.from(new Set(plans.map(g => g.yearGroup))).sort()]
@@ -2838,6 +2847,14 @@ function MyPlansPage({ onNavigate }) {
                             View
                           </button>
                           <MyPlanDownloadButton plan={plan} group={group} />
+                          {confirmDeletePlanId === plan.id ? (
+                            <>
+                              <button onClick={() => deletePlan(plan.id)} style={{ height: 28, padding: '0 10px', background: '#FCEBEB', border: '0.5px solid #A32D2D', borderRadius: 7, fontSize: 11, fontWeight: 600, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                              <button onClick={() => setConfirmDeletePlanId(null)} style={{ height: 28, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                            </>
+                          ) : (
+                            <button onClick={() => setConfirmDeletePlanId(plan.id)} style={{ height: 28, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
+                          )}
                         </div>
                       </div>
                     )
