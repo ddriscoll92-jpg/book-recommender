@@ -1188,7 +1188,7 @@ async function downloadWritingFramePdf(wf) {
     doc.setFillColor(tr,tg,tb)
     doc.roundedRect(pageW - margin - 30, 6, 30, 12, 2, 2, 'F')
     doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-    doc.text(`${tier.emoji} ${tier.level}`, pageW - margin - 15, 13.5, { align: 'center' })
+    doc.text(tier.level, pageW - margin - 15, 13.5, { align: 'center' })
 
     y = 34
 
@@ -1283,19 +1283,18 @@ async function downloadWritingFramePdf(wf) {
       doc.setFillColor(255,251,235); doc.setDrawColor(217,119,6); doc.setLineWidth(0.6)
       doc.roundedRect(margin, y, contentW, 16, 2, 2, 'FD')
       doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14)
-      doc.text('⭐ Challenge', margin+3, y+6)
+      doc.text('Challenge:', margin+3, y+6)
       doc.setFont('helvetica','normal')
       const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
       doc.text(cLines, margin+3, y+12)
       y += 20
     }
 
-    // Star rating footer
-    const stars = tier.level === 'Support' ? '★' : tier.level === 'Core' ? '★★' : '★★★'
+    const stars = tier.level === 'Support' ? '[Support]' : tier.level === 'Core' ? '[Core]' : '[Extension]'
     doc.setFillColor(tr,tg,tb)
     doc.rect(0, pageH-10, pageW, 10, 'F')
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
-    doc.text(`TeachReads  ·  ${wf.title}  ·  ${tier.level}  ${stars}`, margin, pageH-4)
+    doc.text(`TeachReads  |  ${wf.title}  |  ${tier.level}`, margin, pageH-4)
     doc.text(`Page ${ti+1} of ${wf.tiers.length}`, pageW-margin, pageH-4, { align:'right' })
   })
 
@@ -1424,7 +1423,7 @@ async function downloadWorksheetPdf(worksheet) {
 
     // Tier badge
     doc.setFontSize(9); doc.setFont('helvetica', 'normal')
-    doc.text(`${tier.emoji || ''} ${tier.level}  ·  ${worksheet.yearGroup}  ·  ${worksheet.subject}`, margin, 20)
+    doc.text(`${tier.level}  |  ${worksheet.yearGroup}  |  ${worksheet.subject}`, margin, 20)
 
     // TeachReads tag top right
     doc.setFontSize(7); doc.setTextColor(220, 255, 240)
@@ -1514,7 +1513,7 @@ async function downloadWorksheetPdf(worksheet) {
       doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.6)
       doc.roundedRect(margin, y, contentW, 18, 2, 2, 'FD')
       doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
-      doc.text('⭐ Challenge', margin + 3, y + 6)
+      doc.text('Challenge:', margin + 3, y + 6)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
       const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
       doc.text(cLines, margin + 3, y + 12)
