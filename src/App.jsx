@@ -3481,6 +3481,7 @@ function ResourcesPage({ onNavigate, checkTrial }) {
   const [catalogueSubject, setCatalogueSubject] = useState('All')
   const [catalogueYear, setCatalogueYear] = useState('All')
   const [viewingResource, setViewingResource] = useState(null)
+  const [confirmDeleteResourceId, setConfirmDeleteResourceId] = useState(null)
 
   async function loadCatalogue() {
     setCatalogueLoading(true)
@@ -4094,6 +4095,7 @@ Be detailed and practical. If specific year group or subject is mentioned, align
                       {filtered.map(res => {
                         const tc = typeColors[res.resource_type] || { bg: PAGE_BG, color: MUTED }
                         const isViewing = viewingResource?.id === res.id
+                        const isConfirmingDelete = confirmDeleteResourceId === res.id
                         return (
                           <div key={res.id} style={{ border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 10, background: BG, overflow: 'hidden' }}>
                             {/* Row */}
@@ -4106,13 +4108,33 @@ Be detailed and practical. If specific year group or subject is mentioned, align
                                 <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{res.title}</div>
                                 <div style={{ fontSize: 11, color: MUTED }}>{res.meta} · {new Date(res.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                               </div>
-                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                                 <button
                                   onClick={e => { e.stopPropagation(); setViewingResource(isViewing ? null : res) }}
                                   style={{ height: 26, padding: '0 10px', background: isViewing ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: isViewing ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                                   {isViewing ? 'Hide' : 'View'}
                                 </button>
                                 <ResourceDownloadButton resource={res} />
+                                {isConfirmingDelete ? (
+                                  <>
+                                    <button
+                                      onClick={async e => { e.stopPropagation(); await supabase.from('resources').delete().eq('id', res.id); setConfirmDeleteResourceId(null); if (isViewing) setViewingResource(null); loadCatalogue() }}
+                                      style={{ height: 26, padding: '0 10px', background: '#FCEBEB', border: '0.5px solid #A32D2D', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                                      Delete
+                                    </button>
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setConfirmDeleteResourceId(null) }}
+                                      style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setConfirmDeleteResourceId(res.id) }}
+                                    style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                                    🗑️
+                                  </button>
+                                )}
                               </div>
                             </div>
                             {/* Expanded view */}
