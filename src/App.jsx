@@ -190,6 +190,22 @@ function downloadTxt(book, yearGroup, idea, plan) {
       }
     })
   }
+  if (plan?.modelExample) {
+    const me = plan.modelExample
+    lines.push('')
+    lines.push('MODEL EXAMPLE')
+    lines.push('-'.repeat(40))
+    if (me.title) lines.push(me.title)
+    if (me.description) lines.push(me.description)
+    if (me.sections?.length) {
+      me.sections.forEach(s => {
+        lines.push('')
+        lines.push(`[ ${s.label || ''} ]`)
+        if (s.placeholder) lines.push(`Guidance: ${s.placeholder}`)
+        if (s.example) lines.push(`Example: ${s.example}`)
+      })
+    }
+  }
   const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -258,6 +274,23 @@ async function downloadPdf(book, yearGroup, idea, plan) {
       y += 4
     })
   }
+  if (plan?.modelExample) {
+    const me = plan.modelExample
+    if (y > 240) { doc.addPage(); y = margin }
+    addText('Model Example', 13, GREEN_RGB, true)
+    if (me.title) addText(me.title, 11, [44,44,42], true)
+    if (me.description) addText(me.description, 10)
+    y += 2
+    if (me.sections?.length) {
+      me.sections.forEach(s => {
+        if (y > 255) { doc.addPage(); y = margin }
+        addText(s.label || '', 10, GREEN_RGB, true)
+        if (s.placeholder) { addText('Guidance', 9, [95,94,90], true); addText(s.placeholder, 10) }
+        if (s.example) { addText('Example', 9, [95,94,90], true); addText(s.example, 10) }
+        y += 3
+      })
+    }
+  }
   doc.save(`${idea.title || 'plan'}.pdf`)
 }
 
@@ -321,6 +354,21 @@ async function downloadDocx(book, yearGroup, idea, plan) {
       }
       children.push(new Paragraph({}))
     })
+  }
+  if (plan?.modelExample) {
+    const me = plan.modelExample
+    children.push(new Paragraph({}))
+    children.push(heading('Model Example'))
+    if (me.title) children.push(para(me.title, true))
+    if (me.description) children.push(para(me.description))
+    if (me.sections?.length) {
+      me.sections.forEach(s => {
+        children.push(new Paragraph({}))
+        if (s.label) children.push(para(s.label, true))
+        if (s.placeholder) { children.push(para('Guidance', true)); children.push(para(s.placeholder)) }
+        if (s.example) { children.push(para('Example', true)); children.push(para(s.example)) }
+      })
+    }
   }
 
   const doc = new Document({ sections: [{ children }] })
@@ -5632,4 +5680,3 @@ export default function App() {
     </div>
   )
 }
-
