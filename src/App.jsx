@@ -167,12 +167,24 @@ function downloadTxt(book, yearGroup, idea, plan) {
     lines.push('-'.repeat(40))
     plan.lessons.forEach(l => {
       lines.push(`\nLesson ${l.lessonNumber}: ${l.title}`)
+      if (l.lessonOverview) lines.push(`Lesson overview: ${l.lessonOverview}`)
       if (l.learningIntention) lines.push(`Learning intention: ${l.learningIntention}`)
       if (l.successCriteria) lines.push(`Success criteria: ${l.successCriteria}`)
       if (l.mainActivity) lines.push(`Main activity: ${l.mainActivity}`)
       if (l.teacherNotes) lines.push(`Teacher notes: ${l.teacherNotes}`)
-      if (l.ncLinks) lines.push(`NC links: ${l.ncLinks}`)
-      if (l.sendAdaptations) lines.push(`SEND adaptations: ${l.sendAdaptations}`)
+      if (l.ncLinks?.length) {
+        lines.push('NC links:')
+        l.ncLinks.forEach(nc => lines.push(`  - ${nc.skill}: ${nc.curriculumLink}`))
+      }
+      if (l.sendAdaptations && typeof l.sendAdaptations === 'object') {
+        lines.push('SEND adaptations:')
+        Object.entries(l.sendAdaptations).forEach(([group, items]) => {
+          if (Array.isArray(items) && items.length) lines.push(`  ${group}: ${items.join('; ')}`)
+          else if (typeof items === 'string' && items) lines.push(`  ${group}: ${items}`)
+        })
+      } else if (typeof l.sendAdaptations === 'string' && l.sendAdaptations) {
+        lines.push(`SEND adaptations: ${l.sendAdaptations}`)
+      }
     })
   }
   const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
@@ -220,12 +232,24 @@ async function downloadPdf(book, yearGroup, idea, plan) {
     plan.lessons.forEach(l => {
       if (y > 250) { doc.addPage(); y = margin }
       addText(`Lesson ${l.lessonNumber}: ${l.title}`, 12, GREEN_RGB, true)
+      if (l.lessonOverview) { addText('Lesson overview', 9, [95,94,90], true); addText(l.lessonOverview, 10) }
       if (l.learningIntention) { addText('Learning intention', 9, [95,94,90], true); addText(l.learningIntention, 10) }
       if (l.successCriteria) { addText('Success criteria', 9, [95,94,90], true); addText(l.successCriteria, 10) }
       if (l.mainActivity) { addText('Main activity', 9, [95,94,90], true); addText(l.mainActivity, 10) }
       if (l.teacherNotes) { addText('Teacher notes', 9, [95,94,90], true); addText(l.teacherNotes, 10) }
-      if (l.ncLinks) { addText('NC links', 9, [95,94,90], true); addText(l.ncLinks, 10) }
-      if (l.sendAdaptations) { addText('SEND adaptations', 9, [95,94,90], true); addText(l.sendAdaptations, 10) }
+      if (l.ncLinks?.length) {
+        addText('NC links', 9, [95,94,90], true)
+        l.ncLinks.forEach(nc => addText(`${nc.skill}: ${nc.curriculumLink}`, 10))
+      }
+      if (l.sendAdaptations && typeof l.sendAdaptations === 'object') {
+        addText('SEND adaptations', 9, [95,94,90], true)
+        Object.entries(l.sendAdaptations).forEach(([group, items]) => {
+          if (Array.isArray(items) && items.length) addText(`${group}: ${items.join('; ')}`, 10)
+          else if (typeof items === 'string' && items) addText(`${group}: ${items}`, 10)
+        })
+      } else if (typeof l.sendAdaptations === 'string' && l.sendAdaptations) {
+        addText('SEND adaptations', 9, [95,94,90], true); addText(l.sendAdaptations, 10)
+      }
       y += 4
     })
   }
@@ -270,12 +294,24 @@ async function downloadDocx(book, yearGroup, idea, plan) {
   if (plan?.lessons?.length) {
     plan.lessons.forEach(l => {
       children.push(heading(`Lesson ${l.lessonNumber}: ${l.title}`))
+      if (l.lessonOverview) { children.push(para('Lesson overview', true)); children.push(para(l.lessonOverview)) }
       if (l.learningIntention) { children.push(para('Learning intention', true)); children.push(para(l.learningIntention)) }
       if (l.successCriteria) { children.push(para('Success criteria', true)); children.push(para(l.successCriteria)) }
       if (l.mainActivity) { children.push(para('Main activity', true)); children.push(para(l.mainActivity)) }
       if (l.teacherNotes) { children.push(para('Teacher notes', true)); children.push(para(l.teacherNotes)) }
-      if (l.ncLinks) { children.push(para('NC links', true)); children.push(para(l.ncLinks)) }
-      if (l.sendAdaptations) { children.push(para('SEND adaptations', true)); children.push(para(l.sendAdaptations)) }
+      if (l.ncLinks?.length) {
+        children.push(para('NC links', true))
+        l.ncLinks.forEach(nc => children.push(para(`• ${nc.skill}: ${nc.curriculumLink}`)))
+      }
+      if (l.sendAdaptations && typeof l.sendAdaptations === 'object') {
+        children.push(para('SEND adaptations', true))
+        Object.entries(l.sendAdaptations).forEach(([group, items]) => {
+          if (Array.isArray(items) && items.length) children.push(para(`${group}: ${items.join('; ')}`))
+          else if (typeof items === 'string' && items) children.push(para(`${group}: ${items}`))
+        })
+      } else if (typeof l.sendAdaptations === 'string' && l.sendAdaptations) {
+        children.push(para('SEND adaptations', true)); children.push(para(l.sendAdaptations))
+      }
       children.push(new Paragraph({}))
     })
   }
