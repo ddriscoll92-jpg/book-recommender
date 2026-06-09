@@ -1549,13 +1549,25 @@ async function downloadWorksheetPdf(worksheet) {
     // ── Questions ──
     const qPerCol = 5
     const colW = (contentW - 6) / 2
-    const rowH = 30  // enough for word problems
+
+    function getRowH(q) {
+      if (q.type === 'word') return 30
+      if (q.type === 'column') return 26
+      return 18
+    }
+
+    const leftQs  = tier.questions.slice(0, qPerCol)
+    const rightQs = tier.questions.slice(qPerCol, qPerCol * 2)
+    const leftOffsets  = leftQs.reduce((acc, q, i)  => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(leftQs[i-1]));  return acc }, [])
+    const rightOffsets = rightQs.reduce((acc, q, i) => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(rightQs[i-1])); return acc }, [])
 
     tier.questions.forEach((q, qi) => {
       const col = qi < qPerCol ? 0 : 1
       const row = qi % qPerCol
       const qx = margin + col * (colW + 6)
-      const qy = y + row * rowH
+      const rowH = getRowH(q)
+      const offsets = col === 0 ? leftOffsets : rightOffsets
+      const qy = y + offsets[row]
 
       // Question box
       doc.setFillColor(255, 255, 255)
@@ -1571,40 +1583,36 @@ async function downloadWorksheetPdf(worksheet) {
 
       doc.setTextColor(44, 44, 42)
       const textX = qx + 11
-      const fullTextW = colW - 13  // full width minus number circle and padding
+      const fullTextW = colW - 13
       const ansBoxW = 16; const ansBoxH = 9
       const ansBoxX = qx + colW - ansBoxW - 2
-      const shortTextW = ansBoxX - textX - 2  // width when answer box present
+      const shortTextW = ansBoxX - textX - 2
 
       if (q.type === 'column') {
+        // Left-aligned column sum
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
-        const numX = qx + colW - 16
-        doc.text(q.top || '', numX, qy + 8, { align: 'right' })
-        doc.text(`${q.op || '+'} ${q.bottom || ''}`, numX, qy + 14, { align: 'right' })
+        const colNumX = textX + 20
+        doc.text(q.top || '', colNumX, qy + 8, { align: 'right' })
+        doc.text(`${q.op || 'x'} ${q.bottom || ''}`, colNumX, qy + 14, { align: 'right' })
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.line(numX - 12, qy + 16, numX, qy + 16)
+        doc.line(textX, qy + 16, colNumX + 2, qy + 16)
         doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
-        doc.line(numX - 12, qy + 22, numX, qy + 22)
+        doc.line(textX, qy + 22, colNumX + 2, qy + 22)
 
       } else if (q.type === 'word') {
-        // Word problems: full width text, answer line only (no box)
         doc.setFontSize(8); doc.setFont('helvetica', 'normal')
         const lines = doc.splitTextToSize(q.text || '', fullTextW)
         doc.text(lines.slice(0, 3), textX, qy + 7)
-        // Answer line at bottom
         doc.setFontSize(8)
-        const ansText = q.answer || 'Answer: ___________'
-        doc.text(ansText, textX, qy + rowH - 5)
+        doc.text(q.answer || 'Answer: ___________', textX, qy + rowH - 5)
 
       } else {
-        // Equation / missing / number_line
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
         const qText = (q.q || '').replace(/___/g, '____')
         const hasBlanks = (q.q || '').includes('___')
-        // Only show answer box if question has no blanks already
         const effectiveTextW = hasBlanks ? fullTextW : shortTextW
         const wrappedLines = doc.splitTextToSize(qText, effectiveTextW)
-        doc.text(wrappedLines.slice(0, 2), textX, qy + 10)
+        doc.text(wrappedLines.slice(0, 2), textX, qy + (rowH - 2) / 2 + 1)
         if (!hasBlanks) {
           doc.setFillColor(245, 244, 240)
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
@@ -1613,7 +1621,9 @@ async function downloadWorksheetPdf(worksheet) {
       }
     })
 
-    y += qPerCol * rowH + 6
+    const leftTotal  = leftQs.reduce((s, q)  => s + getRowH(q), 0)
+    const rightTotal = rightQs.reduce((s, q) => s + getRowH(q), 0)
+    y += Math.max(leftTotal, rightTotal) + 6
 
     // ── Challenge box ──
     if (tier.challenge) {
