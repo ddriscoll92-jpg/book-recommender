@@ -1545,7 +1545,7 @@ async function downloadWorksheetPdf(worksheet) {
     // ── Questions ──
     const qPerCol = 5
     const colW = (contentW - 6) / 2
-    const rowH = 24  // increased from 22
+    const rowH = 30  // enough for word problems
 
     tier.questions.forEach((q, qi) => {
       const col = qi < qPerCol ? 0 : 1
@@ -1567,32 +1567,38 @@ async function downloadWorksheetPdf(worksheet) {
 
       doc.setTextColor(44, 44, 42)
       const textX = qx + 11
+      const fullTextW = colW - 13  // full width minus number circle and padding
       const ansBoxW = 16; const ansBoxH = 9
       const ansBoxX = qx + colW - ansBoxW - 2
-      const textMaxW = ansBoxX - textX - 2  // text stays left of answer box
+      const shortTextW = ansBoxX - textX - 2  // width when answer box present
 
       if (q.type === 'column') {
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
         const numX = qx + colW - 16
-        doc.text(q.top || '', numX, qy + 7, { align: 'right' })
-        doc.text(`${q.op || '+'} ${q.bottom || ''}`, numX, qy + 12, { align: 'right' })
+        doc.text(q.top || '', numX, qy + 8, { align: 'right' })
+        doc.text(`${q.op || '+'} ${q.bottom || ''}`, numX, qy + 14, { align: 'right' })
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.line(numX - 12, qy + 14, numX, qy + 14)
+        doc.line(numX - 12, qy + 16, numX, qy + 16)
         doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
-        doc.line(numX - 12, qy + 19, numX, qy + 19)
+        doc.line(numX - 12, qy + 22, numX, qy + 22)
+
       } else if (q.type === 'word') {
-        doc.setFontSize(7.5); doc.setFont('helvetica', 'normal')
-        const lines = doc.splitTextToSize(q.text || '', colW - 14)
-        doc.text(lines.slice(0, 2), textX, qy + 6)
-        doc.setFontSize(7.5)
-        doc.text(q.answer || 'Answer: ___', textX, qy + rowH - 6)
+        // Word problems: full width text, answer line only (no box)
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+        const lines = doc.splitTextToSize(q.text || '', fullTextW)
+        doc.text(lines.slice(0, 3), textX, qy + 7)
+        // Answer line at bottom
+        doc.setFontSize(8)
+        const ansText = q.answer || 'Answer: ___________'
+        doc.text(ansText, textX, qy + rowH - 5)
+
       } else {
-        // Equation / missing / number_line — wrap text to avoid answer box
+        // Equation / missing / number_line
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
         const qText = (q.q || '').replace(/___/g, '____')
-        const wrappedLines = doc.splitTextToSize(qText, textMaxW)
-        doc.text(wrappedLines.slice(0, 2), textX, qy + 8)
-        // Answer box — right aligned in the question box
+        const wrappedLines = doc.splitTextToSize(qText, shortTextW)
+        doc.text(wrappedLines.slice(0, 2), textX, qy + 10)
+        // Answer box — right side, vertically centred
         doc.setFillColor(245, 244, 240)
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
         doc.roundedRect(ansBoxX, qy + (rowH - 2 - ansBoxH) / 2, ansBoxW, ansBoxH, 1, 1, 'FD')
