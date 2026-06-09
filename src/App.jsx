@@ -1246,6 +1246,207 @@ function LessonTab({ lesson, lessonIdx, total }) {
   )
 }
 
+// ── Comprehension PDF Download ────────────────────────────────────────────────
+
+async function downloadComprehensionPdf(comp) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210; const pageH = 297; const margin = 16; const contentW = pageW - 2 * margin
+
+  function hexToRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
+  }
+
+  comp.tiers.forEach((tier, ti) => {
+    if (ti > 0) doc.addPage()
+    const [tr,tg,tb] = hexToRgb(tier.colour)
+    let y = margin
+
+    // Outer border
+    doc.setDrawColor(40,40,40); doc.setLineWidth(0.8)
+    doc.rect(margin - 4, margin - 4, contentW + 8, pageH - margin * 2 + 8)
+
+    // Tier badge top left
+    doc.setFillColor(tr,tg,tb)
+    doc.roundedRect(margin, y, 28, 7, 1.5, 1.5, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+    doc.text(tier.level, margin + 14, y + 4.8, { align: 'center' })
+
+    // Name field top right
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+    doc.text('Name:', pageW - margin - 52, y + 5)
+    doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
+    doc.line(pageW - margin - 40, y + 5.5, pageW - margin, y + 5.5)
+
+    y += 12
+
+    // Title centred underlined
+    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+    const titleW = doc.getTextWidth(comp.title)
+    doc.text(comp.title, pageW / 2, y, { align: 'center' })
+    doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
+    doc.line(pageW/2 - titleW/2, y + 1.5, pageW/2 + titleW/2, y + 1.5)
+    y += 10
+
+    // Passage
+    doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+    const passageLines = doc.splitTextToSize(tier.passage || '', contentW)
+    const lineH = 7.5
+    passageLines.forEach(line => {
+      if (y + lineH > pageH - margin - 10) { doc.addPage(); y = margin }
+      doc.text(line, margin, y)
+      y += lineH
+    })
+
+    y += 4
+
+    // Dashed divider
+    doc.setDrawColor(100,100,100); doc.setLineWidth(0.3)
+    const dashLen = 3; const gap = 2; let dx = margin
+    while (dx < margin + contentW) {
+      doc.line(dx, y, Math.min(dx + dashLen, margin + contentW), y)
+      dx += dashLen + gap
+    }
+    y += 6
+
+    // Questions
+    ;(tier.questions || []).forEach((q, qi) => {
+      if (y + 20 > pageH - margin - 10) { doc.addPage(); y = margin }
+
+      if (q.type === 'multiple_choice') {
+        // Question text
+        doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+        // Circled number
+        doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
+        doc.circle(margin + 4, y + 0.5, 4, 'FD')
+        doc.setFontSize(8); doc.setFont('helvetica','bold')
+        doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
+        doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+        const qLines = doc.splitTextToSize(q.q || '', contentW - 12)
+        doc.text(qLines, margin + 11, y + 2)
+        y += qLines.length * 5.5 + 4
+
+        // 2x2 options grid
+        const opts = q.options || []
+        const boxSize = 6; const colW2 = contentW / 2
+        for (let oi = 0; oi < 4; oi++) {
+          const col = oi % 2; const row = Math.floor(oi / 2)
+          const ox = margin + col * colW2 + 4
+          const oy = y + row * 10
+          doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.4)
+          doc.rect(ox, oy - boxSize + 1, boxSize, boxSize)
+          doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+          doc.text(opts[oi] || '', ox + boxSize + 2, oy)
+        }
+        y += 26
+
+      } else {
+        // Standard question with writing lines
+        doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
+        doc.circle(margin + 4, y + 0.5, 4, 'FD')
+        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+        doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
+        doc.setFontSize(10); doc.setFont('helvetica','bold')
+        const qLines = doc.splitTextToSize(q.q || '', contentW - 12)
+        doc.text(qLines, margin + 11, y + 2)
+        y += qLines.length * 5.5 + 3
+
+        const numLines = q.lines || 2
+        for (let li = 0; li < numLines; li++) {
+          if (y + 8 > pageH - margin - 10) { doc.addPage(); y = margin }
+          // Solid answer line
+          doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
+          doc.line(margin, y + 5, margin + contentW, y + 5)
+          // Dashed guide line
+          doc.setDrawColor(160,160,160); doc.setLineWidth(0.2)
+          let ddx = margin
+          while (ddx < margin + contentW) {
+            doc.line(ddx, y + 9, Math.min(ddx + 2, margin + contentW), y + 9)
+            ddx += 4
+          }
+          y += 10
+        }
+        y += 4
+      }
+    })
+
+    // Footer
+    doc.setFillColor(tr,tg,tb)
+    doc.rect(0, pageH - 10, pageW, 10, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+    doc.text(`TeachReads  |  ${comp.title}  |  ${tier.level}`, margin, pageH - 4)
+    doc.text(`Page ${ti + 1} of ${comp.tiers.length}`, pageW - margin, pageH - 4, { align: 'right' })
+  })
+
+  doc.save(`${comp.title.replace(/[^a-z0-9]/gi,'_')}_comprehension.pdf`)
+}
+
+// ── Comprehension Output Component ───────────────────────────────────────────
+
+function ComprehensionOutput({ comprehension: comp }) {
+  const [downloading, setDownloading] = useState(false)
+
+  const TIER_STYLES = {
+    'Support':   { border: '#DC2626', bg: '#FEF2F2', headerBg: '#DC2626' },
+    'Core':      { border: '#D97706', bg: '#FFFBEB', headerBg: '#D97706' },
+    'Extension': { border: '#16A34A', bg: '#F0FDF4', headerBg: '#16A34A' },
+  }
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadComprehensionPdf(comp) }
+    catch(e) { console.error('Comprehension PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{comp.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{comp.yearGroup} · {comp.subject} · {comp.skill}</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+          {downloading ? 'Generating PDF...' : '📄 Download PDF (3 worksheets)'}
+        </button>
+      </div>
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+        {comp.tiers.map((tier, ti) => {
+          const ts = TIER_STYLES[tier.level] || TIER_STYLES['Core']
+          return (
+            <div key={ti} style={{ borderTop: ti > 0 ? `0.5px solid ${BORDER}` : 'none' }}>
+              <div style={{ background: ts.headerBg, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{tier.level}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>· {(tier.questions || []).length} questions</span>
+              </div>
+              <div style={{ background: ts.bg, padding: '12px 16px' }}>
+                <div style={{ fontSize: 12, color: TEXT, lineHeight: 1.6, marginBottom: 10, fontStyle: 'italic', borderLeft: `3px solid ${ts.headerBg}`, paddingLeft: 10 }}>
+                  {(tier.passage || '').slice(0, 200)}{(tier.passage || '').length > 200 ? '...' : ''}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(tier.questions || []).map((q, qi) => (
+                    <div key={qi} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${ts.headerBg}`, color: ts.headerBg, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{qi + 1}</div>
+                      <div style={{ fontSize: 12, color: TEXT }}>
+                        <span style={{ fontSize: 10, color: ts.headerBg, fontWeight: 600, marginRight: 4 }}>[{q.type}]</span>
+                        {q.q}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Writing Frame PDF Download ────────────────────────────────────────────────
 
 async function downloadWritingFramePdf(wf) {
@@ -3834,6 +4035,39 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
     if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
 
+    // Detect reading comprehension requests
+    const isComprehension = /reading comprehension|comprehension|reading passage|read.*questions|passage.*questions/i.test(prompt)
+    if (isComprehension) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, comprehensionMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const comprehension = data.comprehension
+        setResource({ ...comprehension, _type: 'comprehension' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id,
+              title: comprehension.title,
+              meta: `${comprehension.yearGroup} · ${comprehension.subject} · ${comprehension.skill}`,
+              resource_type: 'comprehension',
+              sections: comprehension.tiers.map(t => ({ heading: t.level, content: t.passage?.slice(0, 500) || '' })),
+              prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Comprehension save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Comprehension save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     // Detect writing frame requests
     const isWritingFrame = /writing frame|uplevel|uplevell|sentence|fronted adverbial|subordinat|expanded noun|literacy frame/i.test(prompt)
     if (isWritingFrame) {
@@ -4330,6 +4564,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           ? <WorksheetOutput worksheet={resource} />
           : resource && resource._type === 'writing_frame'
           ? <WritingFrameOutput writingFrame={resource} />
+          : resource && resource._type === 'comprehension'
+          ? <ComprehensionOutput comprehension={resource} />
           : resource && <ResourceOutput resource={resource} />
         }
 

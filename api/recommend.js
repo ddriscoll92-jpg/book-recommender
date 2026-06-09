@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -165,6 +165,70 @@ Rules:
 - Align grammar objectives to UK National Curriculum for the year group`
   }
 
+  if (comprehensionMode) {
+    maxTokens = 4000
+    systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Short engaging title e.g. The Lost Penguin",
+  "subject": "English",
+  "yearGroup": "Year 3",
+  "skill": "Reading comprehension — retrieval and inference",
+  "tiers": [
+    {
+      "level": "Support",
+      "colour": "#DC2626",
+      "emoji": "Red",
+      "passage": "Short simple passage 4-6 sentences. Simple vocabulary. Short sentences. Large concepts broken down.",
+      "questions": [
+        { "type": "retrieval", "q": "Simple retrieval question about the text?", "lines": 2 },
+        { "type": "retrieval", "q": "Another retrieval question?", "lines": 2 },
+        { "type": "retrieval", "q": "Third retrieval question?", "lines": 2 }
+      ]
+    },
+    {
+      "level": "Core",
+      "colour": "#D97706",
+      "emoji": "Amber",
+      "passage": "Medium passage 7-10 sentences. Age-appropriate vocabulary. Mix of short and longer sentences.",
+      "questions": [
+        { "type": "retrieval", "q": "Retrieval question?", "lines": 2 },
+        { "type": "retrieval", "q": "Retrieval question?", "lines": 2 },
+        { "type": "inference", "q": "Inference question requiring reading between the lines?", "lines": 3 },
+        { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
+        { "type": "inference", "q": "Explain question?", "lines": 3 }
+      ]
+    },
+    {
+      "level": "Extension",
+      "colour": "#16A34A",
+      "emoji": "Green",
+      "passage": "Longer richer passage 10-14 sentences. Ambitious vocabulary. Varied sentence structures. Figurative language.",
+      "questions": [
+        { "type": "retrieval", "q": "Retrieval question?", "lines": 2 },
+        { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
+        { "type": "inference", "q": "Inference question?", "lines": 3 },
+        { "type": "inference", "q": "Deeper inference question?", "lines": 3 },
+        { "type": "multiple_choice", "q": "Another multiple choice?", "options": ["Option A", "Option B", "Option C", "Option D"] },
+        { "type": "extended", "q": "Extended response question requiring a full paragraph answer?", "lines": 5 },
+        { "type": "vocabulary", "q": "Find the word in the passage that means [synonym]. What does it tell us?", "lines": 2 }
+      ]
+    }
+  ]
+}
+Rules:
+- The passage must be completely original, not copied from any published work
+- Each tier's passage covers the same topic/story but at different complexity levels
+- Support passage uses only simple common words, short sentences, basic concepts
+- Core passage uses age-appropriate vocabulary, some inference opportunities
+- Extension passage uses rich vocabulary, figurative language, complex sentences
+- Questions must be directly answerable from the passage provided in that tier
+- multiple_choice questions always have exactly 4 options, only one correct
+- lines indicates how many writing lines to draw (2 = short answer, 3 = medium, 5 = extended)
+- Align reading level to UK National Curriculum year group`
+  }
+
   try {
     const body = {
       model: 'claude-sonnet-4-6',
@@ -192,6 +256,7 @@ Rules:
 
     if (worksheetMode) return res.status(200).json({ worksheet: parsed })
     if (writingFrameMode) return res.status(200).json({ writingFrame: parsed })
+    if (comprehensionMode) return res.status(200).json({ comprehension: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {
