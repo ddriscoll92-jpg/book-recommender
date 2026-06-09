@@ -1528,11 +1528,15 @@ async function downloadWorksheetPdf(worksheet) {
     doc.setLineWidth(0.3)
     doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'FD')
     doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
-    const fields = [{ l: 'Name:', x: margin + 2 }, { l: 'Date:', x: margin + 66 }, { l: 'Class:', x: margin + 130 }]
+    const fields = [
+      { l: 'Name:', x: margin + 2,   lineEnd: margin + 60 },
+      { l: 'Date:', x: margin + 66,  lineEnd: margin + 124 },
+      { l: 'Class:', x: margin + 130, lineEnd: margin + contentW - 2 },
+    ]
     fields.forEach(f => {
       doc.text(f.l, f.x, y + 6)
       doc.setDrawColor(180, 178, 169); doc.setLineWidth(0.3)
-      doc.line(f.x + 10, y + 6.5, f.x + 58, y + 6.5)
+      doc.line(f.x + (f.l === 'Class:' ? 11 : 10), y + 6.5, f.lineEnd, y + 6.5)
     })
 
     y += 15
@@ -1596,12 +1600,16 @@ async function downloadWorksheetPdf(worksheet) {
         // Equation / missing / number_line
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
         const qText = (q.q || '').replace(/___/g, '____')
-        const wrappedLines = doc.splitTextToSize(qText, shortTextW)
+        const hasBlanks = (q.q || '').includes('___')
+        // Only show answer box if question has no blanks already
+        const effectiveTextW = hasBlanks ? fullTextW : shortTextW
+        const wrappedLines = doc.splitTextToSize(qText, effectiveTextW)
         doc.text(wrappedLines.slice(0, 2), textX, qy + 10)
-        // Answer box — right side, vertically centred
-        doc.setFillColor(245, 244, 240)
-        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.roundedRect(ansBoxX, qy + (rowH - 2 - ansBoxH) / 2, ansBoxW, ansBoxH, 1, 1, 'FD')
+        if (!hasBlanks) {
+          doc.setFillColor(245, 244, 240)
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+          doc.roundedRect(ansBoxX, qy + (rowH - 2 - ansBoxH) / 2, ansBoxW, ansBoxH, 1, 1, 'FD')
+        }
       }
     })
 
