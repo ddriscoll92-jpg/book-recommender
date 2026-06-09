@@ -1545,58 +1545,61 @@ async function downloadWorksheetPdf(worksheet) {
     // ── Questions ──
     const qPerCol = 5
     const colW = (contentW - 6) / 2
+    const rowH = 24  // increased from 22
 
     tier.questions.forEach((q, qi) => {
       const col = qi < qPerCol ? 0 : 1
       const row = qi % qPerCol
       const qx = margin + col * (colW + 6)
-      const qy = y + row * 22
+      const qy = y + row * rowH
 
       // Question box
       doc.setFillColor(255, 255, 255)
       doc.setDrawColor(211, 209, 199)
       doc.setLineWidth(0.4)
-      doc.roundedRect(qx, qy, colW, 20, 1.5, 1.5, 'FD')
+      doc.roundedRect(qx, qy, colW, rowH - 2, 1.5, 1.5, 'FD')
 
-      // Question number
+      // Question number circle
       doc.setFillColor(tc.r, tc.g, tc.b)
       doc.circle(qx + 5, qy + 5, 3.5, 'F')
       doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
       doc.text(String(qi + 1), qx + 5, qy + 6.5, { align: 'center' })
 
       doc.setTextColor(44, 44, 42)
+      const textX = qx + 11
+      const ansBoxW = 16; const ansBoxH = 9
+      const ansBoxX = qx + colW - ansBoxW - 2
+      const textMaxW = ansBoxX - textX - 2  // text stays left of answer box
 
       if (q.type === 'column') {
-        // Column sum
-        doc.setFontSize(11); doc.setFont('helvetica', 'normal')
-        const numX = qx + colW - 20
-        doc.text(q.top || '', numX, qy + 6, { align: 'right' })
-        doc.text(`${q.op || '+'} ${q.bottom || ''}`, numX, qy + 11, { align: 'right' })
+        doc.setFontSize(10); doc.setFont('helvetica', 'normal')
+        const numX = qx + colW - 16
+        doc.text(q.top || '', numX, qy + 7, { align: 'right' })
+        doc.text(`${q.op || '+'} ${q.bottom || ''}`, numX, qy + 12, { align: 'right' })
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.line(numX - 14, qy + 13, numX, qy + 13)
-        // Answer line
+        doc.line(numX - 12, qy + 14, numX, qy + 14)
         doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
-        doc.line(numX - 14, qy + 17.5, numX, qy + 17.5)
+        doc.line(numX - 12, qy + 19, numX, qy + 19)
       } else if (q.type === 'word') {
         doc.setFontSize(7.5); doc.setFont('helvetica', 'normal')
         const lines = doc.splitTextToSize(q.text || '', colW - 14)
-        doc.text(lines, qx + 11, qy + 6)
-        // Answer line
-        doc.setFontSize(8)
-        doc.text(q.answer || 'Answer: ___', qx + 11, qy + 16)
+        doc.text(lines.slice(0, 2), textX, qy + 6)
+        doc.setFontSize(7.5)
+        doc.text(q.answer || 'Answer: ___', textX, qy + rowH - 6)
       } else {
-        // Equation / missing number
-        doc.setFontSize(11); doc.setFont('helvetica', 'normal')
-        const qText = (q.q || '').replace(/___/g, '       ')
-        doc.text(qText, qx + 11, qy + 8)
-        // Answer box
+        // Equation / missing / number_line — wrap text to avoid answer box
+        doc.setFontSize(10); doc.setFont('helvetica', 'normal')
+        const qText = (q.q || '').replace(/___/g, '____')
+        const wrappedLines = doc.splitTextToSize(qText, textMaxW)
+        doc.text(wrappedLines.slice(0, 2), textX, qy + 8)
+        // Answer box — right aligned in the question box
         doc.setFillColor(245, 244, 240)
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.roundedRect(qx + colW - 20, qy + 3, 16, 9, 1, 1, 'FD')
+        doc.roundedRect(ansBoxX, qy + (rowH - 2 - ansBoxH) / 2, ansBoxW, ansBoxH, 1, 1, 'FD')
       }
     })
 
-    y += qPerCol * 22 + 6
+    y += qPerCol * rowH + 6
 
     // ── Challenge box ──
     if (tier.challenge) {
