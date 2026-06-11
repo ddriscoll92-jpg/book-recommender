@@ -6059,6 +6059,7 @@ export default function App() {
     if (dest === 'plans') setPage('plans')
     if (dest === 'books') setPage('books')
     if (dest === 'resources') setPage('resources')
+    if (dest === 'assistant') setPage('assistant')
     if (dest === 'signout') { handleSignOut() }
     if (dest === 'upgrade') { setPage('upgrade') }
     if (dest === 'admin') { setShowAdmin(true) }
