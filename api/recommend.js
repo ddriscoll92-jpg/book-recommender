@@ -324,7 +324,13 @@ Rules:
 
     const text = data.content.map(b => b.text || '').join('')
     const clean = text.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(clean)
+    let parsed
+    try {
+      parsed = JSON.parse(clean)
+    } catch(parseErr) {
+      console.error('JSON parse error:', parseErr.message, 'Raw text:', clean.slice(0, 500))
+      return res.status(500).json({ error: `JSON parse failed: ${parseErr.message}` })
+    }
 
     if (worksheetMode) return res.status(200).json({ worksheet: parsed })
     if (writingFrameMode) return res.status(200).json({ writingFrame: parsed })
@@ -333,6 +339,7 @@ Rules:
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {
+    console.error('recommend.js error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 }
