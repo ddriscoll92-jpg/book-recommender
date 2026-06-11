@@ -3892,7 +3892,7 @@ Do not discuss topics unrelated to education and teaching.`
   ]
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: '2rem 1rem', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: '2rem 1rem', paddingTop: '5rem', fontFamily: "'DM Sans', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
         <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>🤖</div>
