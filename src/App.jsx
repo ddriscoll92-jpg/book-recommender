@@ -23,6 +23,7 @@ const TRIAL_LIMITS = {
   lesson_ideas: 15,
   units_of_work: 10,
   resources: 15,
+  ai_chat: 20,
 }
 
 const BASIC_LIMITS = {
@@ -31,6 +32,7 @@ const BASIC_LIMITS = {
   lesson_ideas: 999,
   units_of_work: 20,
   resources: 40,
+  ai_chat: 150,
 }
 
 const PREMIUM_LIMITS = {
@@ -39,6 +41,7 @@ const PREMIUM_LIMITS = {
   lesson_ideas: 999,
   units_of_work: 999,
   resources: 999,
+  ai_chat: 999,
 }
 
 const STRIPE_PRICES = {
@@ -421,6 +424,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
     { id: 'plans', label: 'My Plans', active: true },
     { id: 'books', label: 'My Books', active: true },
     { id: 'resources', label: 'My Resources', active: true },
+    { id: 'assistant', label: 'AI Assistant', active: true },
   ]
 
   return (
@@ -3817,6 +3821,161 @@ function ResourceDownloadButton({ resource }) {
   )
 }
 
+// ── AI Assistant Page ─────────────────────────────────────────────────────────
+
+function AIAssistantPage({ checkTrial }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: "Hello! I'm your AI teaching assistant. I can help with lesson planning, differentiation strategies, SEND support, assessment ideas, behaviour management, curriculum advice, and much more. What would you like help with today?" }
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  const SYSTEM_PROMPT = `You are an expert UK primary school teaching assistant. You help teachers with:
+- Lesson planning and curriculum design aligned to the UK National Curriculum
+- Differentiation strategies for mixed-ability classes
+- SEND support and adaptations
+- Assessment for learning and pupil progress
+- Behaviour management strategies
+- Subject knowledge across all primary subjects
+- Ofsted preparation and school improvement
+- Report writing and parent communication
+- Phonics, early reading and literacy development
+- Maths mastery and reasoning approaches
+
+Keep responses practical, classroom-focused and concise. Use bullet points for lists. 
+Always relate advice to UK primary school context (KS1/KS2). 
+Do not discuss topics unrelated to education and teaching.`
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function sendMessage() {
+    if (!input.trim() || loading) return
+    const allowed = await checkTrial?.('ai_chat')
+    if (allowed === false) return
+
+    const userMsg = { role: 'user', content: input.trim() }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setInput('')
+    setLoading(true)
+
+    try {
+      const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
+      const res = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: input.trim(),
+          assistantMode: true,
+          history: apiMessages,
+          systemPrompt: SYSTEM_PROMPT,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'API error')
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }])
+    }
+    setLoading(false)
+  }
+
+  const SUGGESTED = [
+    "How can I differentiate a lesson on fractions for mixed ability Year 4?",
+    "Give me 5 strategies for supporting a pupil with dyslexia in English lessons",
+    "What are effective ways to teach the 5 times table to Year 2?",
+    "How do I write a positive report comment for a below-expected pupil?",
+    "What does Ofsted look for in an outstanding primary lesson?",
+  ]
+
+  return (
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: '2rem 1rem', fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+        <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>🤖</div>
+        <div>
+          <h1 style={{ fontFamily: "'Lora', serif", fontSize: 26, fontWeight: 500, color: TEXT, margin: 0 }}>AI Teaching Assistant</h1>
+          <p style={{ color: MUTED, fontSize: 14, margin: 0, marginTop: 2 }}>Ask anything about teaching, planning, differentiation and more</p>
+        </div>
+      </div>
+
+      {/* Privacy notice */}
+      <div style={{ background: '#FFFBEB', border: `0.5px solid #D97706`, borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 12, color: '#92400E' }}>
+        Please do not enter pupil names or personal data in this chat.
+      </div>
+
+      {/* Chat window */}
+      <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+        <div style={{ height: 420, overflowY: 'auto', padding: '16px' }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 16, flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: m.role === 'user' ? GREEN : NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                {m.role === 'user' ? '👤' : '🤖'}
+              </div>
+              <div style={{
+                maxWidth: '78%',
+                background: m.role === 'user' ? GREEN : '#fff',
+                color: m.role === 'user' ? LIGHT_GREEN : TEXT,
+                padding: '10px 14px',
+                borderRadius: m.role === 'user' ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
+                fontSize: 13,
+                lineHeight: 1.6,
+                border: m.role === 'assistant' ? `0.5px solid ${BORDER}` : 'none',
+                whiteSpace: 'pre-wrap',
+              }}>
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🤖</div>
+              <div style={{ background: '#fff', border: `0.5px solid ${BORDER}`, padding: '10px 14px', borderRadius: '4px 12px 12px 12px', fontSize: 13, color: MUTED }}>Thinking...</div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input row */}
+        <div style={{ borderTop: `0.5px solid ${BORDER}`, padding: '12px 16px', display: 'flex', gap: 10, background: '#fff' }}>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+            placeholder="Ask a teaching question... (Enter to send, Shift+Enter for new line)"
+            rows={2}
+            style={{ flex: 1, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", resize: 'none', outline: 'none', color: TEXT }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={loading || !input.trim()}
+            style={{ height: 52, padding: '0 18px', background: loading || !input.trim() ? BORDER : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", alignSelf: 'flex-end' }}>
+            Send
+          </button>
+        </div>
+      </div>
+
+      {/* Suggested prompts */}
+      {messages.length <= 1 && (
+        <div>
+          <div style={{ fontSize: 12, color: MUTED, fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggested questions</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {SUGGESTED.map((s, i) => (
+              <button key={i} onClick={() => { setInput(s) }}
+                style={{ background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: '10px 14px', textAlign: 'left', fontSize: 13, color: '#085041', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                💬 {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ResourcesPage({ onNavigate, checkTrial }) {
   const [tab, setTab] = useState('adhoc') // 'adhoc' | 'plan' | 'catalogue'
   const [catalogue, setCatalogue] = useState([])
@@ -5871,7 +6030,7 @@ export default function App() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       if (!resetAt || resetAt < monthStart) {
         const { data: { user } } = await supabase.auth.getUser()
-        const freshUsage = { user_id: user.id, book_searches: 0, load_mores: 0, lesson_ideas: 0, units_of_work: 0, resources: 0, reset_at: monthStart.toISOString() }
+        const freshUsage = { user_id: user.id, book_searches: 0, load_mores: 0, lesson_ideas: 0, units_of_work: 0, resources: 0, ai_chat: 0, reset_at: monthStart.toISOString() }
         await supabase.from('usage_counts').upsert(freshUsage)
         usage = freshUsage
         setTrialInfo(prev => ({ ...prev, usage: freshUsage }))
@@ -5916,7 +6075,7 @@ export default function App() {
 
   const userName = displayName || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
   const userEmail = session?.user?.email || ''
-  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'books' ? 'books' : page === 'resources' ? 'resources' : ''
+  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'books' ? 'books' : page === 'resources' ? 'resources' : page === 'assistant' ? 'assistant' : ''
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
@@ -5972,6 +6131,7 @@ export default function App() {
       )}
       {page === 'upgrade_success' && <UpgradeSuccessPage onNavigate={handleNavigate} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
+      {page === 'assistant' && <AIAssistantPage checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
       {legalPage && legalPage !== 'contact' && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
       {legalPage === 'contact' && <ContactModal onClose={() => setLegalPage(null)} />}
@@ -5979,4 +6139,3 @@ export default function App() {
     </div>
   )
 }
-
