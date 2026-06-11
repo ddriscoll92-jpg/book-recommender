@@ -3848,7 +3848,9 @@ Always relate advice to UK primary school context (KS1/KS2).
 Do not discuss topics unrelated to education and teaching.`
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > 1) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   async function sendMessage() {
