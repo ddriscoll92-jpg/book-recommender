@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -165,7 +165,54 @@ Rules:
 - Align grammar objectives to UK National Curriculum for the year group`
   }
 
-  if (comprehensionMode) {
+  if (exitTicketMode) {
+    maxTokens = 2000
+    systemPrompt = `You are an expert UK primary school teacher creating print-ready exit ticket assessment cards.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Short lesson title e.g. Fractions of Amounts",
+  "subject": "Maths",
+  "yearGroup": "Year 4",
+  "tiers": [
+    {
+      "level": "Support",
+      "colour": "#DC2626",
+      "prompts": [
+        { "text": "Today I learned...", "lines": 2 },
+        { "text": "One thing I found tricky was...", "lines": 2 },
+        { "text": "Tomorrow I need help with...", "lines": 1 }
+      ]
+    },
+    {
+      "level": "Core",
+      "colour": "#D97706",
+      "prompts": [
+        { "text": "The most important thing I learned today was...", "lines": 2 },
+        { "text": "I can show my understanding by...", "lines": 2 },
+        { "text": "An example of this is...", "lines": 2 }
+      ]
+    },
+    {
+      "level": "Extension",
+      "colour": "#16A34A",
+      "prompts": [
+        { "text": "I can explain today's learning in my own words:", "lines": 2 },
+        { "text": "I could apply this to a real-life situation by...", "lines": 2 },
+        { "text": "A question I still have is...", "lines": 1 }
+      ]
+    }
+  ]
+}
+Rules:
+- Each tier has exactly 3 prompts
+- Prompts must be directly related to the lesson topic
+- Support prompts are simple retrieval and reflection
+- Core prompts require some explanation and understanding
+- Extension prompts require application, analysis or deeper thinking
+- lines is 1 or 2 (space for writing)
+- Keep prompt text concise — it must fit on a small card`
+  }
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
 You must return ONLY valid JSON — no markdown, no explanation, no backticks.
@@ -282,6 +329,7 @@ Rules:
     if (worksheetMode) return res.status(200).json({ worksheet: parsed })
     if (writingFrameMode) return res.status(200).json({ writingFrame: parsed })
     if (comprehensionMode) return res.status(200).json({ comprehension: parsed })
+    if (exitTicketMode) return res.status(200).json({ exitTicket: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {

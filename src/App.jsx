@@ -1250,6 +1250,176 @@ function LessonTab({ lesson, lessonIdx, total }) {
   )
 }
 
+// ── Exit Ticket PDF Download ──────────────────────────────────────────────────
+
+async function downloadExitTicketPdf(et) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210; const pageH = 297; const margin = 12
+
+  function hexToRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
+  }
+
+  // 4 tickets per page: 2 cols x 2 rows — one page per tier
+  et.tiers.forEach((tier, ti) => {
+    if (ti > 0) doc.addPage()
+    const [tr,tg,tb] = hexToRgb(tier.colour)
+    const ticketW = (pageW - margin * 2 - 6) / 2
+    const ticketH = (pageH - margin * 2 - 6) / 2
+
+    // Draw 4 identical tickets
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 2; col++) {
+        const tx = margin + col * (ticketW + 6)
+        const ty = margin + row * (ticketH + 6)
+
+        // Outer border (thick coloured)
+        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(2)
+        doc.roundedRect(tx, ty, ticketW, ticketH, 3, 3)
+
+        // Inner border (thin)
+        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.4)
+        doc.roundedRect(tx + 3, ty + 3, ticketW - 6, ticketH - 6, 2, 2)
+
+        // Header bar
+        doc.setFillColor(tr,tg,tb)
+        doc.rect(tx + 3, ty + 3, ticketW - 6, 10, 'F')
+        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+        doc.text('EXIT TICKET', tx + ticketW/2, ty + 9.5, { align: 'center' })
+
+        // Title
+        doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(tr,tg,tb)
+        const titleLines = doc.splitTextToSize(et.title, ticketW - 12)
+        doc.text(titleLines.slice(0,1), tx + ticketW/2, ty + 18, { align: 'center' })
+
+        // Tier badge
+        doc.setFontSize(6); doc.setFont('helvetica','normal'); doc.setTextColor(tr,tg,tb)
+        doc.text(tier.level, tx + ticketW - 6, ty + 18, { align: 'right' })
+
+        // Prompts with lines
+        let py = ty + 24
+        const lineW = ticketW - 12
+
+        tier.prompts.forEach(p => {
+          if (py + 12 > ty + ticketH - 14) return
+          // Prompt text
+          doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+          const pLines = doc.splitTextToSize(p.text, lineW)
+          doc.text(pLines.slice(0,2), tx + 6, py)
+          py += pLines.slice(0,2).length * 4 + 2
+
+          // Writing lines
+          const numLines = p.lines || 2
+          for (let li = 0; li < numLines; li++) {
+            doc.setDrawColor(180,178,169); doc.setLineWidth(0.3)
+            doc.line(tx + 6, py + 4, tx + 6 + lineW, py + 4)
+            py += 6
+          }
+          py += 2
+        })
+
+        // Name / Date footer
+        const footerY = ty + ticketH - 10
+        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100)
+        doc.text('Name:', tx + 6, footerY)
+        doc.setDrawColor(180,178,169); doc.setLineWidth(0.3)
+        doc.line(tx + 18, footerY + 0.5, tx + ticketW/2 - 2, footerY + 0.5)
+        doc.text('Date:', tx + ticketW/2 + 2, footerY)
+        doc.line(tx + ticketW/2 + 12, footerY + 0.5, tx + ticketW - 6, footerY + 0.5)
+      }
+    }
+
+    // Cut lines between tickets
+    doc.setDrawColor(180,178,169); doc.setLineWidth(0.2)
+    doc.setLineDashPattern([2, 2], 0)
+    // Horizontal cut line
+    const midY = margin + ticketH + 3
+    doc.line(margin, midY, pageW - margin, midY)
+    // Vertical cut line
+    const midX = margin + ticketW + 3
+    doc.line(midX, margin, midX, pageH - margin)
+    doc.setLineDashPattern([], 0)
+
+    // "Cut here" labels
+    doc.setFontSize(6); doc.setFont('helvetica','normal'); doc.setTextColor(180,178,169)
+    doc.text('cut', midX - 2, midY - 1)
+  })
+
+  doc.save(`${et.title.replace(/[^a-z0-9]/gi,'_')}_exit_tickets.pdf`)
+}
+
+// ── Exit Ticket Output Component ─────────────────────────────────────────────
+
+function ExitTicketOutput({ exitTicket: et }) {
+  const [downloading, setDownloading] = useState(false)
+
+  const TIER_STYLES = {
+    'Support':   { border: '#DC2626', bg: '#FEF2F2', headerBg: '#DC2626' },
+    'Core':      { border: '#D97706', bg: '#FFFBEB', headerBg: '#D97706' },
+    'Extension': { border: '#16A34A', bg: '#F0FDF4', headerBg: '#16A34A' },
+  }
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadExitTicketPdf(et) }
+    catch(e) { console.error('Exit ticket PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{et.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{et.yearGroup} · {et.subject} · 4 tickets per page, 3 pages</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+          {downloading ? 'Generating PDF...' : '📄 Download PDF (3 pages)'}
+        </button>
+      </div>
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+        {et.tiers.map((tier, ti) => {
+          const ts = TIER_STYLES[tier.level] || TIER_STYLES['Core']
+          return (
+            <div key={ti} style={{ borderTop: ti > 0 ? `0.5px solid ${BORDER}` : 'none' }}>
+              <div style={{ background: ts.headerBg, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{tier.level}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>· 4 cards per page</span>
+              </div>
+              <div style={{ background: ts.bg, padding: '12px 16px' }}>
+                {/* Mini ticket preview */}
+                <div style={{ border: `2px solid ${ts.border}`, borderRadius: 8, padding: '10px 12px', maxWidth: 280, background: BG }}>
+                  <div style={{ background: ts.headerBg, borderRadius: 4, padding: '3px 8px', textAlign: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', letterSpacing: '0.1em' }}>EXIT TICKET</span>
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: ts.border, textAlign: 'center', marginBottom: 8 }}>{et.title}</div>
+                  {tier.prompts.map((p, pi) => (
+                    <div key={pi} style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: TEXT, marginBottom: 3 }}>{p.text}</div>
+                      {Array.from({ length: p.lines }).map((_, li) => (
+                        <div key={li} style={{ height: 1, background: BORDER, marginBottom: 4 }} />
+                      ))}
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6, paddingTop: 6, borderTop: `0.5px solid ${BORDER}` }}>
+                    <span style={{ fontSize: 9, color: MUTED }}>Name: ______________</span>
+                    <span style={{ fontSize: 9, color: MUTED }}>Date: _______</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Comprehension PDF Download ────────────────────────────────────────────────
 
 async function downloadComprehensionPdf(comp) {
@@ -4064,6 +4234,42 @@ function ResourcesPage({ onNavigate, checkTrial }) {
     setGenerating(true); setError(''); setResource(null)
     const rt = RESOURCE_TYPES.find(r => r.id === selectedResourceType)
 
+    // Route exit_ticket type
+    if (selectedResourceType === 'exit_ticket') {
+      const etPrompt = `Create a differentiated exit ticket for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: etPrompt, exitTicketMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const exitTicket = data.exitTicket
+        setResource({ ...exitTicket, _type: 'exit_ticket' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: exitTicket.title,
+              meta: `${exitTicket.yearGroup} · ${exitTicket.subject} · Exit ticket`,
+              resource_type: 'exit_ticket',
+              sections: exitTicket.tiers.map(t => ({ heading: t.level, content: t.prompts.map(p => p.text).join('\n') })),
+              prompt: (etPrompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Exit ticket save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Exit ticket save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     // Route writing_frame type to structured writing frame generator
     if (selectedResourceType === 'writing_frame') {
       const wfPrompt = `Create a differentiated literacy writing frame for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
@@ -4195,6 +4401,39 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
     const allowed = await checkTrial?.('resources')
     if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
+
+    // Detect exit ticket requests
+    const isExitTicket = /exit ticket|exit.ticket|ticket out|end of lesson/i.test(prompt)
+    if (isExitTicket) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, exitTicketMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const exitTicket = data.exitTicket
+        setResource({ ...exitTicket, _type: 'exit_ticket' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id,
+              title: exitTicket.title,
+              meta: `${exitTicket.yearGroup} · ${exitTicket.subject} · Exit ticket`,
+              resource_type: 'exit_ticket',
+              sections: exitTicket.tiers.map(t => ({ heading: t.level, content: t.prompts.map(p => p.text).join('\n') })),
+              prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Exit ticket save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Exit ticket save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
 
     // Detect reading comprehension requests
     const isComprehension = /reading comprehension|comprehension|reading passage|read.*questions|passage.*questions/i.test(prompt)
@@ -4727,6 +4966,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           ? <WritingFrameOutput writingFrame={resource} />
           : resource && resource._type === 'comprehension'
           ? <ComprehensionOutput comprehension={resource} />
+          : resource && resource._type === 'exit_ticket'
+          ? <ExitTicketOutput exitTicket={resource} />
           : resource && <ResourceOutput resource={resource} />
         }
 
