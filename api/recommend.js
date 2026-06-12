@@ -213,6 +213,8 @@ Rules:
 - lines is 1 or 2 (space for writing)
 - Keep prompt text concise — it must fit on a small card`
   }
+
+  if (comprehensionMode) {
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
 You must return ONLY valid JSON — no markdown, no explanation, no backticks.
