@@ -1250,6 +1250,106 @@ function LessonTab({ lesson, lessonIdx, total }) {
   )
 }
 
+// ── Vocab Cards PDF Download ──────────────────────────────────────────────────
+
+async function downloadVocabCardsPdf(vc) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const pageW = 297; const pageH = 210; const margin = 10
+
+  function hexToRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
+  }
+
+  const cols = 4; const rows = 3; const perPage = cols * rows
+  const cardW = (pageW - margin * 2 - (cols - 1) * 4) / cols
+  const cardH = (pageH - margin * 2 - (rows - 1) * 4) / rows
+
+  vc.cards.forEach((card, i) => {
+    const pageIdx = Math.floor(i / perPage)
+    const posOnPage = i % perPage
+    if (posOnPage === 0 && pageIdx > 0) doc.addPage()
+
+    const col = posOnPage % cols
+    const row = Math.floor(posOnPage / cols)
+    const cx = margin + col * (cardW + 4)
+    const cy = margin + row * (cardH + 4)
+    const [r,g,b] = hexToRgb(card.colour || '#2563EB')
+
+    // Card border
+    doc.setDrawColor(r,g,b); doc.setLineWidth(1.2)
+    doc.roundedRect(cx, cy, cardW, cardH, 3, 3)
+
+    // Term — large bold, centred top half
+    doc.setFontSize(15); doc.setFont('helvetica','bold'); doc.setTextColor(r,g,b)
+    const termLines = doc.splitTextToSize(card.term || '', cardW - 8)
+    const termY = cy + cardH * 0.38
+    doc.text(termLines.slice(0,2), cx + cardW/2, termY, { align: 'center' })
+
+    // Divider line
+    doc.setDrawColor(r,g,b); doc.setLineWidth(0.4)
+    doc.line(cx + 6, cy + cardH * 0.5, cx + cardW - 6, cy + cardH * 0.5)
+
+    // Definition — smaller, bottom half
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
+    const defLines = doc.splitTextToSize(card.definition || '', cardW - 10)
+    doc.text(defLines.slice(0,4), cx + cardW/2, cy + cardH * 0.62, { align: 'center' })
+  })
+
+  // Footer on each page
+  const totalPages = doc.internal.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
+    doc.text(`TeachReads  |  ${vc.title}  |  ${vc.yearGroup} ${vc.subject}`, margin, pageH - 4)
+    doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' })
+  }
+
+  doc.save(`${vc.title.replace(/[^a-z0-9]/gi,'_')}_vocab_cards.pdf`)
+}
+
+// ── Vocab Cards Output Component ─────────────────────────────────────────────
+
+function VocabCardsOutput({ vocabCards: vc }) {
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadVocabCardsPdf(vc) }
+    catch(e) { console.error('Vocab cards PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{vc.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{vc.yearGroup} · {vc.subject} · {vc.cards.length} cards</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+          {downloading ? 'Generating PDF...' : '📄 Download PDF'}
+        </button>
+      </div>
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden', padding: 16, background: BG }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          {vc.cards.map((card, i) => (
+            <div key={i} style={{ border: `2px solid ${card.colour}`, borderRadius: 10, padding: '14px 10px', textAlign: 'center', background: '#fff', minHeight: 110, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: card.colour, marginBottom: 6 }}>{card.term}</div>
+              <div style={{ height: 1, background: card.colour, opacity: 0.3, marginBottom: 6 }} />
+              <div style={{ fontSize: 11, color: TEXT, lineHeight: 1.4 }}>{card.definition}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Exit Ticket PDF Download ──────────────────────────────────────────────────
 
 async function downloadExitTicketPdf(et) {
@@ -4234,6 +4334,42 @@ function ResourcesPage({ onNavigate, checkTrial }) {
     setGenerating(true); setError(''); setResource(null)
     const rt = RESOURCE_TYPES.find(r => r.id === selectedResourceType)
 
+    // Route vocab_cards type
+    if (selectedResourceType === 'vocab_cards') {
+      const vcPrompt = `Create vocabulary flashcards for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: vcPrompt, vocabCardsMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const vocabCards = data.vocabCards
+        setResource({ ...vocabCards, _type: 'vocab_cards' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: vocabCards.title,
+              meta: `${vocabCards.yearGroup} · ${vocabCards.subject} · ${vocabCards.cards.length} cards`,
+              resource_type: 'vocab_cards',
+              sections: [{ heading: 'Vocabulary', content: vocabCards.cards.map(c => `${c.term}: ${c.definition}`).join('\n') }],
+              prompt: (vcPrompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Vocab cards save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Vocab cards save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     // Route exit_ticket type
     if (selectedResourceType === 'exit_ticket') {
       const etPrompt = `Create a differentiated exit ticket for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
@@ -4401,6 +4537,39 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
     const allowed = await checkTrial?.('resources')
     if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
+
+    // Detect vocabulary card requests
+    const isVocabCards = /vocab.*card|vocabulary card|word card|flash.?card|key.?word.*card/i.test(prompt)
+    if (isVocabCards) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, vocabCardsMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const vocabCards = data.vocabCards
+        setResource({ ...vocabCards, _type: 'vocab_cards' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id,
+              title: vocabCards.title,
+              meta: `${vocabCards.yearGroup} · ${vocabCards.subject} · ${vocabCards.cards.length} cards`,
+              resource_type: 'vocab_cards',
+              sections: [{ heading: 'Vocabulary', content: vocabCards.cards.map(c => `${c.term}: ${c.definition}`).join('\n') }],
+              prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Vocab cards save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Vocab cards save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
 
     // Detect exit ticket requests
     const isExitTicket = /exit ticket|exit.ticket|ticket out|end of lesson/i.test(prompt)
@@ -4968,6 +5137,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           ? <ComprehensionOutput comprehension={resource} />
           : resource && resource._type === 'exit_ticket'
           ? <ExitTicketOutput exitTicket={resource} />
+          : resource && resource._type === 'vocab_cards'
+          ? <VocabCardsOutput vocabCards={resource} />
           : resource && <ResourceOutput resource={resource} />
         }
 

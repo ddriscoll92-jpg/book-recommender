@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -214,6 +214,29 @@ Rules:
 - Keep prompt text concise — it must fit on a small card`
   }
 
+  if (vocabCardsMode) {
+    maxTokens = 2500
+    systemPrompt = `You are an expert UK primary school teacher creating print-ready vocabulary flashcards.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Short title e.g. Materials Vocabulary",
+  "subject": "Science",
+  "yearGroup": "Year 3",
+  "cards": [
+    { "term": "magnetic", "definition": "Able to attract iron or steel objects.", "colour": "#D97706" },
+    { "term": "transparent", "definition": "Allows light to pass through completely, so you can see through it.", "colour": "#2563EB" },
+    { "term": "insoluble", "definition": "Does not dissolve in water.", "colour": "#16A34A" }
+  ]
+}
+Rules:
+- Generate exactly 12 vocabulary cards relevant to the topic
+- term: a single key word or short phrase (1-3 words)
+- definition: one clear, simple sentence a primary pupil can understand
+- colour: pick from this palette and cycle through them: #D97706 (amber), #2563EB (blue), #16A34A (green), #DC2626 (red), #7C3AED (purple), #DB2777 (pink)
+- Align vocabulary to UK National Curriculum for the year group and subject`
+  }
+
   if (comprehensionMode) {
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
@@ -341,6 +364,7 @@ Rules:
     if (writingFrameMode) return res.status(200).json({ writingFrame: parsed })
     if (comprehensionMode) return res.status(200).json({ comprehension: parsed })
     if (exitTicketMode) return res.status(200).json({ exitTicket: parsed })
+    if (vocabCardsMode) return res.status(200).json({ vocabCards: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {
