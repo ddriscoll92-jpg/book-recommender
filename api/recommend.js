@@ -166,7 +166,7 @@ Rules:
   }
 
   if (exitTicketMode) {
-    maxTokens = 2000
+    maxTokens = 3000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready exit ticket assessment cards.
 You must return ONLY valid JSON — no markdown, no explanation, no backticks.
 The JSON must have this exact structure:
@@ -320,7 +320,10 @@ Rules:
     })
 
     const data = await response.json()
-    if (!response.ok) return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error' })
+    if (!response.ok) {
+      console.error('Anthropic API error:', data.error?.message, data.error?.type)
+      return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error' })
+    }
 
     const text = data.content.map(b => b.text || '').join('')
     const clean = text.replace(/```json|```/g, '').trim()
