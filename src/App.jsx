@@ -1540,13 +1540,16 @@ async function downloadExitTicketPdf(et) {
         })
         const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
         const availableH = contentBottom - contentTop
-        const remainingForLines = Math.max(0, availableH - totalTextH)
-        // Distribute remaining space as line-gap height per prompt, proportional to declared lines
+        const minFirstGap = 5
+        const numPrompts = measured.length
         const totalDeclaredLines = measured.reduce((s,m) => s + (m.p.lines || 2), 0)
-        const lineGap = totalDeclaredLines > 0 ? remainingForLines / totalDeclaredLines : 6
+        const extraLines = totalDeclaredLines - numPrompts  // lines beyond the first per prompt
+        const remainingForExtra = Math.max(0, availableH - totalTextH - (numPrompts * minFirstGap))
+        const lineGap = extraLines > 0 ? remainingForExtra / extraLines : 6
 
         let py = contentTop
-        measured.forEach(({ p, textH, pLines }) => {
+        const minFirstGap = 5  // fixed space between text and first writing line
+        measured.forEach(({ p, pLines }) => {
           doc.setFillColor(tr,tg,tb); doc.circle(tx + 5, py - 1.3, 0.8, 'F')
           doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
           doc.text(pLines, tx + 8, py)
@@ -1555,7 +1558,7 @@ async function downloadExitTicketPdf(et) {
           const numLines = p.lines || 2
           for (let li = 0; li < numLines; li++) {
             doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
-            py += lineGap
+            py += (li === 0 ? minFirstGap : lineGap)
             doc.line(tx + 8, py, tx + 8 + lineW - 3, py)
           }
         })
