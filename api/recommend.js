@@ -59,7 +59,8 @@ Rules:
 - Core tier: age-expected difficulty, mixed question types
 - Extension tier: larger numbers, multi-step, reasoning
 - Align to UK National Curriculum for the year group mentioned
-- Make questions engaging and practical`
+- Make questions engaging and practical
+- Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
   }
 
   if (writingFrameMode) {
@@ -162,7 +163,8 @@ Rules:
 - Extension tier has fewer, more open-ended steps requiring sustained writing
 - The base sentence should be simple and directly related to the topic/book
 - themeColour should match the mood: purple for mysterious, green for nature, blue for adventure, orange for exciting, pink for creative
-- Align grammar objectives to UK National Curriculum for the year group`
+- Align grammar objectives to UK National Curriculum for the year group
+- Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
   }
 
   if (exitTicketMode) {
@@ -211,7 +213,8 @@ Rules:
 - Core prompts require some explanation and understanding
 - Extension prompts require application, analysis or deeper thinking
 - lines is 2 or 3 (space for writing) — use 3 for prompts expecting fuller answers, 2 for short ones
-- CRITICAL: prompt text must be a complete sentence or phrase under 12 words. Never truncate or cut off mid-sentence. If a prompt needs more context, shorten it by removing detail rather than writing a longer sentence.`
+- CRITICAL: prompt text must be a complete sentence or phrase under 12 words. Never truncate or cut off mid-sentence. If a prompt needs more context, shorten it by removing detail rather than writing a longer sentence.
+- Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
   }
 
   if (vocabCardsMode) {
@@ -324,7 +327,8 @@ Rules:
 - Questions must be directly answerable from the passage provided in that tier
 - multiple_choice questions always have exactly 4 options, only one correct
 - lines indicates how many writing lines to draw (2 = short answer, 3 = medium, 5 = extended)
-- Align reading level to UK National Curriculum year group`
+- Align reading level to UK National Curriculum year group
+- Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
   }
 
   if (assistantMode) {

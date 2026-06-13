@@ -1558,12 +1558,12 @@ async function downloadExitTicketPdf(et) {
 
           // Fixed-height answer box with faint internal guide lines
           doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
-          doc.roundedRect(tx + 8, py, lineW - 3, boxH, 1, 1)
+          doc.roundedRect(tx + 6, py, lineW, boxH, 1, 1)
           const numGuides = Math.max(1, Math.floor(boxH / 7))
           for (let li = 1; li <= numGuides; li++) {
             const gy = py + (boxH / (numGuides + 1)) * li
             doc.setDrawColor(232,230,222); doc.setLineWidth(0.2)
-            doc.line(tx + 10, gy, tx + 8 + lineW - 5, gy)
+            doc.line(tx + 8, gy, tx + 6 + lineW - 2, gy)
           }
           py += boxH
         })
