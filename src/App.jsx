@@ -1250,6 +1250,138 @@ function LessonTab({ lesson, lessonIdx, total }) {
   )
 }
 
+// ── Knowledge Organiser PDF Download ──────────────────────────────────────────
+
+async function downloadKnowledgeOrgPdf(ko) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const pageW = 297; const pageH = 210; const margin = 12; const contentW = pageW - margin * 2
+
+  function hexToRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
+  }
+
+  // Header bar
+  doc.setFillColor(30,36,51)
+  doc.rect(0, 0, pageW, 22, 'F')
+  doc.setFontSize(18); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+  doc.text(ko.title, margin, 12)
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(139,147,167)
+  doc.text(`${ko.yearGroup}  |  ${ko.subject}`, margin, 18)
+  doc.setFontSize(8); doc.text('TeachReads', pageW - margin, 12, { align: 'right' })
+
+  // 2x2 panel grid
+  const gridY = 28; const gridH = pageH - gridY - margin
+  const colW = (contentW - 6) / 2
+  const rowH = (gridH - 6) / 2
+
+  ko.panels.forEach((panel, pi) => {
+    const col = pi % 2; const row = Math.floor(pi / 2)
+    const px = margin + col * (colW + 6)
+    const py = gridY + row * (rowH + 6)
+    const [r,g,b] = hexToRgb(panel.colour || '#2563EB')
+
+    // Panel border + header
+    doc.setDrawColor(r,g,b); doc.setLineWidth(0.6)
+    doc.roundedRect(px, py, colW, rowH, 2, 2)
+    doc.setFillColor(r,g,b)
+    doc.roundedRect(px, py, colW, 9, 2, 2, 'F')
+    doc.rect(px, py + 4, colW, 5, 'F') // square off bottom of header
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+    doc.text(panel.heading, px + 4, py + 6.2)
+
+    // Panel content
+    let cy = py + 14
+    const contentMaxW = colW - 8
+    doc.setTextColor(44,44,42)
+
+    if (panel.type === 'terms') {
+      panel.items.forEach(item => {
+        if (cy > py + rowH - 6) return
+        doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(r,g,b)
+        doc.text(item.term || '', px + 4, cy)
+        cy += 4.5
+        doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70)
+        const defLines = doc.splitTextToSize(item.definition || '', contentMaxW)
+        doc.text(defLines.slice(0,2), px + 4, cy)
+        cy += defLines.slice(0,2).length * 4 + 2.5
+      })
+    } else {
+      panel.items.forEach(item => {
+        if (cy > py + rowH - 5) return
+        doc.setFontSize(8.5); doc.setFont('helvetica','normal')
+        // Bullet point
+        doc.setFillColor(r,g,b); doc.circle(px + 5, cy - 1.3, 0.8, 'F')
+        const lines = doc.splitTextToSize(String(item || ''), contentMaxW - 4)
+        doc.text(lines.slice(0,2), px + 8, cy)
+        cy += lines.slice(0,2).length * 4.2 + 1.5
+      })
+    }
+  })
+
+  doc.save(`${ko.title.replace(/[^a-z0-9]/gi,'_')}_knowledge_organiser.pdf`)
+}
+
+// ── Knowledge Organiser Output Component ─────────────────────────────────────
+
+function KnowledgeOrgOutput({ knowledgeOrg: ko }) {
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadKnowledgeOrgPdf(ko) }
+    catch(e) { console.error('Knowledge organiser PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{ko.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{ko.yearGroup} · {ko.subject} · Knowledge organiser</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+          {downloading ? 'Generating PDF...' : '📄 Download PDF'}
+        </button>
+      </div>
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden', padding: 16, background: BG }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {ko.panels.map((panel, pi) => (
+            <div key={pi} style={{ border: `1.5px solid ${panel.colour}`, borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ background: panel.colour, padding: '8px 12px' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{panel.heading}</span>
+              </div>
+              <div style={{ padding: '10px 12px', background: '#fff' }}>
+                {panel.type === 'terms' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {panel.items.map((item, ii) => (
+                      <div key={ii}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: panel.colour }}>{item.term}</span>
+                        <div style={{ fontSize: 11, color: TEXT }}>{item.definition}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {panel.items.map((item, ii) => (
+                      <li key={ii} style={{ fontSize: 12, color: TEXT }}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Vocab Cards PDF Download ──────────────────────────────────────────────────
 
 async function downloadVocabCardsPdf(vc) {
@@ -4334,6 +4466,42 @@ function ResourcesPage({ onNavigate, checkTrial }) {
     setGenerating(true); setError(''); setResource(null)
     const rt = RESOURCE_TYPES.find(r => r.id === selectedResourceType)
 
+    // Route knowledge_org type
+    if (selectedResourceType === 'knowledge_org') {
+      const koPrompt = `Create a knowledge organiser for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: koPrompt, knowledgeOrgMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const knowledgeOrg = data.knowledgeOrg
+        setResource({ ...knowledgeOrg, _type: 'knowledge_org' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: knowledgeOrg.title,
+              meta: `${knowledgeOrg.yearGroup} · ${knowledgeOrg.subject} · Knowledge organiser`,
+              resource_type: 'knowledge_org',
+              sections: knowledgeOrg.panels.map(p => ({ heading: p.heading, content: p.type === 'terms' ? p.items.map(i => `${i.term}: ${i.definition}`).join('\n') : p.items.join('\n') })),
+              prompt: (koPrompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Knowledge org save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Knowledge org save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     // Route vocab_cards type
     if (selectedResourceType === 'vocab_cards') {
       const vcPrompt = `Create vocabulary flashcards for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
@@ -4537,6 +4705,39 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
     const allowed = await checkTrial?.('resources')
     if (allowed === false) return
     setGenerating(true); setError(''); setResource(null)
+
+    // Detect knowledge organiser requests
+    const isKnowledgeOrg = /knowledge organi[sz]er|fact sheet|topic overview|reference sheet/i.test(prompt)
+    if (isKnowledgeOrg) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, knowledgeOrgMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const knowledgeOrg = data.knowledgeOrg
+        setResource({ ...knowledgeOrg, _type: 'knowledge_org' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id,
+              title: knowledgeOrg.title,
+              meta: `${knowledgeOrg.yearGroup} · ${knowledgeOrg.subject} · Knowledge organiser`,
+              resource_type: 'knowledge_org',
+              sections: knowledgeOrg.panels.map(p => ({ heading: p.heading, content: p.type === 'terms' ? p.items.map(i => `${i.term}: ${i.definition}`).join('\n') : p.items.join('\n') })),
+              prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Knowledge org save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Knowledge org save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
 
     // Detect vocabulary card requests
     const isVocabCards = /vocab.*card|vocabulary card|word card|flash.?card|key.?word.*card/i.test(prompt)
@@ -5139,6 +5340,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           ? <ExitTicketOutput exitTicket={resource} />
           : resource && resource._type === 'vocab_cards'
           ? <VocabCardsOutput vocabCards={resource} />
+          : resource && resource._type === 'knowledge_org'
+          ? <KnowledgeOrgOutput knowledgeOrg={resource} />
           : resource && <ResourceOutput resource={resource} />
         }
 

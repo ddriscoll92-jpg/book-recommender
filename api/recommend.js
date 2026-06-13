@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -237,6 +237,32 @@ Rules:
 - Align vocabulary to UK National Curriculum for the year group and subject`
   }
 
+  if (knowledgeOrgMode) {
+    maxTokens = 3000
+    systemPrompt = `You are an expert UK primary school teacher creating a print-ready knowledge organiser.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Topic title e.g. The Romans",
+  "subject": "History",
+  "yearGroup": "Year 4",
+  "panels": [
+    { "heading": "Key Facts", "type": "bullets", "colour": "#2563EB", "items": ["Fact 1", "Fact 2", "Fact 3", "Fact 4", "Fact 5", "Fact 6"] },
+    { "heading": "Key Vocabulary", "type": "terms", "colour": "#16A34A", "items": [{ "term": "Empire", "definition": "A group of countries ruled by one leader." }] },
+    { "heading": "Key People", "type": "terms", "colour": "#7C3AED", "items": [{ "term": "Julius Caesar", "definition": "Roman general who invaded Britain in 55BC." }] },
+    { "heading": "Key Dates", "type": "bullets", "colour": "#DC2626", "items": ["43AD - Romans invade Britain", "410AD - Romans leave Britain"] }
+  ]
+}
+Rules:
+- Generate exactly 4 panels
+- "type": "bullets" for simple fact lists (6-8 items, each a short sentence or phrase)
+- "type": "terms" for term+definition pairs (5-6 items)
+- Panel headings should suit the subject: History often uses Key Facts, Key Vocabulary, Key People, Key Dates. Science often uses Key Facts, Key Vocabulary, Key Processes, Did You Know. Geography often uses Key Facts, Key Vocabulary, Key Places, Did You Know.
+- colour: pick 4 distinct colours from: #2563EB (blue), #16A34A (green), #7C3AED (purple), #DC2626 (red), #D97706 (amber), #DB2777 (pink)
+- Content must be accurate and aligned to UK National Curriculum for the year group
+- Keep bullet items concise (under 15 words) and definitions under 20 words`
+  }
+
   if (comprehensionMode) {
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
@@ -365,6 +391,7 @@ Rules:
     if (comprehensionMode) return res.status(200).json({ comprehension: parsed })
     if (exitTicketMode) return res.status(200).json({ exitTicket: parsed })
     if (vocabCardsMode) return res.status(200).json({ vocabCards: parsed })
+    if (knowledgeOrgMode) return res.status(200).json({ knowledgeOrg: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {
