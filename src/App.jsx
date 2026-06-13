@@ -869,7 +869,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
 
 // ── Resource Page ─────────────────────────────────────────────────────────────
 
-function BookDetailPage({ book, yearGroup, onBack, onCreateResources, checkTrial }) {
+function BookDetailPage({ book, yearGroup: initialYearGroup, onBack, onCreateResources, checkTrial }) {
   if (!book) return null
   const [details, setDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
@@ -882,6 +882,7 @@ function BookDetailPage({ book, yearGroup, onBack, onCreateResources, checkTrial
   const [checkedIdeas, setCheckedIdeas] = useState(new Set())
   // refreshing: Set of "Subject::index" strings currently refreshing
   const [refreshing, setRefreshing] = useState(new Set())
+  const [yearGroup, setYearGroup] = useState(initialYearGroup || '')
 
   useState(() => {
     fetchBookDetails(book.title, book.author)
@@ -1025,6 +1026,13 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
             <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT, marginBottom: 4 }}>Generate lesson ideas</div>
             <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>Select the subjects you'd like lesson ideas for, based on <em>{book.title}</em>.</p>
           </div>
+          <div style={{ marginBottom: 14, maxWidth: 220 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: TEXT, marginBottom: 4 }}>Year group</label>
+            <select style={s.select} value={yearGroup} onChange={e => setYearGroup(e.target.value)}>
+              <option value="">Select year group...</option>
+              {['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
           <div style={s.subjectGrid}>
             {SUBJECTS.map(sub => (
               <div key={sub.name}
@@ -1107,7 +1115,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
               <button
                 style={s.proceedBtn(checkedIdeas.size === 0)}
                 disabled={checkedIdeas.size === 0}
-                onClick={() => onCreateResources && onCreateResources(selectedIdeas)}
+                onClick={() => onCreateResources && onCreateResources(selectedIdeas, yearGroup)}
               >
                 Create resources →
               </button>
@@ -4217,7 +4225,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         book={{ title: modal.book.title, author: modal.book.author, yearGroup: modal.book.yearGroup || '', emoji: '📚' }}
         plans={bookPlans[modal.book.title] || []}
         onClose={() => setModal(null)}
-        onAddPlan={() => { setModal(null); onSelectBook && onSelectBook({ title: modal.book.title, author: modal.book.author, reason: '' }) }}
+        onAddPlan={() => { setModal(null); onSelectBook && onSelectBook({ title: modal.book.title, author: modal.book.author, reason: '', year_group: modal.book.yearGroup || '' }) }}
         onViewPlan={() => {}}
         onEditPlan={async (plan) => {
           await supabase.from('plans').update({ title: plan.title, subject: plan.subject }).eq('id', plan.id).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
@@ -6694,6 +6702,7 @@ export default function App() {
   const [legalPage, setLegalPage] = useState(null)
   const [selectedBook, setSelectedBook] = useState(null)
   const [selectedIdeas, setSelectedIdeas] = useState([])
+  const [resourcesYearGroup, setResourcesYearGroup] = useState('')
   const [searchState, setSearchState] = useState({
     subject: '', topic: '', yearGroup: '', focus: '',
     accordionOpen: false, contentType: 'Any', bookType: 'Any', readingLevel: 'Any', starRating: 0,
@@ -6835,9 +6844,9 @@ export default function App() {
       )}
       {page === 'book' && (
         <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} checkTrial={checkTrial} onBack={() => setPage('search')}
-          onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} />
+          onCreateResources={(ideas, yg) => { setSelectedIdeas(ideas); setResourcesYearGroup(yg || ''); setPage('lessonresources') }} />
       )}
-      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
+      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={resourcesYearGroup || selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
