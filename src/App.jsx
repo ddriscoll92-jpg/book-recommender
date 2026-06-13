@@ -1990,15 +1990,13 @@ async function downloadWritingFramePdf(wf) {
 
     const totalFixedH = stepMeasurements.reduce((s,m) => s + m.fixedH, 0)
     const pageBottom = pageH - 16  // leave room for footer bar
-    const availableForBoxes = pageBottom - y - totalFixedH - trailerH
-    const minBoxH = 18
+    const availableForBoxes = Math.max(0, pageBottom - y - totalFixedH - trailerH)
+    const minBoxH = 8
     const nonScaffoldSteps = tier.steps.filter(s => !s.scaffold).length || 1
     const boxHEach = Math.max(minBoxH, availableForBoxes / nonScaffoldSteps)
 
     stepMeasurements.forEach(({ step, instrLines, instrH, scaffoldLines, scaffoldH }) => {
       const boxH = boxHEach
-      const stepH = instrH + scaffoldH + (step.scaffold ? 0 : boxH) + 10
-      if (y + stepH > pageH - 16) { doc.addPage(); y = 16 }
 
       // Step number badge
       doc.setFillColor(tr,tg,tb)
@@ -2039,7 +2037,6 @@ async function downloadWritingFramePdf(wf) {
 
     // Conjunction box — coloured header style
     if (tier.conjunctions && tier.conjunctions.length > 0) {
-      if (y + 16 > pageH - 20) { doc.addPage(); y = 16 }
       doc.setFillColor(tr,tg,tb)
       doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
       doc.rect(margin, y + 3, contentW, 3, 'F')
@@ -2054,7 +2051,6 @@ async function downloadWritingFramePdf(wf) {
 
     // Challenge — coloured header style
     if (tier.challenge) {
-      if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
       doc.setFillColor(tr,tg,tb)
       doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
       doc.rect(margin, y + 3, contentW, 3, 'F')
