@@ -1,3 +1,5 @@
+import { sendPlanUpgradedEmail, sendSubscriptionCancelledEmail, sendPaymentFailedEmail } from './email-helpers.js'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -87,6 +89,32 @@ export default async function handler(req, res) {
     })
   }
 
+  async function getUserInfo(userId) {
+    try {
+      const [userRes, profileRes] = await Promise.all([
+        fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+          headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
+        }),
+        fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=display_name`, {
+          headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
+        }),
+      ])
+      const userData = await userRes.json()
+      const profiles = await profileRes.json()
+      const profile = Array.isArray(profiles) ? profiles[0] : null
+      return { email: userData?.email, name: profile?.display_name || '' }
+    } catch (err) {
+      console.error('getUserInfo error:', err.message)
+      return { email: null, name: '' }
+    }
+  }
+
+  function planDisplayName(plan) {
+    if (plan === 'premium') return 'Premium'
+    if (plan === 'basic') return 'Basic'
+    return plan
+  }
+
   async function getSubscription(subId) {
     const r = await fetch(`https://api.stripe.com/v1/subscriptions/${subId}`, {
       headers: { 'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}` }
@@ -106,6 +134,8 @@ export default async function handler(req, res) {
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
           })
+          const { email, name } = await getUserInfo(userId)
+          if (email) await sendPlanUpgradedEmail(email, name, planDisplayName(plan))
         }
         break
       }
@@ -119,21 +149,51 @@ export default async function handler(req, res) {
         }
         break
       }
-      case 'customer.subscription.deleted':
+      case 'customer.subscription.deleted': {
+        const obj = event.data.object
+        const sub = await getSubscription(obj.id)
+        const userId = sub.metadata?.userId
+        if (userId) {
+          await updateProfile(userId, { plan: 'trial' })
+          const { email, name } = await getUserInfo(userId)
+          if (email) await sendSubscriptionCancelledEmail(email, name)
+        }
+        break
+      }
       case 'invoice.payment_failed': {
         const obj = event.data.object
-        const subId = obj.subscription || obj.id
+        const subId = obj.subscription
         if (subId) {
           const sub = await getSubscription(subId)
           const userId = sub.metadata?.userId
-          if (userId) await updateProfile(userId, { plan: 'trial' })
+          if (userId) {
+            const { email, name } = await getUserInfo(userId)
+            if (email) await sendPaymentFailedEmail(email, name)
+          }
         }
         break
       }
       case 'customer.subscription.updated': {
         const sub = event.data.object
         if (sub.metadata?.userId && sub.metadata?.plan) {
-          await updateProfile(sub.metadata.userId, { plan: sub.metadata.plan })
+          const userId = sub.metadata.userId
+          const newPlan = sub.metadata.plan
+          // Check current plan before updating, to detect a genuine change
+          let currentPlan = null
+          try {
+            const r = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=plan`, {
+              headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
+            })
+            const rows = await r.json()
+            currentPlan = Array.isArray(rows) ? rows[0]?.plan : null
+          } catch (err) {
+            console.error('subscription.updated plan lookup error:', err.message)
+          }
+          await updateProfile(userId, { plan: newPlan })
+          if (currentPlan && currentPlan !== newPlan) {
+            const { email, name } = await getUserInfo(userId)
+            if (email) await sendPlanUpgradedEmail(email, name, planDisplayName(newPlan))
+          }
         }
         break
       }
