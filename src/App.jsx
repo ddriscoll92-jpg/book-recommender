@@ -1969,7 +1969,9 @@ async function downloadWritingFramePdf(wf) {
       doc.setFontSize(9); doc.setFont('helvetica','normal')
       const instrLines = doc.splitTextToSize(step.instruction, contentW - 14)
       const instrH = instrLines.length * 4.5
-      const scaffoldH = step.scaffold ? 12 : 0
+      doc.setFontSize(9.5)
+      const scaffoldLines = step.scaffold ? doc.splitTextToSize(step.scaffold, contentW - 8) : []
+      const scaffoldH = step.scaffold ? scaffoldLines.length * 5 + 4 : 0
       return { step, instrLines, instrH, scaffoldH, fixedH: instrH + 4 + scaffoldH + 6 }
     })
 
@@ -1992,7 +1994,7 @@ async function downloadWritingFramePdf(wf) {
     const minBoxH = 18
     const boxHEach = Math.max(minBoxH, availableForBoxes / tier.steps.length)
 
-    stepMeasurements.forEach(({ step, instrLines, instrH, scaffoldH }) => {
+    stepMeasurements.forEach(({ step, instrLines, instrH, scaffoldLines, scaffoldH }) => {
       const boxH = boxHEach
       const stepH = instrH + scaffoldH + boxH + 10
       if (y + stepH > pageH - 16) { doc.addPage(); y = 16 }
@@ -2008,13 +2010,14 @@ async function downloadWritingFramePdf(wf) {
       doc.text(instrLines, margin + 11, y + 2.5)
       y += instrH + 4
 
-      // Scaffold (if present)
+      // Scaffold (if present) — wrapped, box height matches content
       if (step.scaffold) {
+        const sBoxH = scaffoldLines.length * 5 + 4
         doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
-        doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5)
+        doc.roundedRect(margin, y, contentW, sBoxH, 1.5, 1.5)
         doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
-        doc.text(step.scaffold, margin+4, y+6)
-        y += 12
+        doc.text(scaffoldLines, margin+4, y+6)
+        y += sBoxH + 3
       }
 
       // Answer box — fills remaining page space, faint guide lines
