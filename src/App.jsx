@@ -1719,17 +1719,43 @@ async function downloadComprehensionPdf(comp) {
     doc.line(pageW/2 - titleW/2, y + 1.5, pageW/2 + titleW/2, y + 1.5)
     y += 10
 
-    // Passage
-    doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+    // ── Two-pass: measure total content height at default sizes, then scale down
+    // line heights / spacing if needed so everything fits on one page ──
+    const pageBottom = pageH - margin - 10
+    const baseLineH = 7.5
+    doc.setFontSize(11); doc.setFont('helvetica','normal')
     const passageLines = doc.splitTextToSize(tier.passage || '', contentW)
-    const lineH = 7.5
+    let estH = passageLines.length * baseLineH + 4 + 6  // passage + gap + divider gap
+
+    doc.setFontSize(10); doc.setFont('helvetica','bold')
+    const qMeasurements = (tier.questions || []).map(q => {
+      const qLines = doc.splitTextToSize(q.q || '', contentW - 12)
+      if (q.type === 'multiple_choice') {
+        const h = qLines.length * 5.5 + 4 + 26
+        estH += h
+        return { qLines, h, numLines: 0 }
+      } else {
+        const numLines = q.lines || 2
+        const h = qLines.length * 5.5 + 3 + numLines * 10 + 4
+        estH += h
+        return { qLines, h, numLines }
+      }
+    })
+
+    const availableH = pageBottom - y
+    const scale = estH > availableH ? Math.max(0.55, availableH / estH) : 1
+    const lineH = baseLineH * scale
+    const qLineGap = 5.5 * scale
+    const ansLineH = 10 * scale
+
+    // Passage
+    doc.setFontSize(11 * Math.min(1, scale + 0.15)); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
     passageLines.forEach(line => {
-      if (y + lineH > pageH - margin - 10) { doc.addPage(); y = margin }
       doc.text(line, margin, y)
       y += lineH
     })
 
-    y += 4
+    y += 4 * scale
 
     // Dashed divider
     doc.setDrawColor(100,100,100); doc.setLineWidth(0.3)
@@ -1742,7 +1768,7 @@ async function downloadComprehensionPdf(comp) {
 
     // Questions
     ;(tier.questions || []).forEach((q, qi) => {
-      if (y + 20 > pageH - margin - 10) { doc.addPage(); y = margin }
+      const { qLines } = qMeasurements[qi]
 
       if (q.type === 'multiple_choice') {
         // Question text
@@ -1753,9 +1779,8 @@ async function downloadComprehensionPdf(comp) {
         doc.setFontSize(8); doc.setFont('helvetica','bold')
         doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
         doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-        const qLines = doc.splitTextToSize(q.q || '', contentW - 12)
         doc.text(qLines, margin + 11, y + 2)
-        y += qLines.length * 5.5 + 4
+        y += qLines.length * qLineGap + 4 * scale
 
         // 2x2 options grid
         const opts = q.options || []
@@ -1763,13 +1788,13 @@ async function downloadComprehensionPdf(comp) {
         for (let oi = 0; oi < 4; oi++) {
           const col = oi % 2; const row = Math.floor(oi / 2)
           const ox = margin + col * colW2 + 4
-          const oy = y + row * 10
+          const oy = y + row * 10 * scale
           doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.4)
           doc.rect(ox, oy - boxSize + 1, boxSize, boxSize)
           doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
           doc.text(opts[oi] || '', ox + boxSize + 2, oy)
         }
-        y += 26
+        y += 26 * scale
 
       } else {
         // Standard question with writing lines
@@ -1778,26 +1803,24 @@ async function downloadComprehensionPdf(comp) {
         doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
         doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
         doc.setFontSize(10); doc.setFont('helvetica','bold')
-        const qLines = doc.splitTextToSize(q.q || '', contentW - 12)
         doc.text(qLines, margin + 11, y + 2)
-        y += qLines.length * 5.5 + 3
+        y += qLines.length * qLineGap + 3 * scale
 
         const numLines = q.lines || 2
         for (let li = 0; li < numLines; li++) {
-          if (y + 8 > pageH - margin - 10) { doc.addPage(); y = margin }
           // Solid answer line
           doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
-          doc.line(margin, y + 5, margin + contentW, y + 5)
+          doc.line(margin, y + 5 * scale, margin + contentW, y + 5 * scale)
           // Dashed guide line
           doc.setDrawColor(160,160,160); doc.setLineWidth(0.2)
           let ddx = margin
           while (ddx < margin + contentW) {
-            doc.line(ddx, y + 9, Math.min(ddx + 2, margin + contentW), y + 9)
+            doc.line(ddx, y + 9 * scale, Math.min(ddx + 2, margin + contentW), y + 9 * scale)
             ddx += 4
           }
-          y += 10
+          y += ansLineH
         }
-        y += 4
+        y += 4 * scale
       }
     })
 
