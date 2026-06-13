@@ -1942,31 +1942,57 @@ async function downloadWritingFramePdf(wf) {
 
     // Word bank (Support only)
     if (tier.wordBank && tier.wordBank.length > 0) {
-      doc.setFillColor(255,251,235); doc.setDrawColor(217,119,6); doc.setLineWidth(0.5)
-      doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'F')
-      doc.rect(margin, y + 4.5, contentW, 4.5, 'F')
-      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-      doc.text('Word Bank', margin + 4, y + 6.2)
-      y += 13
+      doc.setFillColor(tr,tg,tb)
+      doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
+      doc.rect(margin, y + 3, contentW, 3, 'F')
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+      doc.text('WORD BANK', margin + 4, y + 4.2)
+      y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      doc.text(tier.wordBank.join('   ·   '), margin + 4, y)
+      const wbLines = doc.splitTextToSize(tier.wordBank.join('   ·   '), contentW)
+      doc.text(wbLines, margin + 4, y)
+      y += wbLines.length * 4.5
       doc.setFontSize(7.5); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
-      doc.text('Use these words to help describe the scene', margin + 4, y + 5)
-      y += 12
+      doc.text('Use these words to help describe the scene', margin + 4, y)
+      y += 8
     }
 
     // Steps — coloured header style matching knowledge organiser panels
-    tier.steps.forEach((step) => {
+    // Two-pass: measure fixed content (instructions, scaffolds, headers below), then
+    // distribute remaining page space across answer boxes so the page is filled.
+    const stepMeasurements = tier.steps.map(step => {
       doc.setFontSize(9); doc.setFont('helvetica','normal')
       const instrLines = doc.splitTextToSize(step.instruction, contentW - 14)
       const instrH = instrLines.length * 4.5
       const scaffoldH = step.scaffold ? 12 : 0
-      const boxH = Math.max(18, step.lines * 7)
+      return { step, instrLines, instrH, scaffoldH, fixedH: instrH + 4 + scaffoldH + 6 }
+    })
+
+    // Estimate height of conjunctions/challenge blocks (fixed, appear after steps)
+    let trailerH = 0
+    if (tier.conjunctions?.length) {
+      doc.setFontSize(9)
+      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW)
+      trailerH += 9 + conjLines.length * 4.5 + 4
+    }
+    if (tier.challenge) {
+      doc.setFontSize(9)
+      const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
+      trailerH += 9 + cLines.length * 4.5 + 4
+    }
+
+    const totalFixedH = stepMeasurements.reduce((s,m) => s + m.fixedH, 0)
+    const pageBottom = pageH - 16  // leave room for footer bar
+    const availableForBoxes = pageBottom - y - totalFixedH - trailerH
+    const minBoxH = 18
+    const boxHEach = Math.max(minBoxH, availableForBoxes / tier.steps.length)
+
+    stepMeasurements.forEach(({ step, instrLines, instrH, scaffoldH }) => {
+      const boxH = boxHEach
       const stepH = instrH + scaffoldH + boxH + 10
+      if (y + stepH > pageH - 16) { doc.addPage(); y = 16 }
 
-      if (y + stepH > pageH - 20) { doc.addPage(); y = 16 }
-
-      // Step number badge (coloured bullet circle, like knowledge organiser bullets but bigger)
+      // Step number badge
       doc.setFillColor(tr,tg,tb)
       doc.circle(margin + 4, y + 2, 4, 'F')
       doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
@@ -1977,7 +2003,7 @@ async function downloadWritingFramePdf(wf) {
       doc.text(instrLines, margin + 11, y + 2.5)
       y += instrH + 4
 
-      // Scaffold (if present) — coloured-border box like answer boxes
+      // Scaffold (if present)
       if (step.scaffold) {
         doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
         doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5)
@@ -1986,10 +2012,10 @@ async function downloadWritingFramePdf(wf) {
         y += 12
       }
 
-      // Answer box — fixed height, faint guide lines (matches exit ticket style)
+      // Answer box — fills remaining page space, faint guide lines
       doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
       doc.roundedRect(margin, y, contentW, boxH, 1.5, 1.5)
-      const numGuides = step.lines || Math.max(1, Math.floor(boxH / 7))
+      const numGuides = Math.max(1, Math.floor(boxH / 7))
       for (let li = 1; li <= numGuides; li++) {
         const gy = y + (boxH / (numGuides + 1)) * li
         doc.setDrawColor(232,230,222); doc.setLineWidth(0.2)
@@ -2002,25 +2028,26 @@ async function downloadWritingFramePdf(wf) {
     if (tier.conjunctions && tier.conjunctions.length > 0) {
       if (y + 16 > pageH - 20) { doc.addPage(); y = 16 }
       doc.setFillColor(tr,tg,tb)
-      doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'F')
-      doc.rect(margin, y + 4.5, contentW, 4.5, 'F')
-      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-      doc.text('Subordinating Conjunctions', margin + 4, y + 6.2)
-      y += 13
+      doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
+      doc.rect(margin, y + 3, contentW, 3, 'F')
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+      doc.text('SUBORDINATING CONJUNCTIONS', margin + 4, y + 4.2)
+      y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      doc.text(tier.conjunctions.join('   ·   '), margin + 4, y)
-      y += 8
+      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW)
+      doc.text(conjLines, margin + 4, y)
+      y += conjLines.length * 4.5 + 4
     }
 
     // Challenge — coloured header style
     if (tier.challenge) {
       if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
       doc.setFillColor(217,119,6)
-      doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'F')
-      doc.rect(margin, y + 4.5, contentW, 4.5, 'F')
-      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-      doc.text('Challenge', margin + 4, y + 6.2)
-      y += 13
+      doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
+      doc.rect(margin, y + 3, contentW, 3, 'F')
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+      doc.text('CHALLENGE', margin + 4, y + 4.2)
+      y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
       const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
       doc.text(cLines, margin+4, y)
