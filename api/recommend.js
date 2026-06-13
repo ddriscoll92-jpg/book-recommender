@@ -211,7 +211,7 @@ Rules:
 - Core prompts require some explanation and understanding
 - Extension prompts require application, analysis or deeper thinking
 - lines is 2 or 3 (space for writing) — use 3 for prompts expecting fuller answers, 2 for short ones
-- Keep prompt text concise — aim for under 15 words, must fit on a small card in 1-2 lines`
+- CRITICAL: prompt text must be a complete sentence or phrase under 12 words. Never truncate or cut off mid-sentence. If a prompt needs more context, shorten it by removing detail rather than writing a longer sentence.`
   }
 
   if (vocabCardsMode) {
