@@ -1966,8 +1966,8 @@ async function downloadWritingFramePdf(wf) {
     // Two-pass: measure fixed content (instructions, scaffolds, headers below), then
     // distribute remaining page space across answer boxes so the page is filled.
     const stepMeasurements = tier.steps.map(step => {
-      doc.setFontSize(9); doc.setFont('helvetica','normal')
-      const instrLines = doc.splitTextToSize(step.instruction, contentW - 18)
+      doc.setFontSize(9); doc.setFont('helvetica','bold')
+      const instrLines = doc.splitTextToSize(step.instruction, contentW - 20)
       const instrH = instrLines.length * 4.5
       doc.setFontSize(9.5)
       const scaffoldLines = step.scaffold ? doc.splitTextToSize(step.scaffold, contentW - 8) : []
