@@ -1509,59 +1509,57 @@ async function downloadExitTicketPdf(et) {
         const tx = margin + col * (ticketW + 6)
         const ty = margin + row * (ticketH + 6)
 
-        // Outer border (thick coloured)
-        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(2)
-        doc.roundedRect(tx, ty, ticketW, ticketH, 3, 3)
+        // Single coloured border (matches knowledge organiser panel style)
+        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.6)
+        doc.roundedRect(tx, ty, ticketW, ticketH, 2, 2)
 
-        // Inner border (thin)
-        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.4)
-        doc.roundedRect(tx + 3, ty + 3, ticketW - 6, ticketH - 6, 2, 2)
-
-        // Header bar
+        // Header bar — full width, rounded top only
         doc.setFillColor(tr,tg,tb)
-        doc.rect(tx + 3, ty + 3, ticketW - 6, 10, 'F')
-        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-        doc.text('EXIT TICKET', tx + ticketW/2, ty + 9.5, { align: 'center' })
+        doc.roundedRect(tx, ty, ticketW, 11, 2, 2, 'F')
+        doc.rect(tx, ty + 5.5, ticketW, 5.5, 'F') // square off bottom of header
+        doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+        doc.text('EXIT TICKET', tx + 4, ty + 7.2)
+        doc.setFontSize(7); doc.setFont('helvetica','normal')
+        doc.text(tier.level, tx + ticketW - 4, ty + 7.2, { align: 'right' })
 
         // Title
         doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(tr,tg,tb)
-        const titleLines = doc.splitTextToSize(et.title, ticketW - 12)
-        doc.text(titleLines.slice(0,1), tx + ticketW/2, ty + 18, { align: 'center' })
+        const titleLines = doc.splitTextToSize(et.title, ticketW - 8)
+        doc.text(titleLines.slice(0,1), tx + 4, ty + 18)
 
-        // Tier badge
-        doc.setFontSize(6); doc.setFont('helvetica','normal'); doc.setTextColor(tr,tg,tb)
-        doc.text(tier.level, tx + ticketW - 6, ty + 18, { align: 'right' })
-
-        // Prompts with lines
-        let py = ty + 24
-        const lineW = ticketW - 12
+        // Prompts with bullet-style markers and writing lines
+        let py = ty + 25
+        const lineW = ticketW - 14
 
         tier.prompts.forEach(p => {
           if (py + 12 > ty + ticketH - 14) return
-          // Prompt text
-          doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+          // Coloured bullet dot (matches knowledge organiser style)
+          doc.setFillColor(tr,tg,tb); doc.circle(tx + 5, py - 1.3, 0.8, 'F')
+          doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
           const pLines = doc.splitTextToSize(p.text, lineW)
-          doc.text(pLines.slice(0,2), tx + 6, py)
-          py += pLines.slice(0,2).length * 4 + 2
+          doc.text(pLines.slice(0,2), tx + 8, py)
+          py += pLines.slice(0,2).length * 4.2 + 2
 
           // Writing lines
           const numLines = p.lines || 2
           for (let li = 0; li < numLines; li++) {
-            doc.setDrawColor(180,178,169); doc.setLineWidth(0.3)
-            doc.line(tx + 6, py + 4, tx + 6 + lineW, py + 4)
+            doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
+            doc.line(tx + 8, py + 4, tx + 8 + lineW - 3, py + 4)
             py += 6
           }
           py += 2
         })
 
         // Name / Date footer
-        const footerY = ty + ticketH - 10
-        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100)
-        doc.text('Name:', tx + 6, footerY)
+        const footerY = ty + ticketH - 8
+        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.3)
+        doc.line(tx + 4, footerY - 4, tx + ticketW - 4, footerY - 4)
+        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(95,94,90)
+        doc.text('Name:', tx + 4, footerY)
         doc.setDrawColor(180,178,169); doc.setLineWidth(0.3)
-        doc.line(tx + 18, footerY + 0.5, tx + ticketW/2 - 2, footerY + 0.5)
+        doc.line(tx + 14, footerY + 0.5, tx + ticketW/2 - 2, footerY + 0.5)
         doc.text('Date:', tx + ticketW/2 + 2, footerY)
-        doc.line(tx + ticketW/2 + 12, footerY + 0.5, tx + ticketW - 6, footerY + 0.5)
+        doc.line(tx + ticketW/2 + 11, footerY + 0.5, tx + ticketW - 4, footerY + 0.5)
       }
     }
 
@@ -1624,23 +1622,29 @@ function ExitTicketOutput({ exitTicket: et }) {
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>· 4 cards per page</span>
               </div>
               <div style={{ background: ts.bg, padding: '12px 16px' }}>
-                {/* Mini ticket preview */}
-                <div style={{ border: `2px solid ${ts.border}`, borderRadius: 8, padding: '10px 12px', maxWidth: 280, background: BG }}>
-                  <div style={{ background: ts.headerBg, borderRadius: 4, padding: '3px 8px', textAlign: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', letterSpacing: '0.1em' }}>EXIT TICKET</span>
+                {/* Mini ticket preview - matches knowledge organiser panel style */}
+                <div style={{ border: `1.5px solid ${ts.border}`, borderRadius: 8, overflow: 'hidden', maxWidth: 280, background: '#fff' }}>
+                  <div style={{ background: ts.headerBg, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>EXIT TICKET</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{tier.level}</span>
                   </div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: ts.border, textAlign: 'center', marginBottom: 8 }}>{et.title}</div>
-                  {tier.prompts.map((p, pi) => (
-                    <div key={pi} style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: TEXT, marginBottom: 3 }}>{p.text}</div>
-                      {Array.from({ length: p.lines }).map((_, li) => (
-                        <div key={li} style={{ height: 1, background: BORDER, marginBottom: 4 }} />
-                      ))}
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: ts.border, marginBottom: 8 }}>{et.title}</div>
+                    {tier.prompts.map((p, pi) => (
+                      <div key={pi} style={{ marginBottom: 8, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: ts.border, marginTop: 5, flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: TEXT, marginBottom: 3 }}>{p.text}</div>
+                          {Array.from({ length: p.lines }).map((_, li) => (
+                            <div key={li} style={{ height: 1, background: BORDER, marginBottom: 4 }} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 6, paddingTop: 6, borderTop: `0.5px solid ${ts.border}` }}>
+                      <span style={{ fontSize: 9, color: MUTED }}>Name: ______________</span>
+                      <span style={{ fontSize: 9, color: MUTED }}>Date: _______</span>
                     </div>
-                  ))}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 6, paddingTop: 6, borderTop: `0.5px solid ${BORDER}` }}>
-                    <span style={{ fontSize: 9, color: MUTED }}>Name: ______________</span>
-                    <span style={{ fontSize: 9, color: MUTED }}>Date: _______</span>
                   </div>
                 </div>
               </div>
