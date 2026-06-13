@@ -1969,8 +1969,9 @@ async function downloadWritingFramePdf(wf) {
       const instrLines = doc.splitTextToSize(step.instruction, contentW - 20)
       const instrH = instrLines.length * 4.5
       doc.setFontSize(9.5)
-      const scaffoldLines = step.scaffold ? doc.splitTextToSize(step.scaffold, contentW - 8) : []
-      const scaffoldH = step.scaffold ? scaffoldLines.length * 5 + 8 : 0
+      const normalizedScaffold = step.scaffold ? step.scaffold.replace(/_{4,}/g, '_'.repeat(17)) : ''
+      const scaffoldLines = step.scaffold ? doc.splitTextToSize(normalizedScaffold, contentW - 8) : []
+      const scaffoldH = step.scaffold ? scaffoldLines.length * 7 + 6 : 0
       return { step, instrLines, instrH, scaffoldLines, scaffoldH, fixedH: instrH + 4 + scaffoldH + 6 }
     })
 
@@ -2012,11 +2013,14 @@ async function downloadWritingFramePdf(wf) {
 
       // Scaffold (if present) — wrapped, box height matches content
       if (step.scaffold) {
-        const sBoxH = scaffoldLines.length * 5 + 8
+        const lineGap = 7
+        const sBoxH = scaffoldLines.length * lineGap + 6
         doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
         doc.roundedRect(margin, y, contentW, sBoxH, 1.5, 1.5)
         doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
-        doc.text(scaffoldLines, margin+4, y+10)
+        scaffoldLines.forEach((line, li) => {
+          doc.text(line, margin+4, y+10+li*lineGap)
+        })
         y += sBoxH + 6
         return
       }
