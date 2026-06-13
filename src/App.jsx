@@ -652,7 +652,15 @@ function SearchPage({ onSelectBook, searchState, setSearchState, checkTrial }) {
   const activeFilterCount = [contentType !== 'Any', bookType !== 'Any', readingLevel !== 'Any', starRating > 0].filter(Boolean).length
 
   async function fetchBooks(loadMore = false) {
-    if (!subject.trim() || !topic.trim() || !yearGroup) { set('error', 'Please fill in subject, topic and year group before searching.'); return }
+    const missing = []
+    if (!subject.trim()) missing.push('subject')
+    if (!topic.trim()) missing.push('topic')
+    if (!yearGroup) missing.push('year group')
+    if (missing.length > 0) {
+      const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}`
+      set('error', `Please select a ${list} before searching.`)
+      return
+    }
     if (!loadMore) {
       const allowed = await checkTrial('book_searches')
       if (!allowed) return
@@ -675,7 +683,8 @@ function SearchPage({ onSelectBook, searchState, setSearchState, checkTrial }) {
 
     const prompt = `You are a UK primary school teacher assistant. Recommend exactly ${count} books for ${yearGroup} students studying ${topic} in ${subject}.
 ${focusLine}${contentLine}${bookTypeLine}${levelLine}${exclusions}
-IMPORTANT: Only recommend books you are certain exist. Every title and author must be a real, published book. Do not invent or guess titles.
+IMPORTANT: Only recommend books from your own knowledge that are real, published books with accurate titles and authors. Do not invent fictional titles. If you are not confident a book exists, choose a different one you are confident about.
+Respond with ONLY the JSON array below — no other text, explanation, or commentary.
 Return ONLY a valid JSON array with no extra text or markdown fences. Each object must have:
 - "title": string
 - "author": string
@@ -794,6 +803,9 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
             )}
           </div>
         </div>
+        {error && (
+          <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '0.75rem 1rem', fontSize: 13, marginTop: 10 }}>{error}</div>
+        )}
         <button
           style={{ width: '100%', height: 50, background: loading ? '#888780' : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 8 }}
           onClick={() => fetchBooks(false)}

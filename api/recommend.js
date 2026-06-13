@@ -386,8 +386,19 @@ Rules:
     try {
       parsed = JSON.parse(clean)
     } catch(parseErr) {
-      console.error('JSON parse error:', parseErr.message, 'Raw text:', clean.slice(0, 500))
-      return res.status(500).json({ error: `JSON parse failed: ${parseErr.message}` })
+      // Fallback: try to extract a JSON array or object embedded in extra text
+      const match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/)
+      if (match) {
+        try {
+          parsed = JSON.parse(match[0])
+        } catch (innerErr) {
+          console.error('JSON parse error (fallback failed):', innerErr.message, 'Raw text:', clean.slice(0, 500))
+          return res.status(500).json({ error: `JSON parse failed: ${innerErr.message}` })
+        }
+      } else {
+        console.error('JSON parse error:', parseErr.message, 'Raw text:', clean.slice(0, 500))
+        return res.status(500).json({ error: `JSON parse failed: ${parseErr.message}` })
+      }
     }
 
     if (worksheetMode) return res.status(200).json({ worksheet: parsed })
