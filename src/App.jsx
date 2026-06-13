@@ -1929,85 +1929,102 @@ async function downloadWritingFramePdf(wf) {
     doc.text(wf.contextPrompt || '', margin, y)
     y += 8
 
-    // Base sentence banner
+    // Base sentence banner — coloured block, left-aligned text
     doc.setFillColor(tr,tg,tb)
-    doc.roundedRect(margin, y, contentW, 12, 2, 2, 'F')
-    doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-    doc.text(wf.baseSentence || '', pageW/2, y+8, { align: 'center' })
-    y += 18
+    doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
+    doc.rect(margin, y + 3, contentW, 3, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+    doc.text('BASE SENTENCE', margin + 4, y + 4.2)
+    y += 9
+    doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+    doc.text(wf.baseSentence || '', margin, y)
+    y += 9
 
     // Word bank (Support only)
     if (tier.wordBank && tier.wordBank.length > 0) {
       doc.setFillColor(255,251,235); doc.setDrawColor(217,119,6); doc.setLineWidth(0.5)
-      doc.roundedRect(margin, y, contentW, 14, 2, 2, 'FD')
-      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14)
-      doc.text('Word bank:', margin+3, y+6)
-      doc.setFont('helvetica','normal')
-      doc.text(tier.wordBank.join('  ·  '), margin+26, y+6)
-      doc.setFontSize(7.5); doc.setFont('helvetica','italic')
-      doc.text('Use these words to help describe the scene', margin+3, y+11)
-      y += 18
+      doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'F')
+      doc.rect(margin, y + 4.5, contentW, 4.5, 'F')
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+      doc.text('Word Bank', margin + 4, y + 6.2)
+      y += 13
+      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+      doc.text(tier.wordBank.join('   ·   '), margin + 4, y)
+      doc.setFontSize(7.5); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
+      doc.text('Use these words to help describe the scene', margin + 4, y + 5)
+      y += 12
     }
 
-    // Steps
+    // Steps — coloured header style matching knowledge organiser panels
     tier.steps.forEach((step) => {
-      const stepH = step.lines * 7 + (step.scaffold ? 10 : 0) + 22
+      doc.setFontSize(9); doc.setFont('helvetica','normal')
+      const instrLines = doc.splitTextToSize(step.instruction, contentW - 14)
+      const instrH = instrLines.length * 4.5
+      const scaffoldH = step.scaffold ? 12 : 0
+      const boxH = Math.max(18, step.lines * 7)
+      const stepH = instrH + scaffoldH + boxH + 10
+
       if (y + stepH > pageH - 20) { doc.addPage(); y = 16 }
 
-      // Step number circle
+      // Step number badge (coloured bullet circle, like knowledge organiser bullets but bigger)
       doc.setFillColor(tr,tg,tb)
-      doc.circle(margin + 5, y + 5, 5, 'F')
-      doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-      doc.text(String(step.number), margin+5, y+7, { align:'center' })
+      doc.circle(margin + 4, y + 2, 4, 'F')
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+      doc.text(String(step.number), margin + 4, y + 3.3, { align:'center' })
 
       // Step instruction
-      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      const instrLines = doc.splitTextToSize(step.instruction, contentW - 16)
-      doc.text(instrLines, margin+13, y+6)
-      y += instrLines.length * 5 + 6
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+      doc.text(instrLines, margin + 11, y + 2.5)
+      y += instrH + 4
 
-      // Scaffold (if present)
+      // Scaffold (if present) — coloured-border box like answer boxes
       if (step.scaffold) {
-        doc.setFillColor(240,249,255); doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
-        doc.roundedRect(margin, y, contentW, 10, 1.5, 1.5, 'FD')
-        doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-        doc.text(step.scaffold, margin+4, y+7)
-        y += 13
+        doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
+        doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5)
+        doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
+        doc.text(step.scaffold, margin+4, y+6)
+        y += 12
       }
 
-      // Writing lines
-      doc.setFillColor(255,255,255); doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
-      doc.roundedRect(margin, y, contentW, step.lines * 7 + 4, 1.5, 1.5, 'FD')
-      for (let li = 0; li < step.lines; li++) {
-        doc.setDrawColor(220,218,210); doc.setLineWidth(0.2)
-        doc.line(margin+4, y + 4 + (li+1)*7, margin + contentW - 4, y + 4 + (li+1)*7)
+      // Answer box — fixed height, faint guide lines (matches exit ticket style)
+      doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
+      doc.roundedRect(margin, y, contentW, boxH, 1.5, 1.5)
+      const numGuides = step.lines || Math.max(1, Math.floor(boxH / 7))
+      for (let li = 1; li <= numGuides; li++) {
+        const gy = y + (boxH / (numGuides + 1)) * li
+        doc.setDrawColor(232,230,222); doc.setLineWidth(0.2)
+        doc.line(margin + 3, gy, margin + contentW - 3, gy)
       }
-      y += step.lines * 7 + 8
+      y += boxH + 6
     })
 
-    // Conjunction box
+    // Conjunction box — coloured header style
     if (tier.conjunctions && tier.conjunctions.length > 0) {
-      if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
-      doc.setFillColor(240,240,255); doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
-      doc.roundedRect(margin, y, contentW, 14, 2, 2, 'FD')
-      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(60,52,137)
-      doc.text('Subordinating conjunctions:', margin+3, y+6)
-      doc.setFont('helvetica','normal')
-      doc.text(tier.conjunctions.join('   '), margin+56, y+6)
-      y += 18
+      if (y + 16 > pageH - 20) { doc.addPage(); y = 16 }
+      doc.setFillColor(tr,tg,tb)
+      doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'F')
+      doc.rect(margin, y + 4.5, contentW, 4.5, 'F')
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+      doc.text('Subordinating Conjunctions', margin + 4, y + 6.2)
+      y += 13
+      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+      doc.text(tier.conjunctions.join('   ·   '), margin + 4, y)
+      y += 8
     }
 
-    // Challenge
+    // Challenge — coloured header style
     if (tier.challenge) {
       if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
-      doc.setFillColor(255,251,235); doc.setDrawColor(217,119,6); doc.setLineWidth(0.6)
-      doc.roundedRect(margin, y, contentW, 16, 2, 2, 'FD')
-      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14)
-      doc.text('Challenge:', margin+3, y+6)
-      doc.setFont('helvetica','normal')
+      doc.setFillColor(217,119,6)
+      doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'F')
+      doc.rect(margin, y + 4.5, contentW, 4.5, 'F')
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+      doc.text('Challenge', margin + 4, y + 6.2)
+      y += 13
+      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
       const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
-      doc.text(cLines, margin+3, y+12)
-      y += 20
+      doc.text(cLines, margin+4, y)
+      y += cLines.length * 4.5 + 4
     }
 
     const stars = tier.level === 'Support' ? '[Support]' : tier.level === 'Core' ? '[Core]' : '[Extension]'
