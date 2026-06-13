@@ -1530,22 +1530,20 @@ async function downloadExitTicketPdf(et) {
         // Prompts with bullet-style markers and writing lines
         const lineW = ticketW - 14
         const contentTop = ty + 25
-        const contentBottom = ty + ticketH - 12  // space above footer divider
+        const contentBottom = ty + ticketH - 14  // space above footer divider
 
-        // Pass 1: measure text height for each prompt
+        // Measure text height for each prompt
         const measured = tier.prompts.map(p => {
           doc.setFontSize(8.5); doc.setFont('helvetica','bold')
           const pLines = doc.splitTextToSize(p.text, lineW).slice(0,2)
-          return { p, textH: pLines.length * 4.2 + 2, pLines }
+          return { p, pLines, textH: pLines.length * 4.2 + 2 }
         })
+
+        // Work out a generous fixed gap between writing lines that fills the card
         const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
+        const totalLineCount = measured.reduce((s,m) => s + (m.p.lines || 2), 0)
         const availableH = contentBottom - contentTop
-        const minFirstGap = 5
-        const numPrompts = measured.length
-        const totalDeclaredLines = measured.reduce((s,m) => s + (m.p.lines || 2), 0)
-        const extraLines = totalDeclaredLines - numPrompts  // lines beyond the first per prompt
-        const remainingForExtra = Math.max(0, availableH - totalTextH - (numPrompts * minFirstGap))
-        const lineGap = extraLines > 0 ? remainingForExtra / extraLines : 6
+        const gapPerLine = totalLineCount > 0 ? Math.max(7, (availableH - totalTextH) / totalLineCount) : 7
 
         let py = contentTop
         measured.forEach(({ p, pLines }) => {
@@ -1556,8 +1554,8 @@ async function downloadExitTicketPdf(et) {
 
           const numLines = p.lines || 2
           for (let li = 0; li < numLines; li++) {
+            py += gapPerLine
             doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
-            py += (li === 0 ? minFirstGap : lineGap)
             doc.line(tx + 8, py, tx + 8 + lineW - 3, py)
           }
         })
