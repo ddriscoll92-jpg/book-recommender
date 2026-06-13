@@ -1893,11 +1893,10 @@ async function downloadWritingFramePdf(wf) {
   wf.tiers.forEach((tier, ti) => {
     if (ti > 0) doc.addPage()
     const [tr,tg,tb] = hexToRgb(tier.colour)
-    const [hr,hg,hb] = hexToRgb(wf.themeColour || '#7C3AED')
     let y = 0
 
     // Header bar
-    doc.setFillColor(hr,hg,hb)
+    doc.setFillColor(tr,tg,tb)
     doc.rect(0, 0, pageW, 26, 'F')
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
     doc.text('Uplevelling Sentences', pageW/2, 8, { align: 'center' })
@@ -1905,9 +1904,9 @@ async function downloadWritingFramePdf(wf) {
     doc.text(wf.title, pageW/2, 18, { align: 'center' })
 
     // Tier badge
-    doc.setFillColor(tr,tg,tb)
+    doc.setFillColor(255,255,255)
     doc.roundedRect(pageW - margin - 30, 6, 30, 12, 2, 2, 'F')
-    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(tr,tg,tb)
     doc.text(tier.level, pageW - margin - 15, 13.5, { align: 'center' })
 
     y = 34
@@ -1992,11 +1991,12 @@ async function downloadWritingFramePdf(wf) {
     const pageBottom = pageH - 16  // leave room for footer bar
     const availableForBoxes = pageBottom - y - totalFixedH - trailerH
     const minBoxH = 18
-    const boxHEach = Math.max(minBoxH, availableForBoxes / tier.steps.length)
+    const nonScaffoldSteps = tier.steps.filter(s => !s.scaffold).length || 1
+    const boxHEach = Math.max(minBoxH, availableForBoxes / nonScaffoldSteps)
 
     stepMeasurements.forEach(({ step, instrLines, instrH, scaffoldLines, scaffoldH }) => {
       const boxH = boxHEach
-      const stepH = instrH + scaffoldH + boxH + 10
+      const stepH = instrH + scaffoldH + (step.scaffold ? 0 : boxH) + 10
       if (y + stepH > pageH - 16) { doc.addPage(); y = 16 }
 
       // Step number badge
@@ -2017,7 +2017,8 @@ async function downloadWritingFramePdf(wf) {
         doc.roundedRect(margin, y, contentW, sBoxH, 1.5, 1.5)
         doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
         doc.text(scaffoldLines, margin+4, y+6)
-        y += sBoxH + 3
+        y += sBoxH + 6
+        return
       }
 
       // Answer box — fills remaining page space, faint guide lines
