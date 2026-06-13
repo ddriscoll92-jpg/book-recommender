@@ -2557,12 +2557,14 @@ function ResourceOutput({ resource }) {
   )
 }
 
-function ResourcePage({ book, yearGroup, ideas, onBack, checkTrial }) {
+function ResourcePage({ book, yearGroup: initialYearGroup, ideas, onBack, checkTrial }) {
   const [plans, setPlans] = useState({})
   const [generating, setGenerating] = useState({})
   const [openAccordions, setOpenAccordions] = useState({})
   // active tab per idea: 0..n-1 = lesson index, "model" = model example
   const [activeTabs, setActiveTabs] = useState({})
+  const [yearGroup, setYearGroup] = useState(initialYearGroup || '')
+  const [started, setStarted] = useState(!!initialYearGroup)
 
   function toggleAccordion(key) {
     setOpenAccordions(prev => ({ ...prev, [key]: !prev[key] }))
@@ -2678,7 +2680,9 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
     }
   }
 
-  useState(() => { ideas.forEach(idea => generatePlan(idea)) }, [])
+  useEffect(() => {
+    if (started) ideas.forEach(idea => generatePlan(idea))
+  }, [started])
 
   return (
     <div style={s.page}>
@@ -2689,11 +2693,31 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           <div style={s.headerIcon}>📝</div>
           <div>
             <h1 style={s.h1}>Create Resources</h1>
-            <p style={s.headerSub}>{book.title} · {yearGroup}</p>
+            <p style={s.headerSub}>{book.title}{yearGroup ? ` · ${yearGroup}` : ''}</p>
           </div>
         </div>
 
-        {ideas.map((idea, ideaIdx) => {
+        {!started && (
+          <div style={s.card}>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT, marginBottom: 4 }}>Select a year group</div>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Choose the year group for this plan before generating resources.</p>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <select style={{ ...s.select, maxWidth: 200 }} value={yearGroup} onChange={e => setYearGroup(e.target.value)}>
+                <option value="">Select year group...</option>
+                {['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <button
+                style={s.generateBtn(!yearGroup)}
+                disabled={!yearGroup}
+                onClick={() => setStarted(true)}
+              >
+                Generate resources →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {started && ideas.map((idea, ideaIdx) => {
           const plan = plans[idea.title]
           const isGenerating = generating[idea.title]
           const isOpen = openAccordions[idea.title]
@@ -6813,7 +6837,7 @@ export default function App() {
         <BookDetailPage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} checkTrial={checkTrial} onBack={() => setPage('search')}
           onCreateResources={(ideas) => { setSelectedIdeas(ideas); setPage('lessonresources') }} />
       )}
-      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
+      {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
