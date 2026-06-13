@@ -1954,7 +1954,7 @@ async function downloadWritingFramePdf(wf) {
       doc.text('WORD BANK', margin + 4, y + 4.2)
       y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      const wbLines = doc.splitTextToSize(tier.wordBank.join('   ·   '), contentW - 8)
+      const wbLines = doc.splitTextToSize(tier.wordBank.join('   ·   '), contentW - 10)
       doc.text(wbLines, margin + 4, y)
       y += wbLines.length * 4.5
       doc.setFontSize(7.5); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
@@ -1979,12 +1979,12 @@ async function downloadWritingFramePdf(wf) {
     let trailerH = 0
     if (tier.conjunctions?.length) {
       doc.setFontSize(9)
-      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW - 8)
+      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW - 10)
       trailerH += 9 + conjLines.length * 4.5 + 4
     }
     if (tier.challenge) {
       doc.setFontSize(9)
-      const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
+      const cLines = doc.splitTextToSize(tier.challenge, contentW - 10)
       trailerH += 9 + cLines.length * 4.5 + 4
     }
 
@@ -2042,7 +2042,7 @@ async function downloadWritingFramePdf(wf) {
       doc.text('SUBORDINATING CONJUNCTIONS', margin + 4, y + 4.2)
       y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW - 8)
+      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW - 10)
       doc.text(conjLines, margin + 4, y)
       y += conjLines.length * 4.5 + 4
     }
@@ -2050,14 +2050,14 @@ async function downloadWritingFramePdf(wf) {
     // Challenge — coloured header style
     if (tier.challenge) {
       if (y + 18 > pageH - 20) { doc.addPage(); y = 16 }
-      doc.setFillColor(217,119,6)
+      doc.setFillColor(tr,tg,tb)
       doc.roundedRect(margin, y, contentW, 6, 1.5, 1.5, 'F')
       doc.rect(margin, y + 3, contentW, 3, 'F')
       doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
       doc.text('CHALLENGE', margin + 4, y + 4.2)
       y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
+      const cLines = doc.splitTextToSize(tier.challenge, contentW - 10)
       doc.text(cLines, margin+4, y)
       y += cLines.length * 4.5 + 4
     }
