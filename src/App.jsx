@@ -1930,7 +1930,7 @@ async function downloadWritingFramePdf(wf) {
 
     // Context prompt — wrapped to content width
     doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
-    const ctxLines = doc.splitTextToSize(wf.contextPrompt || '', contentW)
+    const ctxLines = doc.splitTextToSize(wf.contextPrompt || '', contentW - 4)
     doc.text(ctxLines, margin, y)
     y += ctxLines.length * 4.5 + 4
 
@@ -1954,7 +1954,7 @@ async function downloadWritingFramePdf(wf) {
       doc.text('WORD BANK', margin + 4, y + 4.2)
       y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      const wbLines = doc.splitTextToSize(tier.wordBank.join('   ·   '), contentW)
+      const wbLines = doc.splitTextToSize(tier.wordBank.join('   ·   '), contentW - 8)
       doc.text(wbLines, margin + 4, y)
       y += wbLines.length * 4.5
       doc.setFontSize(7.5); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
@@ -1967,7 +1967,7 @@ async function downloadWritingFramePdf(wf) {
     // distribute remaining page space across answer boxes so the page is filled.
     const stepMeasurements = tier.steps.map(step => {
       doc.setFontSize(9); doc.setFont('helvetica','normal')
-      const instrLines = doc.splitTextToSize(step.instruction, contentW - 14)
+      const instrLines = doc.splitTextToSize(step.instruction, contentW - 18)
       const instrH = instrLines.length * 4.5
       doc.setFontSize(9.5)
       const scaffoldLines = step.scaffold ? doc.splitTextToSize(step.scaffold, contentW - 8) : []
@@ -1979,7 +1979,7 @@ async function downloadWritingFramePdf(wf) {
     let trailerH = 0
     if (tier.conjunctions?.length) {
       doc.setFontSize(9)
-      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW)
+      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW - 8)
       trailerH += 9 + conjLines.length * 4.5 + 4
     }
     if (tier.challenge) {
@@ -2042,7 +2042,7 @@ async function downloadWritingFramePdf(wf) {
       doc.text('SUBORDINATING CONJUNCTIONS', margin + 4, y + 4.2)
       y += 9
       doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW)
+      const conjLines = doc.splitTextToSize(tier.conjunctions.join('   ·   '), contentW - 8)
       doc.text(conjLines, margin + 4, y)
       y += conjLines.length * 4.5 + 4
     }
