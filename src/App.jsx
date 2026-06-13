@@ -1972,7 +1972,7 @@ async function downloadWritingFramePdf(wf) {
       doc.setFontSize(9.5)
       const scaffoldLines = step.scaffold ? doc.splitTextToSize(step.scaffold, contentW - 8) : []
       const scaffoldH = step.scaffold ? scaffoldLines.length * 5 + 4 : 0
-      return { step, instrLines, instrH, scaffoldH, fixedH: instrH + 4 + scaffoldH + 6 }
+      return { step, instrLines, instrH, scaffoldLines, scaffoldH, fixedH: instrH + 4 + scaffoldH + 6 }
     })
 
     // Estimate height of conjunctions/challenge blocks (fixed, appear after steps)
