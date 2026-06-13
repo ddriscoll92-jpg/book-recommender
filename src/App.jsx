@@ -3454,13 +3454,13 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
                     <button onClick={() => setEditingId(null)} style={{ height: 30, padding: '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 12, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{plan.subject}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{plan.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{plan.subject}</span>
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{plan.title}</div>
                       <div style={{ fontSize: 11, color: MUTED }}>{plan.lessons} lessons · Created {plan.created}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: 5, flexShrink: 0, flexWrap: 'wrap' }}>
                       <button onClick={() => setViewingPlan(plan)} style={{ height: 26, padding: '0 10px', background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#085041', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>View</button>
                       <MyPlanDownloadButton plan={plan} group={{ book, yearGroup: book.yearGroup || '' }} size="sm" />
                       <button onClick={() => startEdit(plan)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
@@ -3680,7 +3680,7 @@ function MyPlansPage({ onNavigate }) {
                     return (
                       <div
                         key={plan.id}
-                        style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, borderTop: pi > 0 ? `0.5px solid ${BORDER}` : "none", background: BG }}
+                        style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap", borderTop: pi > 0 ? `0.5px solid ${BORDER}` : "none", background: BG }}
                         onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
                         onMouseLeave={e => e.currentTarget.style.background = BG}
                       >
@@ -3690,15 +3690,15 @@ function MyPlansPage({ onNavigate }) {
                         </span>
 
                         {/* Plan info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plan.title}</div>
+                        <div style={{ flex: 1, minWidth: 120 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 2 }}>{plan.title}</div>
                           <div style={{ fontSize: 11, color: MUTED }}>
                             {plan.lessons} lessons · Created {plan.created}
                           </div>
                         </div>
 
                         {/* Actions */}
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
                           <button onClick={() => setViewingPlan({ plan, group })} style={{ height: 28, padding: "0 12px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                             View
                           </button>
@@ -4218,15 +4218,17 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
         </div>
 
         {/* Global search + filter bar */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
-          <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
-          <input
-            style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
-            placeholder="Search by book or author..."
-            value={globalSearch}
-            onChange={e => setGlobalSearch(e.target.value)}
-          />
-          {globalSearch && <span onClick={() => setGlobalSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
+            <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
+            <input
+              style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+              placeholder="Search by book or author..."
+              value={globalSearch}
+              onChange={e => setGlobalSearch(e.target.value)}
+            />
+            {globalSearch && <span onClick={() => setGlobalSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Subject</span>
             <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${globalSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: globalSubject !== 'All' ? LIGHT_GREEN : BG, color: globalSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
