@@ -1661,14 +1661,14 @@ function ExitTicketOutput({ exitTicket: et }) {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
           <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{et.title}</div>
           <div style={{ fontSize: 12, color: NAVY_MUTED }}>{et.yearGroup} · {et.subject} · 4 tickets per page, 3 pages</div>
         </div>
         <button onClick={handleDownload} disabled={downloading}
-          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-          {downloading ? 'Generating PDF...' : '📄 Download PDF (3 pages)'}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {downloading ? '⏳ Generating...' : '📄 Download PDF'}
         </button>
       </div>
       <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
@@ -1896,14 +1896,14 @@ function ComprehensionOutput({ comprehension: comp }) {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
           <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{comp.title}</div>
           <div style={{ fontSize: 12, color: NAVY_MUTED }}>{comp.yearGroup} · {comp.subject} · {comp.skill}</div>
         </div>
         <button onClick={handleDownload} disabled={downloading}
-          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-          {downloading ? 'Generating PDF...' : '📄 Download PDF (3 worksheets)'}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {downloading ? '⏳ Generating...' : '📄 Download PDF'}
         </button>
       </div>
       <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
@@ -1924,7 +1924,6 @@ function ComprehensionOutput({ comprehension: comp }) {
                     <div key={qi} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <div style={{ width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${ts.headerBg}`, color: ts.headerBg, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{qi + 1}</div>
                       <div style={{ fontSize: 12, color: TEXT }}>
-                        <span style={{ fontSize: 10, color: ts.headerBg, fontWeight: 600, marginRight: 4 }}>[{q.type}]</span>
                         {q.q}
                       </div>
                     </div>
@@ -2159,14 +2158,14 @@ function WritingFrameOutput({ writingFrame: wf }) {
   return (
     <div style={{ marginTop: 20 }}>
       {/* Header */}
-      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
           <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{wf.title}</div>
           <div style={{ fontSize: 12, color: NAVY_MUTED }}>{wf.yearGroup} · {wf.subject} · {wf.skill}</div>
         </div>
         <button onClick={handleDownload} disabled={downloading}
-          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-          {downloading ? '⏳ Generating PDF...' : '📄 Download PDF (3 worksheets)'}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {downloading ? '⏳ Generating...' : '📄 Download PDF'}
         </button>
       </div>
 
@@ -2416,14 +2415,14 @@ function WorksheetOutput({ worksheet }) {
   return (
     <div style={{ marginTop: 20 }}>
       {/* Header */}
-      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
           <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{worksheet.title}</div>
           <div style={{ fontSize: 12, color: NAVY_MUTED }}>{worksheet.yearGroup} · {worksheet.subject} · {worksheet.skill}</div>
         </div>
         <button onClick={handleDownload} disabled={downloading}
-          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-          {downloading ? '⏳ Generating PDF...' : '📄 Download PDF (3 worksheets)'}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {downloading ? '⏳ Generating...' : '📄 Download PDF'}
         </button>
       </div>
 
