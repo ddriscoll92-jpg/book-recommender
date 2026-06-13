@@ -3897,17 +3897,17 @@ function BookGridCard({ book, isFavourite, onToggleFavourite, onViewBook, onView
         {/* Secondary row */}
         <div style={{ display: 'flex', gap: 5 }}>
           <button onClick={() => onViewBook && onViewBook(book)}
-            style={{ flex: 1, height: 26, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 10, fontWeight: 500, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+            style={{ flex: 1, minWidth: 0, height: 26, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 10, fontWeight: 500, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
             View book
           </button>
           {/* Edit/delete only for library books */}
           {book.source === 'library' && !confirmDelete && (
             <button onClick={() => onEdit && onEdit(book)}
-              style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 10, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
+              style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 10, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>✏️</button>
           )}
           {book.source === 'library' && !confirmDelete && (
             <button onClick={() => setConfirmDelete(true)}
-              style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 10, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
+              style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 10, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>🗑️</button>
           )}
           {book.source === 'library' && confirmDelete && (
             <>
@@ -4173,7 +4173,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
           </div>
         ) : (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
               {filtered.slice(0, visible).map(book => (
                 <BookGridCard key={book.id} book={book}
                   isFavourite={book.is_favourite || false}
