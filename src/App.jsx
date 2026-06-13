@@ -1528,30 +1528,40 @@ async function downloadExitTicketPdf(et) {
         doc.text(titleLines.slice(0,1), tx + 4, ty + 18)
 
         // Prompts with bullet-style markers and writing lines
-        let py = ty + 25
         const lineW = ticketW - 14
+        const contentTop = ty + 25
+        const contentBottom = ty + ticketH - 12  // space above footer divider
 
-        tier.prompts.forEach(p => {
-          if (py + 12 > ty + ticketH - 14) return
-          // Coloured bullet dot (matches knowledge organiser style)
+        // Pass 1: measure text height for each prompt
+        const measured = tier.prompts.map(p => {
+          doc.setFontSize(8.5); doc.setFont('helvetica','bold')
+          const pLines = doc.splitTextToSize(p.text, lineW).slice(0,2)
+          return { p, textH: pLines.length * 4.2 + 2, pLines }
+        })
+        const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
+        const availableH = contentBottom - contentTop
+        const remainingForLines = Math.max(0, availableH - totalTextH)
+        // Distribute remaining space as line-gap height per prompt, proportional to declared lines
+        const totalDeclaredLines = measured.reduce((s,m) => s + (m.p.lines || 2), 0)
+        const lineGap = totalDeclaredLines > 0 ? remainingForLines / totalDeclaredLines : 6
+
+        let py = contentTop
+        measured.forEach(({ p, textH, pLines }) => {
           doc.setFillColor(tr,tg,tb); doc.circle(tx + 5, py - 1.3, 0.8, 'F')
           doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-          const pLines = doc.splitTextToSize(p.text, lineW)
-          doc.text(pLines.slice(0,2), tx + 8, py)
-          py += pLines.slice(0,2).length * 4.2 + 2
+          doc.text(pLines, tx + 8, py)
+          py += pLines.length * 4.2 + 2
 
-          // Writing lines
           const numLines = p.lines || 2
           for (let li = 0; li < numLines; li++) {
             doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
-            doc.line(tx + 8, py + 4, tx + 8 + lineW - 3, py + 4)
-            py += 6
+            py += lineGap
+            doc.line(tx + 8, py, tx + 8 + lineW - 3, py)
           }
-          py += 2
         })
 
         // Name / Date footer
-        const footerY = ty + ticketH - 8
+        const footerY = ty + ticketH - 5
         doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.3)
         doc.line(tx + 4, footerY - 4, tx + ticketW - 4, footerY - 4)
         doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(95,94,90)
