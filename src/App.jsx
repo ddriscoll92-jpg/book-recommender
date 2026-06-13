@@ -1532,7 +1532,8 @@ async function downloadExitTicketPdf(et) {
         const contentTop = ty + 25
         const contentBottom = ty + ticketH - 14  // space above footer divider
         const numPrompts = tier.prompts.length
-        const gapBetween = 3  // gap between text and box, and between prompts
+        const gapAbove = 6   // gap before each prompt's text (between box and next question)
+        const gapBelow = 2   // gap between text and its answer box
 
         // Measure text height for each prompt
         const measured = tier.prompts.map(p => {
@@ -1544,15 +1545,16 @@ async function downloadExitTicketPdf(et) {
         // Equal-height answer box for every prompt, filling remaining space
         const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
         const availableH = contentBottom - contentTop
-        const totalGaps = gapBetween * numPrompts * 2
+        const totalGaps = (gapAbove + gapBelow) * numPrompts
         const boxH = Math.max(14, (availableH - totalTextH - totalGaps) / numPrompts)
 
         let py = contentTop
-        measured.forEach(({ p, pLines, textH }) => {
+        measured.forEach(({ p, pLines, textH }, pi) => {
+          if (pi > 0) py += gapAbove
           doc.setFillColor(tr,tg,tb); doc.circle(tx + 5, py - 1.3, 0.8, 'F')
           doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
           doc.text(pLines, tx + 8, py)
-          py += textH + gapBetween
+          py += textH + gapBelow
 
           // Fixed-height answer box with faint internal guide lines
           doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
@@ -1563,7 +1565,7 @@ async function downloadExitTicketPdf(et) {
             doc.setDrawColor(232,230,222); doc.setLineWidth(0.2)
             doc.line(tx + 10, gy, tx + 8 + lineW - 5, gy)
           }
-          py += boxH + gapBetween
+          py += boxH
         })
 
         // Name / Date footer
