@@ -1,5 +1,5 @@
 // TeachReads App v2
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Fragment } from 'react'
 import { supabase } from './supabaseClient'
 
 // TeachReads shared constants and styles
@@ -422,6 +422,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
   const navItems = [
     { id: 'search', label: 'Book Recommender', active: true },
     { id: 'plans', label: 'My Plans', active: true },
+    { id: 'planner', label: 'Planner', active: true },
     { id: 'books', label: 'My Books', active: true },
     { id: 'resources', label: 'My Resources', active: true },
     { id: 'assistant', label: 'AI Assistant', active: true },
@@ -3413,6 +3414,445 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
           <button onClick={onClose} style={{ height: 38, padding: '0 16px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Weekly Planner ───────────────────────────────────────────────────────────
+
+function getMonday(d) {
+  const date = new Date(d)
+  const day = date.getDay()
+  const diff = day === 0 ? -6 : 1 - day // shift Sunday back to previous Monday
+  date.setDate(date.getDate() + diff)
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+function toISODate(d) {
+  return d.toISOString().slice(0, 10)
+}
+
+function formatWeekRange(monday) {
+  const friday = new Date(monday)
+  friday.setDate(friday.getDate() + 4)
+  const opts = { day: 'numeric', month: 'short' }
+  return `${monday.toLocaleDateString('en-GB', opts)} – ${friday.toLocaleDateString('en-GB', { ...opts, year: 'numeric' })}`
+}
+
+const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const DEFAULT_PERIODS = [
+  { label: 'Morning', time_range: '9:00 – 10:30' },
+  { label: 'Mid-morning', time_range: '11:00 – 12:00' },
+  { label: 'Afternoon', time_range: '1:00 – 2:30' },
+  { label: 'Late afternoon', time_range: '2:45 – 3:15' },
+]
+
+function PlannerPage({ onNavigate }) {
+  const [weekStart, setWeekStart] = useState(getMonday(new Date()))
+  const [periods, setPeriods] = useState([])
+  const [slots, setSlots] = useState({}) // key: `${dayIndex}::${periodId}` -> slot row
+  const [plans, setPlans] = useState([]) // [{ id, title, subject, lessons: [{id, lesson_number, title}] }]
+  const [loading, setLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState({})
+  const [pickerCell, setPickerCell] = useState(null) // { dayIndex, periodId }
+  const [customText, setCustomText] = useState('')
+  const [draggedLesson, setDraggedLesson] = useState(null)
+  const [editingPeriodId, setEditingPeriodId] = useState(null)
+  const [periodEditForm, setPeriodEditForm] = useState({ label: '', time_range: '' })
+
+  const weekStartISO = toISODate(weekStart)
+
+  // Load periods (create defaults if none exist) and plans/lessons once
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+
+      let { data: periodRows } = await supabase
+        .from('planner_periods')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sort_order')
+
+      if (!periodRows || periodRows.length === 0) {
+        const inserts = DEFAULT_PERIODS.map((p, i) => ({ user_id: user.id, label: p.label, time_range: p.time_range, sort_order: i }))
+        const { data: created } = await supabase.from('planner_periods').insert(inserts).select()
+        periodRows = created || []
+      }
+      setPeriods(periodRows || [])
+
+      const { data: planRows } = await supabase
+        .from('plans')
+        .select('id, title, subject, book_title')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (planRows && planRows.length > 0) {
+        const planIds = planRows.map(p => p.id)
+        const { data: lessonRows } = await supabase
+          .from('lessons')
+          .select('id, plan_id, lesson_number, title')
+          .in('plan_id', planIds)
+          .order('lesson_number')
+
+        const withLessons = planRows.map(p => ({
+          ...p,
+          lessons: (lessonRows || []).filter(l => l.plan_id === p.id)
+        }))
+        setPlans(withLessons)
+      }
+
+      setLoading(false)
+    }
+    init()
+  }, [])
+
+  // Load slots whenever the week changes
+  useEffect(() => {
+    async function loadSlots() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('planner_slots')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('week_start', weekStartISO)
+      const map = {}
+      ;(data || []).forEach(row => {
+        map[`${row.day_index}::${row.period_id}`] = row
+      })
+      setSlots(map)
+    }
+    loadSlots()
+  }, [weekStartISO])
+
+  function changeWeek(delta) {
+    const next = new Date(weekStart)
+    next.setDate(next.getDate() + delta * 7)
+    setWeekStart(next)
+  }
+
+  async function assignSlot(dayIndex, periodId, { lessonId = null, planId = null, customText: txt = '', customSubject = '' }) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const key = `${dayIndex}::${periodId}`
+    const payload = {
+      user_id: user.id,
+      week_start: weekStartISO,
+      day_index: dayIndex,
+      period_id: periodId,
+      lesson_id: lessonId,
+      plan_id: planId,
+      custom_text: txt,
+      custom_subject: customSubject,
+    }
+    const { data, error } = await supabase
+      .from('planner_slots')
+      .upsert(payload, { onConflict: 'user_id,week_start,day_index,period_id' })
+      .select()
+      .single()
+    if (!error && data) {
+      setSlots(prev => ({ ...prev, [key]: data }))
+    }
+  }
+
+  async function clearSlot(dayIndex, periodId) {
+    const key = `${dayIndex}::${periodId}`
+    const existing = slots[key]
+    if (!existing) return
+    await supabase.from('planner_slots').delete().eq('id', existing.id)
+    setSlots(prev => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
+  // ── Period row management ──
+  async function addPeriod() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const sortOrder = periods.length > 0 ? Math.max(...periods.map(p => p.sort_order)) + 1 : 0
+    const { data } = await supabase
+      .from('planner_periods')
+      .insert({ user_id: user.id, label: 'New period', time_range: '', sort_order: sortOrder })
+      .select()
+      .single()
+    if (data) setPeriods(prev => [...prev, data])
+  }
+
+  async function savePeriod(id) {
+    await supabase.from('planner_periods').update(periodEditForm).eq('id', id)
+    setPeriods(prev => prev.map(p => p.id === id ? { ...p, ...periodEditForm } : p))
+    setEditingPeriodId(null)
+  }
+
+  async function deletePeriod(id) {
+    await supabase.from('planner_periods').delete().eq('id', id)
+    setPeriods(prev => prev.filter(p => p.id !== id))
+  }
+
+  // ── Lesson lookup for display ──
+  function findLesson(lessonId, planId) {
+    const plan = plans.find(p => p.id === planId)
+    const lesson = plan?.lessons.find(l => l.id === lessonId)
+    return { plan, lesson }
+  }
+
+  function renderCellContent(slot) {
+    if (!slot) return null
+    if (slot.lesson_id && slot.plan_id) {
+      const { plan, lesson } = findLesson(slot.lesson_id, slot.plan_id)
+      const sc = SUBJECT_COLOURS[plan?.subject] || { bg: PAGE_BG, color: MUTED }
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: sc.color, background: sc.bg, padding: '1px 6px', borderRadius: 10, alignSelf: 'flex-start' }}>{plan?.subject || ''}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: TEXT, lineHeight: 1.3 }}>
+            {lesson ? `L${lesson.lesson_number} · ${lesson.title}` : '(lesson removed)'}
+          </span>
+          {plan?.title && <span style={{ fontSize: 11, color: MUTED }}>{plan.title}</span>}
+        </div>
+      )
+    }
+    if (slot.custom_text) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {slot.custom_subject && <span style={{ fontSize: 10, fontWeight: 600, color: MUTED, background: PAGE_BG, padding: '1px 6px', borderRadius: 10, alignSelf: 'flex-start', border: `0.5px solid ${BORDER}` }}>{slot.custom_subject}</span>}
+          <span style={{ fontSize: 12, color: TEXT, lineHeight: 1.3 }}>{slot.custom_text}</span>
+        </div>
+      )
+    }
+    return null
+  }
+
+  if (loading) {
+    return (
+      <div style={s.page}>
+        <div style={s.container}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: MUTED, fontSize: 13 }}>Loading planner...</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={s.page}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1rem' }}>
+        <div style={s.header}>
+          <div style={s.headerIcon}>🗓️</div>
+          <div>
+            <h1 style={s.h1}>Weekly Planner</h1>
+            <p style={s.headerSub}>Drag lessons from your plans into the grid, or click a slot to assign one.</p>
+          </div>
+        </div>
+
+        {/* Week navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <button onClick={() => changeWeek(-1)} style={{ height: 36, padding: '0 14px', background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>← Previous week</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT }}>{formatWeekRange(weekStart)}</span>
+            <button onClick={() => setWeekStart(getMonday(new Date()))} style={{ height: 30, padding: '0 10px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 12, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Today</button>
+          </div>
+          <button onClick={() => changeWeek(1)} style={{ height: 36, padding: '0 14px', background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Next week →</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* Sidebar: plans & lessons */}
+          <div style={{ width: 260, flexShrink: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '0.75rem', maxHeight: 600, overflowY: 'auto', position: 'sticky', top: 70 }}>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 8, padding: '0 4px' }}>Your lessons</div>
+            {plans.length === 0 && (
+              <div style={{ fontSize: 12, color: MUTED, padding: '0.5rem 4px' }}>No plans yet — create one from My Plans.</div>
+            )}
+            {plans.map(plan => {
+              const sc = SUBJECT_COLOURS[plan.subject] || { bg: PAGE_BG, color: MUTED }
+              const open = sidebarOpen[plan.id]
+              return (
+                <div key={plan.id} style={{ marginBottom: 6 }}>
+                  <div
+                    onClick={() => setSidebarOpen(prev => ({ ...prev, [plan.id]: !prev[plan.id] }))}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 4px', cursor: 'pointer', borderRadius: 6 }}
+                  >
+                    <span style={{ fontSize: 11, transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s', color: MUTED, width: 12, display: 'inline-block' }}>▶</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: sc.color, background: sc.bg, padding: '1px 6px', borderRadius: 10, flexShrink: 0 }}>{plan.subject}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{plan.title}</span>
+                  </div>
+                  {open && (
+                    <div style={{ paddingLeft: 22, display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2, marginBottom: 4 }}>
+                      {plan.lessons.length === 0 && <div style={{ fontSize: 11, color: MUTED, padding: '2px 4px' }}>No lessons</div>}
+                      {plan.lessons.map(lesson => (
+                        <div
+                          key={lesson.id}
+                          draggable
+                          onDragStart={() => setDraggedLesson({ lessonId: lesson.id, planId: plan.id })}
+                          onDragEnd={() => setDraggedLesson(null)}
+                          style={{ fontSize: 12, color: TEXT, padding: '5px 8px', background: PAGE_BG, borderRadius: 6, cursor: 'grab', border: `0.5px solid ${BORDER}` }}
+                        >
+                          L{lesson.lesson_number} · {lesson.title}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Grid */}
+          <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `140px repeat(5, minmax(140px, 1fr))`, gap: 6 }}>
+              {/* Header row */}
+              <div></div>
+              {DAY_LABELS.map((label, di) => {
+                const date = new Date(weekStart)
+                date.setDate(date.getDate() + di)
+                return (
+                  <div key={label} style={{ textAlign: 'center', padding: '6px 4px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{label}</div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+                  </div>
+                )
+              })}
+
+              {/* Period rows */}
+              {periods.map(period => (
+                <Fragment key={period.id}>
+                  {/* Period label cell */}
+                  <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+                    {editingPeriodId === period.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <input
+                          value={periodEditForm.label}
+                          onChange={e => setPeriodEditForm(f => ({ ...f, label: e.target.value }))}
+                          style={{ fontSize: 12, fontWeight: 600, border: `0.5px solid ${BORDER}`, borderRadius: 4, padding: '2px 4px', fontFamily: "'DM Sans', sans-serif" }}
+                        />
+                        <input
+                          value={periodEditForm.time_range}
+                          onChange={e => setPeriodEditForm(f => ({ ...f, time_range: e.target.value }))}
+                          placeholder="e.g. 9:00 – 10:30"
+                          style={{ fontSize: 11, border: `0.5px solid ${BORDER}`, borderRadius: 4, padding: '2px 4px', fontFamily: "'DM Sans', sans-serif" }}
+                        />
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => savePeriod(period.id)} style={{ fontSize: 11, padding: '2px 8px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Save</button>
+                          <button onClick={() => setEditingPeriodId(null)} style={{ fontSize: 11, padding: '2px 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 4, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{period.label}</div>
+                        {period.time_range && <div style={{ fontSize: 11, color: MUTED }}>{period.time_range}</div>}
+                        <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                          <span onClick={() => { setEditingPeriodId(period.id); setPeriodEditForm({ label: period.label, time_range: period.time_range || '' }) }} style={{ fontSize: 11, color: MUTED, cursor: 'pointer' }}>✏️</span>
+                          <span onClick={() => deletePeriod(period.id)} style={{ fontSize: 11, color: MUTED, cursor: 'pointer' }}>🗑️</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Day cells */}
+                  {DAY_LABELS.map((_, di) => {
+                    const key = `${di}::${period.id}`
+                    const slot = slots[key]
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => !slot && setPickerCell({ dayIndex: di, periodId: period.id })}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={e => {
+                          e.preventDefault()
+                          if (draggedLesson) {
+                            assignSlot(di, period.id, { lessonId: draggedLesson.lessonId, planId: draggedLesson.planId })
+                            setDraggedLesson(null)
+                          }
+                        }}
+                        style={{
+                          background: slot ? LIGHT_GREEN : BG,
+                          border: `0.5px dashed ${slot ? GREEN : BORDER}`,
+                          borderRadius: 8,
+                          padding: '8px 10px',
+                          minHeight: 64,
+                          cursor: slot ? 'default' : 'pointer',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {slot ? (
+                          <>
+                            <div style={{ flex: 1 }}>{renderCellContent(slot)}</div>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); clearSlot(di, period.id) }}
+                              style={{ position: 'absolute', top: 4, right: 6, fontSize: 12, color: MUTED, cursor: 'pointer' }}
+                            >✕</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#B8B6AC', margin: '0 auto' }}>+ Add</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </Fragment>
+              ))}
+            </div>
+
+            <button onClick={addPeriod} style={{ marginTop: 10, height: 36, padding: '0 14px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Add period row</button>
+          </div>
+        </div>
+
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+      </div>
+
+      {/* Picker modal */}
+      {pickerCell && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setPickerCell(null)}>
+          <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 420, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '16px 20px', borderBottom: `0.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: TEXT }}>Add to {DAY_LABELS[pickerCell.dayIndex]}</div>
+              <button onClick={() => setPickerCell(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: MUTED, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: TEXT, marginBottom: 8 }}>Pick a lesson from a plan</div>
+              {plans.length === 0 && <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>No plans yet.</div>}
+              {plans.map(plan => (
+                <div key={plan.id} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 4 }}>{plan.subject} · {plan.title}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {plan.lessons.map(lesson => (
+                      <div
+                        key={lesson.id}
+                        onClick={() => { assignSlot(pickerCell.dayIndex, pickerCell.periodId, { lessonId: lesson.id, planId: plan.id }); setPickerCell(null) }}
+                        style={{ fontSize: 12, color: TEXT, padding: '6px 10px', background: PAGE_BG, borderRadius: 6, cursor: 'pointer', border: `0.5px solid ${BORDER}` }}
+                      >
+                        L{lesson.lesson_number} · {lesson.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <hr style={{ border: 'none', borderTop: `0.5px solid ${BORDER}`, margin: '12px 0' }} />
+              <div style={{ fontSize: 12, fontWeight: 500, color: TEXT, marginBottom: 8 }}>Or add a custom entry</div>
+              <textarea
+                value={customText}
+                onChange={e => setCustomText(e.target.value)}
+                placeholder="e.g. Assembly, PE with Year 4..."
+                style={{ width: '100%', minHeight: 60, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, color: TEXT, outline: 'none', resize: 'vertical', fontFamily: "'DM Sans', sans-serif" }}
+              />
+              <button
+                onClick={() => {
+                  if (!customText.trim()) return
+                  assignSlot(pickerCell.dayIndex, pickerCell.periodId, { customText: customText.trim() })
+                  setCustomText('')
+                  setPickerCell(null)
+                }}
+                disabled={!customText.trim()}
+                style={{ marginTop: 8, width: '100%', height: 38, background: customText.trim() ? GREEN : '#888780', color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: customText.trim() ? 'pointer' : 'not-allowed', fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Add to slot
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -6817,6 +7257,7 @@ export default function App() {
   function handleNavigate(dest) {
     if (dest === 'search') setPage('search')
     if (dest === 'plans') setPage('plans')
+    if (dest === 'planner') setPage('planner')
     if (dest === 'books') setPage('books')
     if (dest === 'resources') setPage('resources')
     if (dest === 'assistant') setPage('assistant')
@@ -6836,7 +7277,7 @@ export default function App() {
 
   const userName = displayName || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
   const userEmail = session?.user?.email || ''
-  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'books' ? 'books' : page === 'resources' ? 'resources' : page === 'assistant' ? 'assistant' : ''
+  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'planner' ? 'planner' : page === 'books' ? 'books' : page === 'resources' ? 'resources' : page === 'assistant' ? 'assistant' : ''
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
@@ -6860,6 +7301,7 @@ export default function App() {
       )}
       {page === 'lessonresources' && <ResourcePage book={selectedBook} yearGroup={resourcesYearGroup || selectedBook?.year_group || selectedBook?.yearGroup || searchState.yearGroup} ideas={selectedIdeas} onBack={() => setPage('book')} checkTrial={checkTrial} />}
       {page === 'plans' && <MyPlansPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
+      {page === 'planner' && <PlannerPage onNavigate={handleNavigate} />}
       {page === 'books' && <MyBooksPage onNavigate={handleNavigate} onSelectBook={(book) => { setSelectedBook(book); setPage('book') }} />}
       {page === 'upgrade' && <UpgradePage onNavigate={handleNavigate} trialInfo={trialInfo} />}
       {page === 'password_reset' && (
