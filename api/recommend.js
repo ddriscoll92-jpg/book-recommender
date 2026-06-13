@@ -179,27 +179,27 @@ The JSON must have this exact structure:
       "level": "Support",
       "colour": "#DC2626",
       "prompts": [
-        { "text": "Today I learned...", "lines": 2 },
-        { "text": "One thing I found tricky was...", "lines": 2 },
-        { "text": "Tomorrow I need help with...", "lines": 1 }
+        { "text": "Today I learned...", "lines": 3 },
+        { "text": "One thing I found tricky was...", "lines": 3 },
+        { "text": "Tomorrow I need help with...", "lines": 2 }
       ]
     },
     {
       "level": "Core",
       "colour": "#D97706",
       "prompts": [
-        { "text": "The most important thing I learned today was...", "lines": 2 },
-        { "text": "I can show my understanding by...", "lines": 2 },
-        { "text": "An example of this is...", "lines": 2 }
+        { "text": "The most important thing I learned today was...", "lines": 3 },
+        { "text": "I can show my understanding by...", "lines": 3 },
+        { "text": "An example of this is...", "lines": 3 }
       ]
     },
     {
       "level": "Extension",
       "colour": "#16A34A",
       "prompts": [
-        { "text": "I can explain today's learning in my own words:", "lines": 2 },
-        { "text": "I could apply this to a real-life situation by...", "lines": 2 },
-        { "text": "A question I still have is...", "lines": 1 }
+        { "text": "I can explain today's learning in my own words:", "lines": 3 },
+        { "text": "I could apply this to a real-life situation by...", "lines": 3 },
+        { "text": "A question I still have is...", "lines": 2 }
       ]
     }
   ]
@@ -210,7 +210,7 @@ Rules:
 - Support prompts are simple retrieval and reflection
 - Core prompts require some explanation and understanding
 - Extension prompts require application, analysis or deeper thinking
-- lines is 1 or 2 (space for writing)
+- lines is 2 or 3 (space for writing) — use 3 for prompts expecting fuller answers, 2 for short ones
 - Keep prompt text concise — it must fit on a small card`
   }
 

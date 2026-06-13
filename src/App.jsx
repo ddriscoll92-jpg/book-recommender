@@ -1543,7 +1543,7 @@ async function downloadExitTicketPdf(et) {
         const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
         const firstGap = 6  // fixed gap from text to the first writing line
         const numPrompts = measured.length
-        const extraLineCount = measured.reduce((s,m) => s + Math.max(0, (m.p.lines || 2) - 1), 0)
+        const extraLineCount = measured.reduce((s,m) => s + Math.max(0, (m.p.lines || 3) - 1), 0)
         const availableH = contentBottom - contentTop
         const usedByFirstLines = totalTextH + numPrompts * firstGap
         const extraGap = extraLineCount > 0 ? Math.max(7, (availableH - usedByFirstLines) / extraLineCount) : 7
@@ -1555,7 +1555,7 @@ async function downloadExitTicketPdf(et) {
           doc.text(pLines, tx + 8, py)
           py += pLines.length * 4.2 + 2
 
-          const numLines = p.lines || 2
+          const numLines = p.lines || 3
           for (let li = 0; li < numLines; li++) {
             py += (li === 0 ? firstGap : extraGap)
             doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
