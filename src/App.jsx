@@ -418,6 +418,14 @@ async function callAPI(prompt, raw = false) {
 
 function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo }) {
   const [profileOpen, setProfileOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768)
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   const navItems = [
     { id: 'search', label: 'Book Recommender', active: true },
@@ -427,110 +435,123 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
     { id: 'assistant', label: 'AI Assistant', active: true },
   ]
 
-  return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: NAVY, borderBottom: `1px solid ${NAVY_LIGHT}`, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', fontFamily: "'DM Sans', sans-serif" }}>
-
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <div style={{ width: 28, height: 28, background: GREEN, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📚</div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em' }}>TeachReads</span>
+  const profileDropdown = profileOpen && (
+    <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
+      <div style={{ padding: '12px 14px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{userName || 'Teacher'}</div>
+        <div style={{ fontSize: 12, color: MUTED }}>{userEmail}</div>
       </div>
-
-      {/* Nav links */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        {navItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => item.active ? onNavigate(item.id) : null}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 7,
-              border: 'none',
-              background: currentPage === item.id ? NAVY_LIGHT : 'transparent',
-              color: item.active ? (currentPage === item.id ? '#FFFFFF' : NAVY_MUTED) : NAVY_LIGHT,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: item.active ? 'pointer' : 'default',
-              fontFamily: "'DM Sans', sans-serif",
-              position: 'relative',
-            }}
-          >
-            {item.label}
-            {!item.active && (
-              <span style={{ marginLeft: 5, fontSize: 9, background: NAVY_LIGHT, color: NAVY_MUTED, padding: '1px 5px', borderRadius: 10, verticalAlign: 'middle', fontWeight: 500 }}>Soon</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Profile */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div
-          onClick={() => setProfileOpen(o => !o)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, background: profileOpen ? NAVY_LIGHT : 'transparent' }}
+      {[
+        { label: '👤  Profile & settings', dest: 'profile' },
+        { label: '⭐  Plan options', dest: 'upgrade' },
+        ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', dest: 'admin' }] : []),
+        { label: '📋  Privacy & Terms', dest: 'legal' },
+        { label: '✉️  Contact us', dest: 'contact' },
+        { label: '🚪  Sign Out', dest: 'signout' },
+      ].map((item, i) => (
+        <div key={i}
+          onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
+          style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
+          onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF', overflow: 'hidden', flexShrink: 0 }}>
-            {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : (userName || 'T')[0].toUpperCase()}
-          </div>
-          <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
-            {trialInfo?.plan === 'trial' && !trialInfo?.expired && (
-              <div style={{ 
-                fontSize: 10, 
-                fontWeight: 600,
-                color: trialInfo.daysLeft <= 1 ? '#DC2626' : trialInfo.daysLeft <= 2 ? '#D97706' : '#F59E0B',
-                cursor: trialInfo.daysLeft <= 2 ? 'pointer' : 'default',
-                background: trialInfo.daysLeft <= 1 ? '#FEE2E2' : trialInfo.daysLeft <= 2 ? '#FEF3C7' : 'transparent',
-                padding: trialInfo.daysLeft <= 2 ? '2px 6px' : '0',
-                borderRadius: 4,
-              }} onClick={() => trialInfo.daysLeft <= 2 && onNavigate('upgrade')}>
-                {trialInfo.daysLeft === 0 ? '⚠️ Trial expires today!' : trialInfo.daysLeft === 1 ? '⚠️ Last day of trial!' : `${trialInfo.daysLeft}d trial left`}
-              </div>
-            )}
-            {trialInfo?.expired && (
-              <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 600, cursor: 'pointer', background: '#FEE2E2', padding: '2px 6px', borderRadius: 4 }} onClick={() => onNavigate('upgrade')}>Trial expired — upgrade</div>
-            )}
-            {trialInfo?.plan === 'basic' && (
-              <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Basic plan</div>
-            )}
-            {trialInfo?.plan === 'premium' && (
-              <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Premium plan</div>
-            )}
-            {!trialInfo && (
-              <div style={{ fontSize: 11, color: NAVY_MUTED }}>{ userEmail?.split('@')[1] || 'Teacher' }</div>
-            )}
-          </div>
-          <span style={{ fontSize: 11, color: NAVY_MUTED, marginLeft: 2 }}>▼</span>
+          {item.label}
+        </div>
+      ))}
+    </div>
+  )
+
+  const avatar = (
+    <div style={{ width: 30, height: 30, borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#FFFFFF', overflow: 'hidden', flexShrink: 0 }}>
+      {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : (userName || 'T')[0].toUpperCase()}
+    </div>
+  )
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: NAVY, borderBottom: `1px solid ${NAVY_LIGHT}`, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem' }}>
+
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <div style={{ width: 28, height: 28, background: GREEN, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📚</div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em' }}>TeachReads</span>
         </div>
 
-        {/* Dropdown */}
-        {profileOpen && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, width: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
-            <div style={{ padding: '12px 14px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{userName || 'Teacher'}</div>
-              <div style={{ fontSize: 12, color: MUTED }}>{userEmail}</div>
-            </div>
-            {[
-              { label: '👤  Profile & settings', note: '', dest: 'profile' },
-              { label: '⭐  Plan options', note: '', dest: 'upgrade' },
-              ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', note: '', dest: 'admin' }] : []),
-              { label: '📋  Privacy & Terms', note: '', dest: 'legal' },
-              { label: '✉️  Contact us', note: '', dest: 'contact' },
-              { label: '🚪  Sign Out', note: '', dest: 'signout' },
-            ].map((item, i) => (
-              <div key={i}
-                onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest === 'legal') { setProfileOpen(false); onNavigate('legal') } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
-                style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: item.dest ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
-                onMouseEnter={e => { if (item.dest) e.currentTarget.style.background = PAGE_BG }}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                {item.label}
-                {item.note && <span style={{ fontSize: 10, color: MUTED, background: PAGE_BG, padding: '2px 6px', borderRadius: 10 }}>{item.note}</span>}
+        {isMobile ? (
+          /* Mobile: hamburger + profile */
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => { setMenuOpen(o => !o); setProfileOpen(false) }}
+              style={{ background: menuOpen ? NAVY_LIGHT : 'transparent', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, lineHeight: 1, fontFamily: "'DM Sans', sans-serif" }}
+            >
+              {menuOpen ? '✕' : '☰'}
+            </button>
+            <div style={{ position: 'relative' }}>
+              <div onClick={() => { setProfileOpen(o => !o); setMenuOpen(false) }} style={{ cursor: 'pointer' }}>
+                {avatar}
               </div>
-            ))}
+              {profileDropdown}
+            </div>
           </div>
+        ) : (
+          /* Desktop: inline nav links + profile */
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => item.active ? onNavigate(item.id) : null}
+                  style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: currentPage === item.id ? NAVY_LIGHT : 'transparent', color: item.active ? (currentPage === item.id ? '#FFFFFF' : NAVY_MUTED) : NAVY_LIGHT, fontSize: 13, fontWeight: 500, cursor: item.active ? 'pointer' : 'default', fontFamily: "'DM Sans', sans-serif", position: 'relative' }}
+                >
+                  {item.label}
+                  {!item.active && <span style={{ marginLeft: 5, fontSize: 9, background: NAVY_LIGHT, color: NAVY_MUTED, padding: '1px 5px', borderRadius: 10, verticalAlign: 'middle', fontWeight: 500 }}>Soon</span>}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div onClick={() => setProfileOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, background: profileOpen ? NAVY_LIGHT : 'transparent' }}>
+                {avatar}
+                <div style={{ lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#FFFFFF' }}>{userName || 'Teacher'}</div>
+                  {trialInfo?.plan === 'trial' && !trialInfo?.expired && (
+                    <div style={{ fontSize: 10, fontWeight: 600, color: trialInfo.daysLeft <= 1 ? '#DC2626' : trialInfo.daysLeft <= 2 ? '#D97706' : '#F59E0B', cursor: trialInfo.daysLeft <= 2 ? 'pointer' : 'default', background: trialInfo.daysLeft <= 1 ? '#FEE2E2' : trialInfo.daysLeft <= 2 ? '#FEF3C7' : 'transparent', padding: trialInfo.daysLeft <= 2 ? '2px 6px' : '0', borderRadius: 4 }} onClick={() => trialInfo.daysLeft <= 2 && onNavigate('upgrade')}>
+                      {trialInfo.daysLeft === 0 ? '⚠️ Trial expires today!' : trialInfo.daysLeft === 1 ? '⚠️ Last day of trial!' : `${trialInfo.daysLeft}d trial left`}
+                    </div>
+                  )}
+                  {trialInfo?.expired && <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 600, cursor: 'pointer', background: '#FEE2E2', padding: '2px 6px', borderRadius: 4 }} onClick={() => onNavigate('upgrade')}>Trial expired — upgrade</div>}
+                  {trialInfo?.plan === 'basic' && <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Basic plan</div>}
+                  {trialInfo?.plan === 'premium' && <div style={{ fontSize: 10, color: '#34D399', fontWeight: 500 }}>Premium plan</div>}
+                  {!trialInfo && <div style={{ fontSize: 11, color: NAVY_MUTED }}>{userEmail?.split('@')[1] || 'Teacher'}</div>}
+                </div>
+                <span style={{ fontSize: 11, color: NAVY_MUTED, marginLeft: 2 }}>▼</span>
+              </div>
+              {profileDropdown}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Mobile dropdown menu */}
+      {isMobile && menuOpen && (
+        <div style={{ background: NAVY, borderTop: `1px solid ${NAVY_LIGHT}`, padding: '8px 0' }}>
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => { onNavigate(item.id); setMenuOpen(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 20px', background: currentPage === item.id ? NAVY_LIGHT : 'transparent', border: 'none', color: currentPage === item.id ? '#FFFFFF' : NAVY_MUTED, fontSize: 15, fontWeight: currentPage === item.id ? 600 : 400, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+            >
+              {item.label}
+            </button>
+          ))}
+          {/* Trial info on mobile */}
+          {trialInfo?.plan === 'trial' && !trialInfo?.expired && (
+            <div style={{ padding: '8px 20px', fontSize: 12, color: trialInfo.daysLeft <= 2 ? '#DC2626' : '#F59E0B', fontWeight: 600 }}>
+              {trialInfo.daysLeft === 0 ? '⚠️ Trial expires today!' : trialInfo.daysLeft === 1 ? '⚠️ Last day of trial!' : `${trialInfo.daysLeft} days of trial left`}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
