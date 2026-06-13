@@ -1548,7 +1548,6 @@ async function downloadExitTicketPdf(et) {
         const lineGap = extraLines > 0 ? remainingForExtra / extraLines : 6
 
         let py = contentTop
-        const minFirstGap = 5  // fixed space between text and first writing line
         measured.forEach(({ p, pLines }) => {
           doc.setFillColor(tr,tg,tb); doc.circle(tx + 5, py - 1.3, 0.8, 'F')
           doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
