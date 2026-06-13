@@ -1527,40 +1527,43 @@ async function downloadExitTicketPdf(et) {
         const titleLines = doc.splitTextToSize(et.title, ticketW - 8)
         doc.text(titleLines.slice(0,1), tx + 4, ty + 18)
 
-        // Prompts with bullet-style markers and writing lines
+        // Prompts with bullet markers and fixed-height answer boxes
         const lineW = ticketW - 14
         const contentTop = ty + 25
         const contentBottom = ty + ticketH - 14  // space above footer divider
+        const numPrompts = tier.prompts.length
+        const gapBetween = 3  // gap between text and box, and between prompts
 
         // Measure text height for each prompt
         const measured = tier.prompts.map(p => {
           doc.setFontSize(8.5); doc.setFont('helvetica','bold')
           const pLines = doc.splitTextToSize(p.text, lineW).slice(0,2)
-          return { p, pLines, textH: pLines.length * 4.2 + 2 }
+          return { p, pLines, textH: pLines.length * 4.2 }
         })
 
-        // Work out extra spacing for subsequent lines (2nd, 3rd) to fill the card
+        // Equal-height answer box for every prompt, filling remaining space
         const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
-        const firstGap = 6  // fixed gap from text to the first writing line
-        const numPrompts = measured.length
-        const extraLineCount = measured.reduce((s,m) => s + Math.max(0, (m.p.lines || 3) - 1), 0)
         const availableH = contentBottom - contentTop
-        const usedByFirstLines = totalTextH + numPrompts * firstGap
-        const extraGap = extraLineCount > 0 ? Math.max(7, (availableH - usedByFirstLines) / extraLineCount) : 7
+        const totalGaps = gapBetween * numPrompts * 2
+        const boxH = Math.max(14, (availableH - totalTextH - totalGaps) / numPrompts)
 
         let py = contentTop
-        measured.forEach(({ p, pLines }) => {
+        measured.forEach(({ p, pLines, textH }) => {
           doc.setFillColor(tr,tg,tb); doc.circle(tx + 5, py - 1.3, 0.8, 'F')
           doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
           doc.text(pLines, tx + 8, py)
-          py += pLines.length * 4.2 + 2
+          py += textH + gapBetween
 
-          const numLines = p.lines || 3
-          for (let li = 0; li < numLines; li++) {
-            py += (li === 0 ? firstGap : extraGap)
-            doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
-            doc.line(tx + 8, py, tx + 8 + lineW - 3, py)
+          // Fixed-height answer box with faint internal guide lines
+          doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
+          doc.roundedRect(tx + 8, py, lineW - 3, boxH, 1, 1)
+          const numGuides = Math.max(1, Math.floor(boxH / 7))
+          for (let li = 1; li <= numGuides; li++) {
+            const gy = py + (boxH / (numGuides + 1)) * li
+            doc.setDrawColor(232,230,222); doc.setLineWidth(0.2)
+            doc.line(tx + 10, gy, tx + 8 + lineW - 5, gy)
           }
+          py += boxH + gapBetween
         })
 
         // Name / Date footer
