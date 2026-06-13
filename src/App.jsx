@@ -1970,7 +1970,7 @@ async function downloadWritingFramePdf(wf) {
       const instrH = instrLines.length * 4.5
       doc.setFontSize(9.5)
       const scaffoldLines = step.scaffold ? doc.splitTextToSize(step.scaffold, contentW - 8) : []
-      const scaffoldH = step.scaffold ? scaffoldLines.length * 5 + 4 : 0
+      const scaffoldH = step.scaffold ? scaffoldLines.length * 5 + 8 : 0
       return { step, instrLines, instrH, scaffoldLines, scaffoldH, fixedH: instrH + 4 + scaffoldH + 6 }
     })
 
@@ -2012,11 +2012,11 @@ async function downloadWritingFramePdf(wf) {
 
       // Scaffold (if present) — wrapped, box height matches content
       if (step.scaffold) {
-        const sBoxH = scaffoldLines.length * 5 + 4
+        const sBoxH = scaffoldLines.length * 5 + 8
         doc.setDrawColor(tr,tg,tb); doc.setLineWidth(0.5)
         doc.roundedRect(margin, y, contentW, sBoxH, 1.5, 1.5)
         doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
-        doc.text(scaffoldLines, margin+4, y+6)
+        doc.text(scaffoldLines, margin+4, y+10)
         y += sBoxH + 6
         return
       }
