@@ -3593,15 +3593,17 @@ function MyPlansPage({ onNavigate }) {
         </div>
 
         {/* Filter bar */}
-        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "nowrap" }}>
-          <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
-          <input
-            style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
-            placeholder="Search by book, plan or topic..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && <span onClick={() => setSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+        <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
+            <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
+            <input
+              style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+              placeholder="Search by book, plan or topic..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && <span onClick={() => setSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Subject</span>
             <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${filterSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
