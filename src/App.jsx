@@ -1539,11 +1539,14 @@ async function downloadExitTicketPdf(et) {
           return { p, pLines, textH: pLines.length * 4.2 + 2 }
         })
 
-        // Work out a generous fixed gap between writing lines that fills the card
+        // Work out extra spacing for subsequent lines (2nd, 3rd) to fill the card
         const totalTextH = measured.reduce((s,m) => s + m.textH, 0)
-        const totalLineCount = measured.reduce((s,m) => s + (m.p.lines || 2), 0)
+        const firstGap = 6  // fixed gap from text to the first writing line
+        const numPrompts = measured.length
+        const extraLineCount = measured.reduce((s,m) => s + Math.max(0, (m.p.lines || 2) - 1), 0)
         const availableH = contentBottom - contentTop
-        const gapPerLine = totalLineCount > 0 ? Math.max(7, (availableH - totalTextH) / totalLineCount) : 7
+        const usedByFirstLines = totalTextH + numPrompts * firstGap
+        const extraGap = extraLineCount > 0 ? Math.max(7, (availableH - usedByFirstLines) / extraLineCount) : 7
 
         let py = contentTop
         measured.forEach(({ p, pLines }) => {
@@ -1554,7 +1557,7 @@ async function downloadExitTicketPdf(et) {
 
           const numLines = p.lines || 2
           for (let li = 0; li < numLines; li++) {
-            py += gapPerLine
+            py += (li === 0 ? firstGap : extraGap)
             doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
             doc.line(tx + 8, py, tx + 8 + lineW - 3, py)
           }
