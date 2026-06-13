@@ -1916,18 +1916,23 @@ async function downloadWritingFramePdf(wf) {
     doc.setFillColor(245,244,240); doc.setDrawColor(211,209,199); doc.setLineWidth(0.3)
     doc.roundedRect(margin, y, contentW, 9, 1.5, 1.5, 'FD')
     doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-    const nfields = [{ l:'Name:', x: margin+2 },{ l:'Date:', x: margin+66 },{ l:'Class:', x: margin+130 }]
+    const nfields = [
+      { l:'Name:', x: margin+2, lineEnd: margin+60 },
+      { l:'Date:', x: margin+66, lineEnd: margin+124 },
+      { l:'Class:', x: margin+130, lineEnd: margin+contentW-2 },
+    ]
     nfields.forEach(f => {
       doc.text(f.l, f.x, y+6)
       doc.setDrawColor(180,178,169); doc.setLineWidth(0.3)
-      doc.line(f.x+10, y+6.5, f.x+58, y+6.5)
+      doc.line(f.x + (f.l === 'Class:' ? 11 : 10), y+6.5, f.lineEnd, y+6.5)
     })
     y += 14
 
-    // Context prompt
+    // Context prompt — wrapped to content width
     doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(95,94,90)
-    doc.text(wf.contextPrompt || '', margin, y)
-    y += 8
+    const ctxLines = doc.splitTextToSize(wf.contextPrompt || '', contentW)
+    doc.text(ctxLines, margin, y)
+    y += ctxLines.length * 4.5 + 4
 
     // Base sentence banner — coloured block, left-aligned text
     doc.setFillColor(tr,tg,tb)
@@ -1935,7 +1940,7 @@ async function downloadWritingFramePdf(wf) {
     doc.rect(margin, y + 3, contentW, 3, 'F')
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
     doc.text('BASE SENTENCE', margin + 4, y + 4.2)
-    y += 9
+    y += 12
     doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
     doc.text(wf.baseSentence || '', margin, y)
     y += 9
