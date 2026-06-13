@@ -3667,7 +3667,7 @@ function MyPlansPage({ onNavigate }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20 }}>
+                  <span style={{ background: LIGHT_GREEN, color: "#085041", fontSize: 11, fontWeight: 500, padding: "2px 10px", borderRadius: 20, whiteSpace: 'nowrap', textAlign: 'center' }}>
                     {group.plans.length} plan{group.plans.length !== 1 ? 's' : ''}
                   </span>
                   <span style={{ fontSize: 13, color: MUTED, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
@@ -5480,13 +5480,13 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                         return (
                           <div key={res.id} style={{ border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 10, background: BG, overflow: 'hidden' }}>
                             {/* Row */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer' }}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', cursor: 'pointer', flexWrap: 'wrap' }}
                               onClick={() => setViewingResource(isViewing ? null : res)}>
-                              <span style={{ fontSize: 11, fontWeight: 600, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>
                                 {typeLabels[res.resource_type] || res.resource_type}
                               </span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{res.title}</div>
+                              <div style={{ flex: 1, minWidth: 140 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{res.title}</div>
                                 <div style={{ fontSize: 11, color: MUTED }}>{res.meta} · {new Date(res.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                               </div>
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
