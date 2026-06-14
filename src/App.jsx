@@ -7099,7 +7099,7 @@ export default function App() {
       const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))) : 0
       const expired = plan === 'trial' && expiresAt && now > expiresAt
       const { data: usage } = await supabase.from('usage_counts').select('*').eq('user_id', userId).single()
-      setTrialInfo({ plan, daysLeft, expired, usage: usage || {}, activeSessionId: data.active_session_id })
+      setTrialInfo({ plan, daysLeft, expired, usage: usage || {} })
 
       // If this browser has no session id yet (e.g. session predates this feature), claim one now
       if (!localStorage.getItem('teachreads-session-id')) {
@@ -7116,10 +7116,16 @@ export default function App() {
 
     // ── Single active session check ──
     const localSessionId = localStorage.getItem('teachreads-session-id')
-    if (localSessionId && trialInfo.activeSessionId && localSessionId !== trialInfo.activeSessionId) {
-      await handleSignOut()
-      setSessionKickedOut(true)
-      return false
+    if (localSessionId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profileRow } = await supabase.from('profiles').select('active_session_id').eq('id', user.id).single()
+        if (profileRow?.active_session_id && localSessionId !== profileRow.active_session_id) {
+          await handleSignOut()
+          setSessionKickedOut(true)
+          return false
+        }
+      }
     }
 
     const { plan } = trialInfo
