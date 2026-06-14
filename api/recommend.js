@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, bingoMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -266,6 +266,32 @@ Rules:
 - Keep bullet items concise (under 15 words) and definitions under 20 words`
   }
 
+  if (bingoMode) {
+    maxTokens = 2500
+    systemPrompt = `You are an expert UK primary school teacher creating a print-ready bingo game for the classroom.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Short title e.g. The Creakers Vocabulary Bingo",
+  "subject": "English",
+  "yearGroup": "Year 3",
+  "type": "vocab",
+  "gridSize": 5,
+  "items": [
+    { "display": "gigantic", "detail": "Very large in size" },
+    { "display": "42", "detail": "6 x 7" }
+  ]
+}
+Rules:
+- "type" must be either "vocab" (vocabulary terms) or "maths" (maths facts/answers), based on the request
+- "gridSize" must be 4 for Year 1-2, or 5 for Year 3-6
+- Generate exactly (gridSize * gridSize) - 1 items (15 for a 4x4 grid, 24 for a 5x5 grid) — one cell will be a free space
+- For "vocab" type: "display" is a single key word or short phrase (1-2 words) from the topic; "detail" is a short, simple definition a primary pupil can understand (under 15 words)
+- For "maths" type: "display" is a short answer/result (a number, e.g. "42"); "detail" is the calculation or fact that produces it (e.g. "6 x 7" or "100 - 58"), suitable for a teacher to call out
+- All items must be unique (no duplicate display values)
+- Content must be accurate and aligned to UK National Curriculum for the year group and subject`
+  }
+
   if (comprehensionMode) {
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
@@ -407,6 +433,7 @@ Rules:
     if (exitTicketMode) return res.status(200).json({ exitTicket: parsed })
     if (vocabCardsMode) return res.status(200).json({ vocabCards: parsed })
     if (knowledgeOrgMode) return res.status(200).json({ knowledgeOrg: parsed })
+    if (bingoMode) return res.status(200).json({ bingo: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {

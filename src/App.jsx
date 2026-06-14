@@ -1523,6 +1523,180 @@ function VocabCardsOutput({ vocabCards: vc }) {
   )
 }
 
+// ── Bingo PDF Download ────────────────────────────────────────────────────────
+
+function shuffleArray(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+async function downloadBingoPdf(bingo, numGrids = 6) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210; const pageH = 297; const margin = 16
+  const contentW = pageW - margin * 2
+  const gridSize = bingo.gridSize || 5
+  const freeIndex = Math.floor((gridSize * gridSize) / 2)
+  const GREEN_HEX = '#1D9E75'
+  const [gr, gg, gb] = [29, 158, 117] // GREEN
+
+  function drawHeader(subtitle) {
+    doc.setFillColor(gr, gg, gb)
+    doc.rect(0, 0, pageW, 22, 'F')
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+    doc.text('Bingo', pageW/2, 8, { align: 'center' })
+    doc.setFontSize(14); doc.setFont('helvetica','bold')
+    doc.text(bingo.title || '', pageW/2, 16, { align: 'center' })
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
+    doc.text(subtitle, margin, 32)
+  }
+
+  // ── Grid pages ──
+  for (let g = 0; g < numGrids; g++) {
+    if (g > 0) doc.addPage()
+    drawHeader(`${bingo.yearGroup || ''} · ${bingo.subject || ''} · Card ${g + 1} of ${numGrids}`)
+
+    const cellGap = 2
+    const gridTop = 40
+    const gridBottom = pageH - margin - 10
+    const availH = gridBottom - gridTop
+    const cellSize = Math.min((contentW - (gridSize - 1) * cellGap) / gridSize, (availH - (gridSize - 1) * cellGap) / gridSize)
+    const gridW = cellSize * gridSize + (gridSize - 1) * cellGap
+    const startX = margin + (contentW - gridW) / 2
+    const startY = gridTop
+
+    const cellItems = shuffleArray(bingo.items || []).slice(0, gridSize * gridSize - 1)
+    let itemIdx = 0
+
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        const idx = row * gridSize + col
+        const cx = startX + col * (cellSize + cellGap)
+        const cy = startY + row * (cellSize + cellGap)
+        const isFree = idx === freeIndex
+
+        if (isFree) {
+          doc.setFillColor(225, 245, 238) // LIGHT_GREEN
+          doc.setDrawColor(gr, gg, gb); doc.setLineWidth(0.8)
+          doc.roundedRect(cx, cy, cellSize, cellSize, 2, 2, 'FD')
+          doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(8, 80, 65)
+          doc.text('FREE', cx + cellSize/2, cy + cellSize/2 + 1.5, { align: 'center' })
+        } else {
+          const item = cellItems[itemIdx] || { display: '' }
+          itemIdx++
+          doc.setDrawColor(180, 178, 169); doc.setLineWidth(0.4)
+          doc.roundedRect(cx, cy, cellSize, cellSize, 2, 2)
+          doc.setFontSize(bingo.type === 'maths' ? 13 : 9.5)
+          doc.setFont('helvetica', bingo.type === 'maths' ? 'bold' : 'normal')
+          doc.setTextColor(44, 44, 42)
+          const lines = doc.splitTextToSize(String(item.display || ''), cellSize - 4)
+          const lineH = bingo.type === 'maths' ? 5 : 4
+          const totalH = lines.length * lineH
+          lines.slice(0, 3).forEach((line, li) => {
+            doc.text(line, cx + cellSize/2, cy + cellSize/2 - totalH/2 + (li + 1) * lineH - lineH/2 + 1.5, { align: 'center' })
+          })
+        }
+      }
+    }
+
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
+    doc.text('Mark off each square as it is called. Shout BINGO when you complete a line!', margin, pageH - 6)
+  }
+
+  // ── Caller's card page ──
+  doc.addPage()
+  drawHeader(`${bingo.yearGroup || ''} · ${bingo.subject || ''} · Caller's card`)
+  doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(100,100,100)
+  doc.text(bingo.type === 'maths'
+    ? 'Read out each calculation below. Pupils mark off the answer if it appears on their grid.'
+    : 'Read out each definition below. Pupils mark off the matching word if it appears on their grid.', margin, 38, { maxWidth: contentW })
+
+  let y = 48
+  ;(bingo.items || []).forEach((item, i) => {
+    if (y > pageH - margin - 14) { doc.addPage(); drawHeader(`${bingo.yearGroup || ''} · ${bingo.subject || ''} · Caller's card (cont.)`); y = 38 }
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+    const detailLines = doc.splitTextToSize(`${item.detail || ''}`, contentW - 28)
+    doc.text(String(item.display || ''), margin, y)
+    doc.setFont('helvetica','normal'); doc.setTextColor(90,90,90)
+    doc.text(detailLines, margin + 22, y)
+    y += Math.max(6, detailLines.length * 5) + 2
+  })
+
+  // ── Footer on each page ──
+  const totalPages = doc.internal.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
+    doc.text(`TeachReads  |  ${bingo.title || ''}`, margin, pageH - 4)
+    doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' })
+  }
+
+  doc.save(`${(bingo.title || 'bingo').replace(/[^a-z0-9]/gi,'_')}_bingo.pdf`)
+}
+
+// ── Bingo Output Component ───────────────────────────────────────────────────
+
+function BingoOutput({ bingo }) {
+  const [downloading, setDownloading] = useState(false)
+  const gridSize = bingo.gridSize || 5
+  const freeIndex = Math.floor((gridSize * gridSize) / 2)
+  const previewItems = (bingo.items || []).slice(0, gridSize * gridSize - 1)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadBingoPdf(bingo) }
+    catch(e) { console.error('Bingo PDF error:', e) }
+    setDownloading(false)
+  }
+
+  let itemIdx = 0
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{bingo.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{bingo.yearGroup} · {bingo.subject} · {gridSize}x{gridSize} {bingo.type === 'maths' ? 'maths facts' : 'vocabulary'} bingo</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {downloading ? '⏳ Generating...' : '📄 Download PDF (6 cards + caller card)'}
+        </button>
+      </div>
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden', padding: 16, background: BG }}>
+        <div style={{ fontSize: 12, color: MUTED, marginBottom: 10 }}>Preview of one bingo card. The PDF includes 6 unique cards plus a caller's card with definitions/calculations.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridSize}, 1fr)`, gap: 4, maxWidth: 400, margin: '0 auto' }}>
+          {Array.from({ length: gridSize * gridSize }).map((_, idx) => {
+            const isFree = idx === freeIndex
+            let content = ''
+            if (!isFree) {
+              content = previewItems[itemIdx]?.display || ''
+              itemIdx++
+            }
+            return (
+              <div key={idx} style={{
+                aspectRatio: '1', border: isFree ? `2px solid ${GREEN}` : `0.5px solid ${BORDER}`,
+                borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center', fontSize: bingo.type === 'maths' ? 13 : 10, padding: 3, lineHeight: 1.2,
+                background: isFree ? LIGHT_GREEN : '#fff', color: isFree ? '#085041' : TEXT, fontWeight: isFree || bingo.type === 'maths' ? 600 : 400
+              }}>
+                {isFree ? 'FREE' : content}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Exit Ticket PDF Download ──────────────────────────────────────────────────
 
 async function downloadExitTicketPdf(et) {
@@ -3745,6 +3919,7 @@ const RESOURCE_TYPES = [
   { id: 'knowledge_org',  label: 'Knowledge organiser',     emoji: '📊', desc: 'Visual summary of key facts and vocabulary' },
   { id: 'vocab_cards',    label: 'Vocabulary cards',        emoji: '🃏', desc: 'Key terms with definitions' },
   { id: 'comprehension',  label: 'Reading comprehension',   emoji: '🔍', desc: 'Questions to check understanding of a text' },
+  { id: 'bingo',          label: 'Bingo game',              emoji: '🎲', desc: 'Vocabulary or maths facts bingo, with caller cards' },
 ]
 
 function BookGridStarRating({ title, author }) {
@@ -4754,6 +4929,44 @@ Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.auth
       return
     }
 
+    // Route bingo type
+    if (selectedResourceType === 'bingo') {
+      const bingoTypeHint = /maths|math|number|times table|calculation/i.test(selectedPlan.subject) ? 'maths facts (e.g. times tables or calculations)' : 'vocabulary terms from the topic'
+      const bingoPrompt = `Create a bingo game for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
+Use ${bingoTypeHint}.`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: bingoPrompt, bingoMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const bingo = data.bingo
+        setResource({ ...bingo, _type: 'bingo' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: bingo.title,
+              meta: `${bingo.yearGroup} · ${bingo.subject} · ${bingo.gridSize}x${bingo.gridSize} bingo`,
+              resource_type: 'bingo',
+              sections: [{ heading: 'Bingo items', content: bingo.items.map(it => `${it.display}: ${it.detail}`).join('\n') }],
+              prompt: (bingoPrompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Bingo save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Bingo save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     // Route exit_ticket type
     if (selectedResourceType === 'exit_ticket') {
       const etPrompt = `Create a differentiated exit ticket for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
@@ -4983,6 +5196,39 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Vocab cards save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
+    // Detect bingo requests
+    const isBingo = /bingo/i.test(prompt)
+    if (isBingo) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, bingoMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const bingo = data.bingo
+        setResource({ ...bingo, _type: 'bingo' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id,
+              title: bingo.title,
+              meta: `${bingo.yearGroup} · ${bingo.subject} · ${bingo.gridSize}x${bingo.gridSize} bingo`,
+              resource_type: 'bingo',
+              sections: [{ heading: 'Bingo items', content: bingo.items.map(it => `${it.display}: ${it.detail}`).join('\n') }],
+              prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Bingo save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Bingo save error:', e?.message) }
       } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
@@ -5455,8 +5701,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                         !(r.meta || '').toLowerCase().includes(catalogueSearch.toLowerCase())) return false
                     return true
                   })
-                  const typeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', adhoc: 'Quick resource' }
-                  const typeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, adhoc: { bg: PAGE_BG, color: MUTED } }
+                  const typeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', adhoc: 'Quick resource' }
+                  const typeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, adhoc: { bg: PAGE_BG, color: MUTED } }
 
                   if (filtered.length === 0) return (
                     <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED }}>
@@ -5558,6 +5804,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           ? <VocabCardsOutput vocabCards={resource} />
           : resource && resource._type === 'knowledge_org'
           ? <KnowledgeOrgOutput knowledgeOrg={resource} />
+          : resource && resource._type === 'bingo'
+          ? <BingoOutput bingo={resource} />
           : resource && <ResourceOutput key={resource._genId} resource={resource} />
         }
 
