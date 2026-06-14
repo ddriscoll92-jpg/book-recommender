@@ -40,7 +40,7 @@ const PREMIUM_LIMITS = {
   load_mores: 999,
   lesson_ideas: 999,
   units_of_work: 999,
-  resources: 999,
+  resources: 500,
   ai_chat: 999,
 }
 
@@ -6815,7 +6815,7 @@ function LegalPage({ type, onClose }) {
 // ── Admin Dashboard ───────────────────────────────────────────────────────────
 const ADMIN_EMAIL = 'dd.driscoll92@gmail.com'
 
-function AuthPage({ onAuth, onLegal }) {
+function AuthPage({ onAuth, onLegal, infoMessage }) {
   const [localLegal, setLocalLegal] = useState(null)
   const [mode, setMode] = useState('signup')
   const [email, setEmail] = useState('')
@@ -6918,6 +6918,9 @@ function AuthPage({ onAuth, onLegal }) {
           </div>
         </div>
         <div id="auth-card" style={{ padding: '2rem 0' }}>
+          {infoMessage && (
+            <div style={{ background: '#FEF3C7', border: '0.5px solid #F59E0B', borderRadius: 10, padding: '0.75rem 1rem', fontSize: 13, color: '#92400E', marginBottom: 16 }}>{infoMessage}</div>
+          )}
           <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 16, padding: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
             <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, color: TEXT, marginBottom: 4 }}>{mode === 'signup' ? 'Get started free' : 'Welcome back'}</h2>
             <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>{mode === 'signup' ? '5-day free trial · No credit card required' : 'Sign in to your TeachReads account'}</p>
@@ -7030,6 +7033,9 @@ export default function App() {
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [trialInfo, setTrialInfo] = useState(null)
+  const [sessionKickedOut, setSessionKickedOut] = useState(false)
+  const [approachingLimitWarning, setApproachingLimitWarning] = useState(null)
+  const [limitBlockedInfo, setLimitBlockedInfo] = useState(null)
   const [showAdmin, setShowAdmin] = useState(false)
   const [newPassword, setNewPasswordReset] = useState('')
   const [resetMsg, setResetMsg] = useState('')
@@ -7078,7 +7084,7 @@ export default function App() {
 
   async function loadProfilePreferences(userId) {
     try {
-    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url, plan, trial_expires_at').eq('id', userId).single()
+    const { data } = await supabase.from('profiles').select('default_year, default_subject, display_name, avatar_url, plan, trial_expires_at, active_session_id').eq('id', userId).single()
     if (data) {
       if (data.display_name) setDisplayName(data.display_name)
       if (data.avatar_url) setAvatarUrl(`${data.avatar_url}?t=${Date.now()}`)
@@ -7093,20 +7099,38 @@ export default function App() {
       const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))) : 0
       const expired = plan === 'trial' && expiresAt && now > expiresAt
       const { data: usage } = await supabase.from('usage_counts').select('*').eq('user_id', userId).single()
-      setTrialInfo({ plan, daysLeft, expired, usage: usage || {} })
+      setTrialInfo({ plan, daysLeft, expired, usage: usage || {}, activeSessionId: data.active_session_id })
+
+      // If this browser has no session id yet (e.g. session predates this feature), claim one now
+      if (!localStorage.getItem('teachreads-session-id')) {
+        const sessionId = crypto.randomUUID()
+        localStorage.setItem('teachreads-session-id', sessionId)
+        await supabase.from('profiles').update({ active_session_id: sessionId }).eq('id', userId)
+      }
     }
     } catch(e) { console.error('loadProfilePreferences error:', e) }
   }
 
   async function checkTrial(action) {
     if (!trialInfo) return true
+
+    // ── Single active session check ──
+    const localSessionId = localStorage.getItem('teachreads-session-id')
+    if (localSessionId && trialInfo.activeSessionId && localSessionId !== trialInfo.activeSessionId) {
+      await handleSignOut()
+      setSessionKickedOut(true)
+      return false
+    }
+
     const { plan } = trialInfo
-    if (plan === 'premium') return true
     if (plan === 'trial' && trialInfo.expired) { setPage('upgrade'); return false }
+
     const limits = plan === 'premium' ? PREMIUM_LIMITS : plan === 'basic' ? BASIC_LIMITS : TRIAL_LIMITS
     const limit = limits[action] || 999
     let usage = trialInfo.usage
-    if (plan === 'basic') {
+
+    // Monthly usage reset for basic and premium plans
+    if (plan === 'basic' || plan === 'premium') {
       const resetAt = trialInfo.usage.reset_at ? new Date(trialInfo.usage.reset_at) : null
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -7118,14 +7142,33 @@ export default function App() {
         setTrialInfo(prev => ({ ...prev, usage: freshUsage }))
       }
     }
+
     const count = usage[action] || 0
-    if (count >= limit) { setPage('upgrade'); return false }
+    if (count >= limit) {
+      if (plan === 'premium') {
+        setLimitBlockedInfo({ action, limit })
+      } else {
+        setPage('upgrade')
+      }
+      return false
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
     const newUsage = { ...usage, [action]: count + 1 }
     await supabase.from('usage_counts').upsert({ user_id: user.id, ...newUsage })
     setTrialInfo(prev => ({ ...prev, usage: newUsage }))
+
+    // Warn when approaching the premium soft cap (90%+)
+    if (plan === 'premium' && limit < 999) {
+      const newCount = count + 1
+      if (newCount >= limit * 0.9 && newCount < limit) {
+        setApproachingLimitWarning({ action, count: newCount, limit })
+      }
+    }
+
     return true
   }
+
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -7151,9 +7194,18 @@ export default function App() {
 
   if (session === undefined) return null
   // Allow success page to show even if session is briefly null after redirect
-  if (!session && page !== 'upgrade_success') return <AuthPage onAuth={async () => {
+  if (!session && page !== 'upgrade_success') return <AuthPage
+    infoMessage={sessionKickedOut ? "You've been signed out because your account was used to sign in on another device. Only one active session is allowed at a time." : null}
+    onAuth={async () => {
       const { data: { session: newSession } } = await supabase.auth.getSession()
       setSession(newSession || true)
+      setSessionKickedOut(false)
+      // Claim this session as the active one — invalidates any other logged-in session
+      if (newSession?.user?.id) {
+        const sessionId = crypto.randomUUID()
+        localStorage.setItem('teachreads-session-id', sessionId)
+        await supabase.from('profiles').update({ active_session_id: sessionId }).eq('id', newSession.user.id)
+      }
     }} onLegal={t => setLegalPage(t)} />
 
   const userName = displayName || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
@@ -7163,6 +7215,14 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
       <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      {approachingLimitWarning && (
+        <div style={{ background: '#FEF3C7', borderBottom: '1px solid #FDE68A', padding: '10px 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, color: '#92400E', fontWeight: 500 }}>
+            ⚠️ You've used {approachingLimitWarning.count} of your {approachingLimitWarning.limit} monthly {approachingLimitWarning.action.replace(/_/g, ' ')} — this resets at the start of next month.
+          </span>
+          <span onClick={() => setApproachingLimitWarning(null)} style={{ fontSize: 13, color: '#92400E', cursor: 'pointer', flexShrink: 0, marginLeft: 12 }}>✕</span>
+        </div>
+      )}
       {trialInfo?.plan === 'trial' && !trialInfo?.expired && trialInfo?.daysLeft <= 2 && (
         <div style={{ background: trialInfo.daysLeft === 0 ? '#FEE2E2' : '#FEF3C7', borderBottom: `1px solid ${trialInfo.daysLeft === 0 ? '#FECACA' : '#FDE68A'}`, padding: '10px 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: trialInfo.daysLeft === 0 ? '#DC2626' : '#92400E', fontWeight: 500 }}>
@@ -7219,6 +7279,20 @@ export default function App() {
       {legalPage && legalPage !== 'contact' && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
       {legalPage === 'contact' && <ContactModal onClose={() => setLegalPage(null)} />}
       {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); if (session?.user?.id) loadProfilePreferences(session.user.id) }} />}
+      {limitBlockedInfo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setLimitBlockedInfo(null)}>
+          <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 420, padding: '1.5rem', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT, marginBottom: 8 }}>Monthly limit reached</div>
+            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 16 }}>
+              You've reached your monthly limit of {limitBlockedInfo.limit} {limitBlockedInfo.action.replace(/_/g, ' ')} on the Premium plan. This resets at the start of next month. If you need a higher limit, please get in touch.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setLimitBlockedInfo(null); setLegalPage('contact') }} style={{ flex: 1, height: 38, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Contact us</button>
+              <button onClick={() => setLimitBlockedInfo(null)} style={{ flex: 1, height: 38, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
