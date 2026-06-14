@@ -1607,7 +1607,7 @@ async function downloadBingoPdf(bingo, numGrids = 6) {
     }
 
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
-    doc.text('Mark off each square as it is called. Shout BINGO when you complete a line!', margin, pageH - 6)
+    doc.text('Mark off each square as it is called. Shout BINGO when you complete a line!', margin, pageH - 11)
   }
 
   // ── Caller's card page ──
