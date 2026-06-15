@@ -1699,6 +1699,8 @@ function BingoOutput({ bingo }) {
 
 // ── Word Search PDF Download ──────────────────────────────────────────────────
 
+const WORDSEARCH_COLOURS = ['#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#D97706', '#DB2777']
+
 function buildWordsearchGrid(words, gridSize) {
   const grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(null))
   const placed = []
@@ -1736,7 +1738,7 @@ function buildWordsearchGrid(words, gridSize) {
         const c = bestPlacement.col + bestPlacement.dir.dc * i
         grid[r][c] = word[i]
       }
-      placed.push(item)
+      placed.push({ ...item, colour: WORDSEARCH_COLOURS[placed.length % WORDSEARCH_COLOURS.length] })
     }
   }
 
@@ -1758,6 +1760,9 @@ async function downloadWordsearchPdf(ws) {
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageW = 210; const pageH = 297; const margin = 16
+  function hexToRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
+  }
   const contentW = pageW - margin * 2
   const gridSize = ws.gridSize || 12
   const [gr, gg, gb] = [29, 158, 117] // GREEN
@@ -1803,7 +1808,8 @@ async function downloadWordsearchPdf(ws) {
 
   placed.forEach((item, i) => {
     if (y > pageH - margin - 10) { doc.addPage(); y = margin + 6 }
-    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+    const [r,g,b] = hexToRgb(item.colour || '#2563EB')
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(r,g,b)
     const clueLines = doc.splitTextToSize(item.clue || '', contentW - 38)
     doc.text(item.word, margin, y)
     doc.setFont('helvetica','normal'); doc.setTextColor(90,90,90)
@@ -1862,7 +1868,7 @@ function WordsearchOutput({ wordsearch: ws }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {preview.placed.map((item, i) => (
             <div key={i} style={{ fontSize: 12, color: TEXT }}>
-              <span style={{ fontWeight: 600 }}>{item.word}</span> — <span style={{ color: MUTED }}>{item.clue}</span>
+              <span style={{ fontWeight: 600, color: item.colour || '#2563EB' }}>{item.word}</span> — <span style={{ color: MUTED }}>{item.clue}</span>
             </div>
           ))}
         </div>
