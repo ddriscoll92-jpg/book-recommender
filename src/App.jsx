@@ -4960,6 +4960,7 @@ function ResourcesPage({ onNavigate, checkTrial }) {
   const [catalogueType, setCatalogueType] = useState('All')
   const [catalogueSubject, setCatalogueSubject] = useState('All')
   const [catalogueYear, setCatalogueYear] = useState('All')
+  const [catalogueFavOnly, setCatalogueFavOnly] = useState(false)
   const [viewingResource, setViewingResource] = useState(null)
   const [confirmDeleteResourceId, setConfirmDeleteResourceId] = useState(null)
 
@@ -5941,6 +5942,10 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                     <option value="All">All years</option>
                     {['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
+                  <span onClick={() => setCatalogueFavOnly(f => !f)}
+                    style={{ height: 28, padding: '0 10px', borderRadius: 20, border: `0.5px solid ${catalogueFavOnly ? GREEN : BORDER}`, fontSize: 12, fontWeight: catalogueFavOnly ? 600 : 400, color: catalogueFavOnly ? '#085041' : MUTED, background: catalogueFavOnly ? LIGHT_GREEN : BG, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
+                    ⭐ Favourites
+                  </span>
                   <span onClick={loadCatalogue} title="Refresh" style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>↺</span>
                 </div>
 
@@ -5949,6 +5954,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                 ) : (() => {
                   const filtered = catalogue.filter(r => {
                     if (catalogueType !== 'All' && r.resource_type !== catalogueType) return false
+                    if (catalogueFavOnly && !r.is_favourite) return false
                     if (catalogueSubject !== 'All' && !(r.meta || '').toLowerCase().includes(catalogueSubject.toLowerCase())) return false
                     if (catalogueYear !== 'All' && !(r.meta || '').toLowerCase().includes(catalogueYear.toLowerCase())) return false
                     if (catalogueSearch) {
@@ -5996,6 +6002,21 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                                 <div style={{ fontSize: 11, color: MUTED }}>{res.meta} · {new Date(res.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                               </div>
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                                <button
+                                  onClick={async e => {
+                                    e.stopPropagation()
+                                    const newVal = !res.is_favourite
+                                    setCatalogue(prev => prev.map(r => r.id === res.id ? { ...r, is_favourite: newVal } : r))
+                                    const { error } = await supabase.from('resources').update({ is_favourite: newVal }).eq('id', res.id)
+                                    if (error) {
+                                      console.error('Favourite toggle error:', error.message)
+                                      setCatalogue(prev => prev.map(r => r.id === res.id ? { ...r, is_favourite: !newVal } : r))
+                                    }
+                                  }}
+                                  title={res.is_favourite ? 'Remove from favourites' : 'Add to favourites'}
+                                  style={{ height: 26, width: 26, padding: 0, background: res.is_favourite ? '#FEF3C7' : PAGE_BG, border: `0.5px solid ${res.is_favourite ? '#F59E0B' : BORDER}`, borderRadius: 6, fontSize: 13, color: res.is_favourite ? '#D97706' : MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  {res.is_favourite ? '⭐' : '☆'}
+                                </button>
                                 <button
                                   onClick={e => { e.stopPropagation(); setViewingResource(isViewing ? null : res) }}
                                   style={{ height: 26, padding: '0 10px', background: isViewing ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: isViewing ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
