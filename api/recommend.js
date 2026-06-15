@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, bingoMode, wordsearchMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, bingoMode, wordsearchMode, slideshowMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -316,6 +316,35 @@ Rules:
 - Content must be accurate and aligned to UK National Curriculum for the year group and subject`
   }
 
+  if (slideshowMode) {
+    maxTokens = 3000
+    systemPrompt = `You are an expert UK primary school teacher creating a teaching slideshow for a single lesson.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Lesson title",
+  "slides": [
+    { "type": "title", "heading": "Lesson title", "subheading": "Year group · Subject · Book title" },
+    { "type": "objective", "heading": "Learning Objective", "content": "We are learning to..." },
+    { "type": "starter", "heading": "Starter / Hook", "content": "Short engaging starter activity description", "bullets": ["optional bullet 1", "optional bullet 2"] },
+    { "type": "vocab", "heading": "Key Vocabulary", "items": [{ "word": "term", "definition": "short definition" }] },
+    { "type": "teaching", "heading": "Main Teaching", "bullets": ["key teaching point 1", "key teaching point 2", "key teaching point 3"] },
+    { "type": "activity", "heading": "Main Activity", "content": "Description of the main activity", "bullets": ["step or instruction 1", "step or instruction 2"] },
+    { "type": "differentiation", "heading": "Support / Core / Extension", "support": "what support learners do", "core": "what core learners do", "extension": "what extension learners do" },
+    { "type": "plenary", "heading": "Plenary / Recap", "content": "Recap activity or key question", "bullets": ["optional question 1", "optional question 2"] }
+  ]
+}
+Rules:
+- Decide which slide types are relevant based on the lesson content provided — not every type is required, and you may include more than one slide of a given type if useful (e.g. two "teaching" slides for a content-heavy lesson)
+- Always start with exactly one "title" slide and include an "objective" slide using the lesson's learning intention
+- Generate between 5 and 10 slides total depending on lesson complexity
+- "vocab" items: 3-6 key words maximum, each with a short pupil-friendly definition (under 12 words)
+- "bullets" arrays: 2-5 short items, each under 15 words
+- "content" fields: 1-3 short sentences, plain and clear for reading aloud or projecting
+- "differentiation" slide: base support/core/extension on the lesson's SEND adaptations if provided, otherwise infer sensible differentiation from the main activity
+- Use UK English spelling and terminology throughout`
+  }
+
   if (comprehensionMode) {
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
@@ -459,6 +488,7 @@ Rules:
     if (knowledgeOrgMode) return res.status(200).json({ knowledgeOrg: parsed })
     if (bingoMode) return res.status(200).json({ bingo: parsed })
     if (wordsearchMode) return res.status(200).json({ wordsearch: parsed })
+    if (slideshowMode) return res.status(200).json({ slideshow: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {
