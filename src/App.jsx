@@ -6047,6 +6047,8 @@ function PresentationsPage({ onNavigate, checkTrial, initialPlanId }) {
   const [catalogueLoading, setCatalogueLoading] = useState(false)
   const [catalogueSearch, setCatalogueSearch] = useState('')
   const [catalogueFavOnly, setCatalogueFavOnly] = useState(false)
+  const [catalogueFilterSubject, setCatalogueFilterSubject] = useState('All')
+  const [catalogueFilterYear, setCatalogueFilterYear] = useState('All')
   const [viewingPresentation, setViewingPresentation] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [regeneratingId, setRegeneratingId] = useState(null)
@@ -6132,7 +6134,7 @@ function PresentationsPage({ onNavigate, checkTrial, initialPlanId }) {
   const [error, setError] = useState('')
   const [generatedCount, setGeneratedCount] = useState(0)
 
-  async function generateAndSave(slidePrompt, titleFallback, planId) {
+  async function generateAndSave(slidePrompt, titleFallback, planId, fallbackSubject, fallbackYearGroup) {
     const res = await fetch('/api/recommend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -6150,6 +6152,8 @@ function PresentationsPage({ onNavigate, checkTrial, initialPlanId }) {
           plan_id: planId || null,
           title: slideshow.title || titleFallback,
           meta: `${slideshow.slides?.length || 0} slides`,
+          subject: slideshow.subject || fallbackSubject || null,
+          year_group: slideshow.yearGroup || fallbackYearGroup || null,
           slides: slideshow.slides,
           prompt: (slidePrompt || '').slice(0, 2000),
         })
@@ -6180,7 +6184,7 @@ Teacher notes: ${lesson.teacher_notes || ''}
 SEND adaptations - Support: ${(lesson.send_adaptations?.lower || []).join('; ')}
 SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; ')}`
       try {
-        await generateAndSave(slidePrompt, lesson.title, selectedPlan.id)
+        await generateAndSave(slidePrompt, lesson.title, selectedPlan.id, selectedPlan.subject, selectedPlanGroup.yearGroup)
         setGeneratedCount(c => c + 1)
       } catch(err) {
         setError(`Failed on "${lesson.title}": ${err.message || 'Something went wrong.'}`)
@@ -6222,6 +6226,8 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
       const { error: updErr } = await supabase.from('presentations').update({
         title: slideshow.title || presentation.title,
         meta: `${slideshow.slides?.length || 0} slides`,
+        subject: slideshow.subject || presentation.subject || null,
+        year_group: slideshow.yearGroup || presentation.year_group || null,
         slides: slideshow.slides,
       }).eq('id', presentation.id)
       if (updErr) console.error('Regenerate save error:', updErr.message)
@@ -6237,6 +6243,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
     "Make a slideshow on the water cycle for Year 5 Science",
     "Create a slideshow about the Great Fire of London for Year 2",
     "Make a slideshow on persuasive writing techniques for Year 6",
+    "Create a slideshow on healthy eating and food groups for Year 3 PSHE",
   ]
 
   const tabBtn = (id, label, emoji) => (
@@ -6451,10 +6458,27 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
                     />
                     {catalogueSearch && <span onClick={() => setCatalogueSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
                   </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Subject</span>
+                    <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueFilterSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueFilterSubject !== 'All' ? LIGHT_GREEN : BG, color: catalogueFilterSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+                      value={catalogueFilterSubject} onChange={e => setCatalogueFilterSubject(e.target.value)}>
+                      {['All', ...Array.from(new Set(catalogue.map(p => p.subject).filter(Boolean))).sort()].map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Year</span>
+                    <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueFilterYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueFilterYear !== 'All' ? LIGHT_GREEN : BG, color: catalogueFilterYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+                      value={catalogueFilterYear} onChange={e => setCatalogueFilterYear(e.target.value)}>
+                      {['All', ...Array.from(new Set(catalogue.map(p => p.year_group).filter(Boolean))).sort()].map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
+                    </select>
+                  </div>
                   <span onClick={() => setCatalogueFavOnly(f => !f)}
                     style={{ height: 28, padding: '0 10px', borderRadius: 20, border: `0.5px solid ${catalogueFavOnly ? GREEN : BORDER}`, fontSize: 12, fontWeight: catalogueFavOnly ? 600 : 400, color: catalogueFavOnly ? '#085041' : MUTED, background: catalogueFavOnly ? LIGHT_GREEN : BG, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
                     ⭐ Favourites
                   </span>
+                  {(catalogueSearch || catalogueFavOnly || catalogueFilterSubject !== 'All' || catalogueFilterYear !== 'All') && (
+                    <span onClick={() => { setCatalogueSearch(''); setCatalogueFavOnly(false); setCatalogueFilterSubject('All'); setCatalogueFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Clear</span>
+                  )}
                   <span onClick={loadCatalogue} title="Refresh" style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>↺</span>
                 </div>
 
@@ -6463,9 +6487,12 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
                 ) : (() => {
                   const filtered = catalogue.filter(p => {
                     if (catalogueFavOnly && !p.is_favourite) return false
+                    if (catalogueFilterSubject !== 'All' && p.subject !== catalogueFilterSubject) return false
+                    if (catalogueFilterYear !== 'All' && p.year_group !== catalogueFilterYear) return false
                     if (catalogueSearch && !p.title.toLowerCase().includes(catalogueSearch.toLowerCase())) return false
                     return true
                   })
+
 
                   if (filtered.length === 0) return (
                     <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED }}>
@@ -6494,7 +6521,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
                               </span>
                               <div style={{ flex: 1, minWidth: 140 }}>
                                 <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{pres.title}</div>
-                                <div style={{ fontSize: 11, color: MUTED }}>{pres.meta} · {new Date(pres.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                <div style={{ fontSize: 11, color: MUTED }}>{[pres.year_group, pres.subject, pres.meta].filter(Boolean).join(' · ')} · {new Date(pres.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                               </div>
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                                 <button

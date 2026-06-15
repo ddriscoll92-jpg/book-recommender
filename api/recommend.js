@@ -323,6 +323,8 @@ You must return ONLY valid JSON — no markdown, no explanation, no backticks.
 The JSON must have this exact structure:
 {
   "title": "Lesson title",
+  "subject": "Subject e.g. Science",
+  "yearGroup": "Year group e.g. Year 4",
   "slides": [
     { "type": "title", "heading": "Lesson title", "subheading": "Year group · Subject · Book title" },
     { "type": "objective", "heading": "Learning Objective", "content": "We are learning to..." },
@@ -335,6 +337,7 @@ The JSON must have this exact structure:
   ]
 }
 Rules:
+- "subject" and "yearGroup" must reflect the lesson/topic provided (infer sensible values if not explicitly stated)
 - Decide which slide types are relevant based on the lesson content provided — not every type is required, and you may include more than one slide of a given type if useful (e.g. two "teaching" slides for a content-heavy lesson)
 - Always start with exactly one "title" slide and include an "objective" slide using the lesson's learning intention
 - Generate between 5 and 10 slides total depending on lesson complexity
