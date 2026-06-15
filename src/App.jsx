@@ -2885,9 +2885,15 @@ function ResourceOutput({ resource }) {
           if (!text) return
           const clean = sanitise(text)
           if (!clean) return
-          checkY(8); doc.setFontSize(size); doc.setTextColor(...color); doc.setFont('helvetica', 'normal')
+          doc.setFontSize(size); doc.setTextColor(...color); doc.setFont('helvetica', 'normal')
           const lines = doc.splitTextToSize(clean, contentW)
-          doc.text(lines, margin, y); y += lines.length * (size * 0.45) + 2
+          const lineH = size * 0.45
+          lines.forEach(line => {
+            checkY(lineH)
+            doc.text(line, margin, y)
+            y += lineH
+          })
+          y += 2
         }
         // Header
         doc.setFillColor(...NAVY_RGB); doc.rect(0, 0, pageW, 32, 'F')
