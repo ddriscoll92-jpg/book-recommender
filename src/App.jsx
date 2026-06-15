@@ -6898,17 +6898,6 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
               </div>
             </div>
 
-            {/* Model example card */}
-            {unit.plan.model_example?.title && (
-              <div style={{ background: '#FFFBF0', border: `0.5px solid ${AMBER}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>⭐ Model example · End goal</span>
-                </div>
-                <p style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>{unit.plan.model_example.description}</p>
-                <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT }}>{unit.plan.model_example.title}</div>
-              </div>
-            )}
-
             {/* Tabs */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: `0.5px solid ${BORDER}`, marginBottom: 16, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -6957,6 +6946,18 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
                       </div>
                     )
                   })}
+                  {unit.plan.model_example?.title && (
+                    <div style={{ background: '#FFFBF0', border: `0.5px solid ${AMBER}`, borderRadius: 10, padding: '0.875rem 1.125rem', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{ width: 26, height: 26, borderRadius: '50%', background: AMBER_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0, marginTop: 1 }}>⭐</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{unit.plan.model_example.title}</span>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: AMBER_TEXT, background: AMBER_BG, padding: '1px 7px', borderRadius: 20 }}>Model example · End goal</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>{unit.plan.model_example.description}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
