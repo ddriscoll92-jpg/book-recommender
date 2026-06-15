@@ -431,7 +431,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
     { id: 'search', label: 'Book Recommender', active: true },
     { id: 'plans', label: 'My Plans', active: true },
     { id: 'books', label: 'My Books', active: true },
-    { id: 'unit', label: 'Unit Overview', active: true },
+    { id: 'unit', label: 'My Units', active: true },
     { id: 'resources', label: 'My Resources', active: true },
     { id: 'presentations', label: 'My Presentations', active: true },
     { id: 'assistant', label: 'AI Assistant', active: true },
@@ -5111,7 +5111,7 @@ Do not discuss topics unrelated to education and teaching.`
   )
 }
 
-function ResourcesPage({ onNavigate, checkTrial }) {
+function ResourcesPage({ onNavigate, checkTrial, initialPlanId }) {
   const [tab, setTab] = useState('adhoc') // 'adhoc' | 'plan' | 'catalogue'
   const [catalogue, setCatalogue] = useState([])
   const [catalogueLoading, setCatalogueLoading] = useState(false)
@@ -5182,6 +5182,21 @@ function ResourcesPage({ onNavigate, checkTrial }) {
     }
     loadRealPlans()
   }, [])
+
+  // Auto-select plan if navigated here with a specific plan in mind
+  useEffect(() => {
+    if (!initialPlanId || realPlans.length === 0) return
+    for (const group of realPlans) {
+      const found = group.plans.find(p => p.id === initialPlanId)
+      if (found) {
+        setSelectedPlanGroup(group)
+        setSelectedPlan(found)
+        setPlanDropdownOpen(false)
+        setTab('plan')
+        break
+      }
+    }
+  }, [initialPlanId, realPlans])
 
   // Ad-hoc state
   const [prompt, setPrompt] = useState('')
@@ -6275,7 +6290,7 @@ function PresentationDownloadButton({ presentation }) {
   )
 }
 
-function PresentationsPage({ onNavigate, checkTrial }) {
+function PresentationsPage({ onNavigate, checkTrial, initialPlanId }) {
   const [tab, setTab] = useState('adhoc') // 'adhoc' | 'plan' | 'catalogue'
 
   // Catalogue state
@@ -6344,6 +6359,21 @@ function PresentationsPage({ onNavigate, checkTrial }) {
     }
     loadRealPlans()
   }, [])
+
+  // Auto-select plan if navigated here with a specific plan in mind
+  useEffect(() => {
+    if (!initialPlanId || realPlans.length === 0) return
+    for (const group of realPlans) {
+      const found = group.plans.find(p => p.id === initialPlanId)
+      if (found) {
+        setSelectedPlanGroup(group)
+        setSelectedPlan(found)
+        setPlanDropdownOpen(false)
+        setTab('plan')
+        break
+      }
+    }
+  }, [initialPlanId, realPlans])
 
   // Ad-hoc state
   const [prompt, setPrompt] = useState('')
@@ -6821,9 +6851,18 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
   const [loadingPlans, setLoadingPlans] = useState(true)
   const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId || null)
 
+  // Picker filters
+  const [search, setSearch] = useState('')
+  const [filterSubject, setFilterSubject] = useState('All')
+  const [filterYear, setFilterYear] = useState('All')
+
   const [unit, setUnit] = useState(null) // { plan, lessons, resources, presentations }
   const [loadingUnit, setLoadingUnit] = useState(false)
   const [tab, setTab] = useState('lessons') // 'lessons' | 'resources' | 'presentations'
+  const [viewingResourceId, setViewingResourceId] = useState(null)
+  const [viewingPresentationId, setViewingPresentationId] = useState(null)
+  const [confirmDeleteResId, setConfirmDeleteResId] = useState(null)
+  const [confirmDeletePresId, setConfirmDeletePresId] = useState(null)
 
   const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
   const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
@@ -6856,27 +6895,42 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
     loadPlans()
   }, [selectedPlanId])
 
+  async function loadUnit(planId) {
+    setLoadingUnit(true)
+    const [{ data: plan }, { data: lessons }, { data: resources }, { data: presentations }] = await Promise.all([
+      supabase.from('plans').select('*').eq('id', planId).single(),
+      supabase.from('lessons').select('*').eq('plan_id', planId).order('lesson_number'),
+      supabase.from('resources').select('*').eq('plan_id', planId).order('created_at', { ascending: false }),
+      supabase.from('presentations').select('*').eq('plan_id', planId).order('created_at', { ascending: false }),
+    ])
+    setUnit({ plan, lessons: lessons || [], resources: resources || [], presentations: presentations || [] })
+    setLoadingUnit(false)
+  }
+
   // Load unit detail once a plan is selected
   useEffect(() => {
     if (!selectedPlanId) { setUnit(null); return }
-    async function loadUnit() {
-      setLoadingUnit(true)
-      const [{ data: plan }, { data: lessons }, { data: resources }, { data: presentations }] = await Promise.all([
-        supabase.from('plans').select('*').eq('id', selectedPlanId).single(),
-        supabase.from('lessons').select('*').eq('plan_id', selectedPlanId).order('lesson_number'),
-        supabase.from('resources').select('*').eq('plan_id', selectedPlanId).order('created_at', { ascending: false }),
-        supabase.from('presentations').select('*').eq('plan_id', selectedPlanId).order('created_at', { ascending: false }),
-      ])
-      setUnit({ plan, lessons: lessons || [], resources: resources || [], presentations: presentations || [] })
-      setTab('lessons')
-      setLoadingUnit(false)
-    }
-    loadUnit()
+    setTab('lessons')
+    loadUnit(selectedPlanId)
   }, [selectedPlanId])
 
   function backToPicker() {
     setSelectedPlanId(null)
     setUnit(null)
+  }
+
+  async function deleteResource(id) {
+    await supabase.from('resources').delete().eq('id', id)
+    setConfirmDeleteResId(null)
+    if (viewingResourceId === id) setViewingResourceId(null)
+    loadUnit(selectedPlanId)
+  }
+
+  async function deletePresentation(id) {
+    await supabase.from('presentations').delete().eq('id', id)
+    setConfirmDeletePresId(null)
+    if (viewingPresentationId === id) setViewingPresentationId(null)
+    loadUnit(selectedPlanId)
   }
 
   const tabBtn = (id, label, count) => (
@@ -6886,6 +6940,21 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
     </button>
   )
 
+  // Picker computed values
+  const allPlans = planGroups.flatMap(group => group.plans.map(plan => ({ ...plan, group })))
+  const pickerSubjects = ['All', ...Array.from(new Set(allPlans.map(p => p.subject))).sort()]
+  const pickerYears = ['All', ...Array.from(new Set(allPlans.map(p => p.yearGroup))).sort()]
+  const filteredGroups = planGroups.map(group => {
+    const filteredPlans = group.plans.filter(plan => {
+      if (filterSubject !== 'All' && plan.subject !== filterSubject) return false
+      if (filterYear !== 'All' && plan.yearGroup !== filterYear) return false
+      if (search && !plan.title.toLowerCase().includes(search.toLowerCase()) &&
+          !group.book.title.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+    return { ...group, plans: filteredPlans }
+  }).filter(g => g.plans.length > 0)
+
   return (
     <div style={{ ...s.page, maxWidth: "100%" }}>
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
@@ -6894,8 +6963,8 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.75rem" }}>
           <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>📖</div>
           <div>
-            <h1 style={s.h1}>Unit Overview</h1>
-            <p style={s.headerSub}>Everything for a unit — book, lessons, model example, resources and presentations</p>
+            <h1 style={s.h1}>My Units</h1>
+            <p style={s.headerSub}>Browse your units — lessons, model example, resources and presentations in one place</p>
           </div>
         </div>
 
@@ -6910,28 +6979,67 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
               <div style={{ fontSize: 13 }}>Create a lesson plan from My Books to see it here.</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {planGroups.map((group, gi) => (
-                <div key={gi} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
-                    <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT }}>{group.book.title}</div>
-                    {group.book.author && <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>{group.book.author}</div>}
-                  </div>
-                  {group.plans.map(plan => (
-                    <div key={plan.id} onClick={() => setSelectedPlanId(plan.id)}
-                      style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderTop: `0.5px solid ${BORDER}` }}
-                      onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <span style={{ fontSize: 11, fontWeight: 600, background: LIGHT_GREEN, color: '#085041', padding: '2px 8px', borderRadius: 20, flexShrink: 0 }}>{plan.subject}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{plan.title}</div>
-                        <div style={{ fontSize: 11, color: MUTED }}>{plan.yearGroup} · {plan.lessons} lessons</div>
+            <div>
+              {/* Filter bar */}
+              <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
+                  <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
+                  <input
+                    style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+                    placeholder="Search by book, plan or topic..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                  {search && <span onClick={() => setSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Subject</span>
+                  <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${filterSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: filterSubject !== 'All' ? LIGHT_GREEN : BG, color: filterSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+                    value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
+                    {pickerSubjects.map(s => <option key={s} value={s}>{s === 'All' ? 'All subjects' : s}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>Year</span>
+                  <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${filterYear !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: filterYear !== 'All' ? LIGHT_GREEN : BG, color: filterYear !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+                    value={filterYear} onChange={e => setFilterYear(e.target.value)}>
+                    {pickerYears.map(y => <option key={y} value={y}>{y === 'All' ? 'All years' : y}</option>)}
+                  </select>
+                </div>
+                {(search || filterSubject !== 'All' || filterYear !== 'All') && (
+                  <span onClick={() => { setSearch(''); setFilterSubject('All'); setFilterYear('All') }} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Clear</span>
+                )}
+              </div>
+
+              {filteredGroups.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
+                  <div style={{ fontSize: 14 }}>No units match your filters.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {filteredGroups.map((group, gi) => (
+                    <div key={gi} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+                      <div style={{ padding: '12px 16px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
+                        <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT }}>{group.book.title}</div>
+                        {group.book.author && <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>{group.book.author}</div>}
                       </div>
-                      <span style={{ fontSize: 12, color: GREEN, flexShrink: 0 }}>View unit →</span>
+                      {group.plans.map(plan => (
+                        <div key={plan.id} onClick={() => setSelectedPlanId(plan.id)}
+                          style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderTop: `0.5px solid ${BORDER}` }}
+                          onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <span style={{ fontSize: 11, fontWeight: 600, background: LIGHT_GREEN, color: '#085041', padding: '2px 8px', borderRadius: 20, flexShrink: 0 }}>{plan.subject}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{plan.title}</div>
+                            <div style={{ fontSize: 11, color: MUTED }}>{plan.yearGroup} · {plan.lessons} lessons</div>
+                          </div>
+                          <span style={{ fontSize: 12, color: GREEN, flexShrink: 0 }}>View unit →</span>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
-              ))}
+              )}
             </div>
           )
         ) : loadingUnit || !unit ? (
@@ -6977,70 +7085,165 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
 
             {/* Lessons tab */}
             {tab === 'lessons' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {unit.lessons.map(lesson => {
-                  const tc = typeColors[lesson.type] || GREEN
-                  const tb = typeBgs[lesson.type] || LIGHT_GREEN
-                  return (
-                    <div key={lesson.lesson_number} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1.125rem', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <span style={{ width: 26, height: 26, borderRadius: '50%', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 500, color: TEXT, flexShrink: 0, marginTop: 1 }}>{lesson.lesson_number}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{lesson.title}</span>
-                          <span style={{ fontSize: 10, fontWeight: 600, color: tc, background: tb, padding: '1px 7px', borderRadius: 20 }}>{lesson.type}</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
-                          <span style={{ fontWeight: 500 }}>Learning intention: </span>{lesson.learning_intention}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                  <MyPlanDownloadButton plan={{ id: unit.plan.id, title: unit.plan.title, subject: unit.plan.subject, lessons: unit.lessons.length }} group={{ book: { title: unit.plan.book_title, author: unit.plan.book_author }, yearGroup: unit.plan.year_group }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {unit.lessons.map(lesson => {
+                    const tc = typeColors[lesson.type] || GREEN
+                    const tb = typeBgs[lesson.type] || LIGHT_GREEN
+                    return (
+                      <div key={lesson.lesson_number} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1.125rem', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <span style={{ width: 26, height: 26, borderRadius: '50%', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 500, color: TEXT, flexShrink: 0, marginTop: 1 }}>{lesson.lesson_number}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{lesson.title}</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: tc, background: tb, padding: '1px 7px', borderRadius: 20 }}>{lesson.type}</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
+                            <span style={{ fontWeight: 500 }}>Learning intention: </span>{lesson.learning_intention}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             )}
 
             {/* Resources tab */}
             {tab === 'resources' && (
-              unit.resources.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
-                  <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No resources yet for this unit</div>
-                  <div style={{ fontSize: 13 }}>Generate resources from this plan in My Resources.</div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                  <button onClick={() => onNavigate('resources', { planId: unit.plan.id, tab: 'plan' })}
+                    style={{ height: 32, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                    ✨ Create resource
+                  </button>
                 </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
-                  {unit.resources.map(res => {
-                    const tc = resTypeColors[res.resource_type] || { bg: PAGE_BG, color: MUTED }
-                    return (
-                      <div key={res.id} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1rem' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20 }}>{resTypeLabels[res.resource_type] || res.resource_type}</span>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginTop: 8 }}>{res.title}</div>
-                        <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{res.meta}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
+                {unit.resources.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No resources yet for this unit</div>
+                    <div style={{ fontSize: 13 }}>Click "Create resource" above to generate one for this plan.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {unit.resources.map(res => {
+                      const tc = resTypeColors[res.resource_type] || { bg: PAGE_BG, color: MUTED }
+                      const isViewing = viewingResourceId === res.id
+                      const isConfirming = confirmDeleteResId === res.id
+                      return (
+                        <div key={res.id} style={{ border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 10, background: BG, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>
+                              {resTypeLabels[res.resource_type] || res.resource_type}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 140 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{res.title}</div>
+                              <div style={{ fontSize: 11, color: MUTED }}>{res.meta}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <button onClick={() => setViewingResourceId(isViewing ? null : res.id)}
+                                style={{ height: 26, padding: '0 10px', background: isViewing ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: isViewing ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                                {isViewing ? 'Hide' : 'View'}
+                              </button>
+                              <ResourceDownloadButton resource={res} />
+                              {isConfirming ? (
+                                <>
+                                  <button onClick={() => deleteResource(res.id)} style={{ height: 26, padding: '0 10px', background: '#FCEBEB', border: '0.5px solid #A32D2D', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                                  <button onClick={() => setConfirmDeleteResId(null)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                                </>
+                              ) : (
+                                <button onClick={() => setConfirmDeleteResId(res.id)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
+                              )}
+                            </div>
+                          </div>
+                          {isViewing && (
+                            <div style={{ borderTop: `0.5px solid ${BORDER}`, padding: '10px 14px', background: PAGE_BG }}>
+                              {(res.sections || []).map((sec, i) => (
+                                <div key={i} style={{ marginBottom: i < res.sections.length - 1 ? 10 : 0 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: '#085041', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{sec.heading}</div>
+                                  <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{sec.content}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Presentations tab */}
             {tab === 'presentations' && (
-              unit.presentations.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
-                  <div style={{ fontSize: 36, marginBottom: 10 }}>🎬</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No presentations yet for this unit</div>
-                  <div style={{ fontSize: 13 }}>Generate slideshows from this plan in My Presentations.</div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                  <button onClick={() => onNavigate('presentations', { planId: unit.plan.id, tab: 'plan' })}
+                    style={{ height: 32, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                    ✨ Create presentation
+                  </button>
                 </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
-                  {unit.presentations.map(pres => (
-                    <div key={pres.id} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1rem' }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, background: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: 20 }}>🎬 {pres.meta}</span>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginTop: 8 }}>{pres.title}</div>
-                    </div>
-                  ))}
-                </div>
-              )
+                {unit.presentations.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>🎬</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No presentations yet for this unit</div>
+                    <div style={{ fontSize: 13 }}>Click "Create presentation" above to generate one for this plan.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {unit.presentations.map(pres => {
+                      const isViewing = viewingPresentationId === pres.id
+                      const isConfirming = confirmDeletePresId === pres.id
+                      return (
+                        <div key={pres.id} style={{ border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 10, background: BG, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, background: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>
+                              🎬 {pres.meta}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 140 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{pres.title}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <button onClick={() => setViewingPresentationId(isViewing ? null : pres.id)}
+                                style={{ height: 26, padding: '0 10px', background: isViewing ? LIGHT_GREEN : PAGE_BG, border: `0.5px solid ${isViewing ? GREEN : BORDER}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: isViewing ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                                {isViewing ? 'Hide' : 'View'}
+                              </button>
+                              <PresentationDownloadButton presentation={pres} />
+                              {isConfirming ? (
+                                <>
+                                  <button onClick={() => deletePresentation(pres.id)} style={{ height: 26, padding: '0 10px', background: '#FCEBEB', border: '0.5px solid #A32D2D', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#A32D2D', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                                  <button onClick={() => setConfirmDeletePresId(null)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                                </>
+                              ) : (
+                                <button onClick={() => setConfirmDeletePresId(pres.id)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>🗑️</button>
+                              )}
+                            </div>
+                          </div>
+                          {isViewing && (
+                            <div style={{ borderTop: `0.5px solid ${BORDER}` }}>
+                              {(pres.slides || []).map((sl, i) => (
+                                <div key={i} style={{ borderTop: i > 0 ? `0.5px solid ${BORDER}` : 'none', padding: '10px 14px', background: PAGE_BG }}>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: '#085041', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Slide {i + 1} · {sl.type}</div>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 4 }}>{sl.heading}</div>
+                                  {sl.content && <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>{sl.content}</div>}
+                                  {sl.bullets && (
+                                    <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                                      {sl.bullets.map((b, bi) => <li key={bi} style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>{b}</li>)}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -8267,6 +8470,8 @@ export default function App() {
   const [session, setSession] = useState(undefined)
   const [page, setPage] = useState('search')
   const [unitOverviewPlanId, setUnitOverviewPlanId] = useState(null)
+  const [resourcesInitialPlanId, setResourcesInitialPlanId] = useState(null)
+  const [presentationsInitialPlanId, setPresentationsInitialPlanId] = useState(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
@@ -8427,8 +8632,8 @@ export default function App() {
     if (dest === 'search') setPage('search')
     if (dest === 'plans') setPage('plans')
     if (dest === 'books') setPage('books')
-    if (dest === 'resources') setPage('resources')
-    if (dest === 'presentations') setPage('presentations')
+    if (dest === 'resources') { setResourcesInitialPlanId(payload?.planId || null); setPage('resources') }
+    if (dest === 'presentations') { setPresentationsInitialPlanId(payload?.planId || null); setPage('presentations') }
     if (dest === 'unit') { setUnitOverviewPlanId(payload || null); setPage('unit') }
     if (dest === 'assistant') setPage('assistant')
     if (dest === 'signout') { handleSignOut() }
@@ -8519,8 +8724,8 @@ export default function App() {
         </div>
       )}
       {page === 'upgrade_success' && <UpgradeSuccessPage onNavigate={handleNavigate} />}
-      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
-      {page === 'presentations' && <PresentationsPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
+      {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} initialPlanId={resourcesInitialPlanId} />}
+      {page === 'presentations' && <PresentationsPage onNavigate={handleNavigate} checkTrial={checkTrial} initialPlanId={presentationsInitialPlanId} />}
       {page === 'unit' && <UnitOverviewPage onNavigate={handleNavigate} initialPlanId={unitOverviewPlanId} />}
       {page === 'assistant' && <AIAssistantPage checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
