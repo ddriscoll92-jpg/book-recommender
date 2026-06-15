@@ -5906,15 +5906,17 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             {tab === 'catalogue' && (
               <div>
                 {/* Filter bar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'nowrap' }}>
-                  <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
-                  <input
-                    style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
-                    placeholder="Search your resources..."
-                    value={catalogueSearch}
-                    onChange={e => setCatalogueSearch(e.target.value)}
-                  />
-                  {catalogueSearch && <span onClick={() => setCatalogueSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
+                    <span style={{ fontSize: 15, color: MUTED, flexShrink: 0 }}>🔍</span>
+                    <input
+                      style={{ flex: 1, minWidth: 0, height: 28, border: 'none', outline: 'none', fontSize: 13, color: TEXT, background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+                      placeholder="Search by title, topic or subject..."
+                      value={catalogueSearch}
+                      onChange={e => setCatalogueSearch(e.target.value)}
+                    />
+                    {catalogueSearch && <span onClick={() => setCatalogueSearch('')} style={{ fontSize: 13, color: MUTED, cursor: 'pointer', flexShrink: 0 }}>✕</span>}
+                  </div>
                   <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueType !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueType !== 'All' ? LIGHT_GREEN : BG, color: catalogueType !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', flexShrink: 0 }}
                     value={catalogueType} onChange={e => setCatalogueType(e.target.value)}>
                     <option value="All">All types</option>
@@ -5925,6 +5927,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                     <option value="knowledge_org">Knowledge organiser</option>
                     <option value="vocab_cards">Vocabulary cards</option>
                     <option value="comprehension">Reading comprehension</option>
+                    <option value="bingo">Bingo game</option>
+                    <option value="wordsearch">Word search</option>
                     <option value="adhoc">Quick resource</option>
                   </select>
                   <select style={{ height: 28, fontSize: 12, border: `0.5px solid ${catalogueSubject !== 'All' ? GREEN : BORDER}`, borderRadius: 20, padding: '0 10px', background: catalogueSubject !== 'All' ? LIGHT_GREEN : BG, color: catalogueSubject !== 'All' ? '#085041' : TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', flexShrink: 0 }}
@@ -5947,8 +5951,15 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                     if (catalogueType !== 'All' && r.resource_type !== catalogueType) return false
                     if (catalogueSubject !== 'All' && !(r.meta || '').toLowerCase().includes(catalogueSubject.toLowerCase())) return false
                     if (catalogueYear !== 'All' && !(r.meta || '').toLowerCase().includes(catalogueYear.toLowerCase())) return false
-                    if (catalogueSearch && !r.title.toLowerCase().includes(catalogueSearch.toLowerCase()) &&
-                        !(r.meta || '').toLowerCase().includes(catalogueSearch.toLowerCase())) return false
+                    if (catalogueSearch) {
+                      const q = catalogueSearch.toLowerCase()
+                      const inTitle = r.title.toLowerCase().includes(q)
+                      const inMeta = (r.meta || '').toLowerCase().includes(q)
+                      const inPrompt = (r.prompt || '').toLowerCase().includes(q)
+                      const inSections = Array.isArray(r.sections) && r.sections.some(s =>
+                        (s.heading || '').toLowerCase().includes(q) || (s.content || '').toLowerCase().includes(q))
+                      if (!inTitle && !inMeta && !inPrompt && !inSections) return false
+                    }
                     return true
                   })
                   const typeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', wordsearch: 'Word search', adhoc: 'Quick resource' }
