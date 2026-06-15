@@ -431,6 +431,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
     { id: 'search', label: 'Book Recommender', active: true },
     { id: 'plans', label: 'My Plans', active: true },
     { id: 'books', label: 'My Books', active: true },
+    { id: 'unit', label: 'Unit Overview', active: true },
     { id: 'resources', label: 'My Resources', active: true },
     { id: 'presentations', label: 'My Presentations', active: true },
     { id: 'assistant', label: 'AI Assistant', active: true },
@@ -3908,7 +3909,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
 
 // ── Search Page ───────────────────────────────────────────────────────────────
 
-function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, onDeletePlan }) {
+function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, onDeletePlan, onViewUnit }) {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
@@ -3968,6 +3969,7 @@ function PlansModal({ book, plans, onClose, onAddPlan, onViewPlan, onEditPlan, o
                     </div>
                     <div style={{ display: 'flex', gap: 5, flexShrink: 0, flexWrap: 'wrap' }}>
                       <button onClick={() => setViewingPlan(plan)} style={{ height: 26, padding: '0 10px', background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#085041', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>View</button>
+                      {onViewUnit && <button onClick={() => onViewUnit(plan.id)} title="Unit overview" style={{ height: 26, padding: '0 10px', background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>📖 Unit</button>}
                       <MyPlanDownloadButton plan={plan} group={{ book, yearGroup: book.yearGroup || '' }} size="sm" />
                       <button onClick={() => startEdit(plan)} style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>✏️</button>
                       {isConfirming ? (
@@ -4209,6 +4211,9 @@ function MyPlansPage({ onNavigate }) {
                         <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
                           <button onClick={() => setViewingPlan({ plan, group })} style={{ height: 28, padding: "0 12px", background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: "#085041", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                             View
+                          </button>
+                          <button onClick={() => onNavigate('unit', plan.id)} title="Unit overview" style={{ height: 28, padding: "0 10px", background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 7, fontSize: 11, fontWeight: 500, color: TEXT, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+                            📖 Unit
                           </button>
                           <MyPlanDownloadButton plan={plan} group={group} />
                           {confirmDeletePlanId === plan.id ? (
@@ -4830,6 +4835,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
           await supabase.from('plans').delete().eq('id', planId).eq('user_id', (await supabase.auth.getUser()).data.user?.id)
           loadAll()
         }}
+        onViewUnit={planId => onNavigate('unit', planId)}
       />
     )}
     {(modal?.mode === 'add' || modal?.mode === 'edit') && (
@@ -6810,6 +6816,242 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
 }
 
 
+function UnitOverviewPage({ onNavigate, initialPlanId }) {
+  const [planGroups, setPlanGroups] = useState([])
+  const [loadingPlans, setLoadingPlans] = useState(true)
+  const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId || null)
+
+  const [unit, setUnit] = useState(null) // { plan, lessons, resources, presentations }
+  const [loadingUnit, setLoadingUnit] = useState(false)
+  const [tab, setTab] = useState('lessons') // 'lessons' | 'resources' | 'presentations'
+
+  const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
+  const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
+  const resTypeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', wordsearch: 'Word search', adhoc: 'Quick resource' }
+  const resTypeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, wordsearch: { bg: '#F0F9FF', color: '#075985' }, adhoc: { bg: PAGE_BG, color: MUTED } }
+
+  // Load plan list for the picker
+  useEffect(() => {
+    if (selectedPlanId) return
+    async function loadPlans() {
+      setLoadingPlans(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data, error } = await supabase
+        .from('plans')
+        .select('id, title, subject, year_group, lesson_count, book_title, book_author, created_at')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+      if (!error && data) {
+        const groups = []
+        data.forEach(plan => {
+          const existing = groups.find(g => g.book.title === plan.book_title)
+          const entry = { id: plan.id, title: plan.title, subject: plan.subject, lessons: plan.lesson_count, yearGroup: plan.year_group }
+          if (existing) existing.plans.push(entry)
+          else groups.push({ book: { title: plan.book_title, author: plan.book_author || '' }, plans: [entry] })
+        })
+        setPlanGroups(groups)
+      }
+      setLoadingPlans(false)
+    }
+    loadPlans()
+  }, [selectedPlanId])
+
+  // Load unit detail once a plan is selected
+  useEffect(() => {
+    if (!selectedPlanId) { setUnit(null); return }
+    async function loadUnit() {
+      setLoadingUnit(true)
+      const [{ data: plan }, { data: lessons }, { data: resources }, { data: presentations }] = await Promise.all([
+        supabase.from('plans').select('*').eq('id', selectedPlanId).single(),
+        supabase.from('lessons').select('*').eq('plan_id', selectedPlanId).order('lesson_number'),
+        supabase.from('resources').select('*').eq('plan_id', selectedPlanId).order('created_at', { ascending: false }),
+        supabase.from('presentations').select('*').eq('plan_id', selectedPlanId).order('created_at', { ascending: false }),
+      ])
+      setUnit({ plan, lessons: lessons || [], resources: resources || [], presentations: presentations || [] })
+      setTab('lessons')
+      setLoadingUnit(false)
+    }
+    loadUnit()
+  }, [selectedPlanId])
+
+  function backToPicker() {
+    setSelectedPlanId(null)
+    setUnit(null)
+  }
+
+  const tabBtn = (id, label, count) => (
+    <button onClick={() => setTab(id)}
+      style={{ border: 'none', borderBottom: tab === id ? `2px solid ${GREEN}` : '2px solid transparent', borderRadius: 0, background: 'transparent', fontWeight: tab === id ? 600 : 400, color: tab === id ? GREEN : MUTED, padding: '10px 16px', cursor: 'pointer', fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+      {label}{count !== undefined ? ` (${count})` : ''}
+    </button>
+  )
+
+  return (
+    <div style={{ ...s.page, maxWidth: "100%" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 1rem" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.75rem" }}>
+          <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>📖</div>
+          <div>
+            <h1 style={s.h1}>Unit Overview</h1>
+            <p style={s.headerSub}>Everything for a unit — book, lessons, model example, resources and presentations</p>
+          </div>
+        </div>
+
+        {!selectedPlanId ? (
+          // ── Plan picker ──
+          loadingPlans ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: MUTED, fontSize: 13 }}>Loading your units...</div>
+          ) : planGroups.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>📖</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No units yet</div>
+              <div style={{ fontSize: 13 }}>Create a lesson plan from My Books to see it here.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {planGroups.map((group, gi) => (
+                <div key={gi} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: `0.5px solid ${BORDER}`, background: PAGE_BG }}>
+                    <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT }}>{group.book.title}</div>
+                    {group.book.author && <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>{group.book.author}</div>}
+                  </div>
+                  {group.plans.map(plan => (
+                    <div key={plan.id} onClick={() => setSelectedPlanId(plan.id)}
+                      style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderTop: `0.5px solid ${BORDER}` }}
+                      onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <span style={{ fontSize: 11, fontWeight: 600, background: LIGHT_GREEN, color: '#085041', padding: '2px 8px', borderRadius: 20, flexShrink: 0 }}>{plan.subject}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{plan.title}</div>
+                        <div style={{ fontSize: 11, color: MUTED }}>{plan.yearGroup} · {plan.lessons} lessons</div>
+                      </div>
+                      <span style={{ fontSize: 12, color: GREEN, flexShrink: 0 }}>View unit →</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )
+        ) : loadingUnit || !unit ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: MUTED, fontSize: 13 }}>Loading unit...</div>
+        ) : (
+          // ── Unit detail ──
+          <div>
+            <div onClick={backToPicker} style={{ fontSize: 12, color: GREEN, cursor: 'pointer', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              ← All units
+            </div>
+
+            {/* Book card */}
+            <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 16, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ width: 52, height: 64, background: LIGHT_GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 24 }}>📚</div>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>{unit.plan.book_title}</div>
+                <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic', marginBottom: 6 }}>{unit.plan.book_author}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: PAGE_BG, color: TEXT }}>{unit.plan.year_group}</span>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: PAGE_BG, color: TEXT }}>{unit.plan.subject}</span>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: PAGE_BG, color: TEXT }}>{unit.lessons.length} lessons</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Model example card */}
+            {unit.plan.model_example?.title && (
+              <div style={{ background: '#FFFBF0', border: `0.5px solid ${AMBER}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ background: AMBER_BG, color: AMBER_TEXT, fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>⭐ Model example · End goal</span>
+                </div>
+                <p style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>{unit.plan.model_example.description}</p>
+                <div style={{ fontFamily: "'Lora', serif", fontSize: 15, fontWeight: 500, color: TEXT }}>{unit.plan.model_example.title}</div>
+              </div>
+            )}
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 4, borderBottom: `0.5px solid ${BORDER}`, marginBottom: 16, flexWrap: 'wrap' }}>
+              {tabBtn('lessons', 'Lessons', unit.lessons.length)}
+              {tabBtn('resources', 'Resources', unit.resources.length)}
+              {tabBtn('presentations', 'Presentations', unit.presentations.length)}
+            </div>
+
+            {/* Lessons tab */}
+            {tab === 'lessons' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {unit.lessons.map(lesson => {
+                  const tc = typeColors[lesson.type] || GREEN
+                  const tb = typeBgs[lesson.type] || LIGHT_GREEN
+                  return (
+                    <div key={lesson.lesson_number} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1.125rem', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{ width: 26, height: 26, borderRadius: '50%', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 500, color: TEXT, flexShrink: 0, marginTop: 1 }}>{lesson.lesson_number}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{lesson.title}</span>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: tc, background: tb, padding: '1px 7px', borderRadius: 20 }}>{lesson.type}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
+                          <span style={{ fontWeight: 500 }}>Learning intention: </span>{lesson.learning_intention}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Resources tab */}
+            {tab === 'resources' && (
+              unit.resources.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No resources yet for this unit</div>
+                  <div style={{ fontSize: 13 }}>Generate resources from this plan in My Resources.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                  {unit.resources.map(res => {
+                    const tc = resTypeColors[res.resource_type] || { bg: PAGE_BG, color: MUTED }
+                    return (
+                      <div key={res.id} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1rem' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20 }}>{resTypeLabels[res.resource_type] || res.resource_type}</span>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginTop: 8 }}>{res.title}</div>
+                        <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{res.meta}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
+
+            {/* Presentations tab */}
+            {tab === 'presentations' && (
+              unit.presentations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>🎬</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No presentations yet for this unit</div>
+                  <div style={{ fontSize: 13 }}>Generate slideshows from this plan in My Presentations.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                  {unit.presentations.map(pres => (
+                    <div key={pres.id} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 10, padding: '0.875rem 1rem' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, background: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: 20 }}>🎬 {pres.meta}</span>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginTop: 8 }}>{pres.title}</div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+      </div>
+    </div>
+  )
+}
+
+
 // ── My Books Page ─────────────────────────────────────────────────────────────
 // (merged My Books + My Library into one page with 3 sections)
 
@@ -8024,6 +8266,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
 export default function App() {
   const [session, setSession] = useState(undefined)
   const [page, setPage] = useState('search')
+  const [unitOverviewPlanId, setUnitOverviewPlanId] = useState(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
@@ -8180,12 +8423,13 @@ export default function App() {
     setAvatarUrl('')
   }
 
-  function handleNavigate(dest) {
+  function handleNavigate(dest, payload) {
     if (dest === 'search') setPage('search')
     if (dest === 'plans') setPage('plans')
     if (dest === 'books') setPage('books')
     if (dest === 'resources') setPage('resources')
     if (dest === 'presentations') setPage('presentations')
+    if (dest === 'unit') { setUnitOverviewPlanId(payload || null); setPage('unit') }
     if (dest === 'assistant') setPage('assistant')
     if (dest === 'signout') { handleSignOut() }
     if (dest === 'upgrade') { setPage('upgrade') }
@@ -8212,7 +8456,7 @@ export default function App() {
 
   const userName = displayName || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Teacher'
   const userEmail = session?.user?.email || ''
-  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'books' ? 'books' : page === 'resources' ? 'resources' : page === 'presentations' ? 'presentations' : page === 'assistant' ? 'assistant' : ''
+  const navPage = page === 'search' ? 'search' : page === 'plans' ? 'plans' : page === 'books' ? 'books' : page === 'unit' ? 'unit' : page === 'resources' ? 'resources' : page === 'presentations' ? 'presentations' : page === 'assistant' ? 'assistant' : ''
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
@@ -8277,6 +8521,7 @@ export default function App() {
       {page === 'upgrade_success' && <UpgradeSuccessPage onNavigate={handleNavigate} />}
       {page === 'resources' && <ResourcesPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
       {page === 'presentations' && <PresentationsPage onNavigate={handleNavigate} checkTrial={checkTrial} />}
+      {page === 'unit' && <UnitOverviewPage onNavigate={handleNavigate} initialPlanId={unitOverviewPlanId} />}
       {page === 'assistant' && <AIAssistantPage checkTrial={checkTrial} />}
       {showAdmin && <div style={{ position: 'fixed', inset: 0, zIndex: 700, overflowY: 'auto' }}><AdminDashboard onNavigate={(d) => { setShowAdmin(false); handleNavigate(d) }} userEmail={userEmail} /></div>}
       {legalPage && legalPage !== 'contact' && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
