@@ -1880,7 +1880,7 @@ function WordsearchOutput({ wordsearch: ws }) {
 // ── Slideshow PPTX Download ───────────────────────────────────────────────────
 
 async function downloadSlideshowPptx(slideshow, lesson, plan, group) {
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js')
+  await loadScript('https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js')
   const PptxGenJS = window.PptxGenJS
   if (!PptxGenJS) throw new Error('PptxGenJS not loaded')
 
