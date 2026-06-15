@@ -7121,8 +7121,8 @@ export default function App() {
       if (user) {
         const { data: profileRow } = await supabase.from('profiles').select('active_session_id').eq('id', user.id).single()
         if (profileRow?.active_session_id && localSessionId !== profileRow.active_session_id) {
-          await handleSignOut()
           setSessionKickedOut(true)
+          await handleSignOut()
           return false
         }
       }
