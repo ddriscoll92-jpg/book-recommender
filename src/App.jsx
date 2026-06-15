@@ -6611,7 +6611,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
         {/* Success message */}
         {!generating && generatedCount > 0 && !error && (tab === 'adhoc' || tab === 'plan') && (
           <div style={{ background: LIGHT_GREEN, color: '#085041', borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
-            ✓ {generatedCount} slideshow{generatedCount !== 1 ? 's' : ''} generated and downloaded. View {generatedCount !== 1 ? 'them' : 'it'} in My presentations.
+            ✓ {generatedCount} slideshow{generatedCount !== 1 ? 's' : ''} generated and downloaded. View {generatedCount !== 1 ? 'them' : 'it'} in <span onClick={() => setTab('catalogue')} style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 500 }}>My catalogue</span>.
           </div>
         )}
 
@@ -6778,7 +6778,10 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
             <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📖</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: TEXT, marginBottom: 6 }}>No units yet</div>
-              <div style={{ fontSize: 13 }}>Create a lesson plan from My Books to see it here.</div>
+              <div style={{ fontSize: 13, marginBottom: 14 }}>Create a lesson plan from My Books to see it here.</div>
+              <button onClick={() => onNavigate('books')} style={{ height: 36, padding: '0 16px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                📚 Go to My Books
+              </button>
             </div>
           ) : (
             <div>
