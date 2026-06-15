@@ -1750,7 +1750,7 @@ function buildWordsearchGrid(words, gridSize) {
     }
   }
 
-  return { grid, placed }
+  return { grid, placed: shuffleArray(placed) }
 }
 
 async function downloadWordsearchPdf(ws) {
