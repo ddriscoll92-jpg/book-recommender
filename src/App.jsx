@@ -6880,18 +6880,34 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
             )}
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 4, borderBottom: `0.5px solid ${BORDER}`, marginBottom: 16, flexWrap: 'wrap' }}>
-              {tabBtn('lessons', 'Lessons', unit.lessons.length)}
-              {tabBtn('resources', 'Resources', unit.resources.length)}
-              {tabBtn('presentations', 'Presentations', unit.presentations.length)}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: `0.5px solid ${BORDER}`, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {tabBtn('lessons', 'Lessons', unit.lessons.length)}
+                {tabBtn('resources', 'Resources', unit.resources.length)}
+                {tabBtn('presentations', 'Presentations', unit.presentations.length)}
+              </div>
+              <div style={{ paddingBottom: 8, flexShrink: 0 }}>
+                {tab === 'lessons' && (
+                  <MyPlanDownloadButton plan={{ id: unit.plan.id, title: unit.plan.title, subject: unit.plan.subject, lessons: unit.lessons.length }} group={{ book: { title: unit.plan.book_title, author: unit.plan.book_author }, yearGroup: unit.plan.year_group }} />
+                )}
+                {tab === 'resources' && (
+                  <button onClick={() => onNavigate('resources', { planId: unit.plan.id, tab: 'plan' })}
+                    style={{ height: 32, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+                    ✨ Create resource
+                  </button>
+                )}
+                {tab === 'presentations' && (
+                  <button onClick={() => onNavigate('presentations', { planId: unit.plan.id, tab: 'plan' })}
+                    style={{ height: 32, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+                    ✨ Create presentation
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Lessons tab */}
             {tab === 'lessons' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-                  <MyPlanDownloadButton plan={{ id: unit.plan.id, title: unit.plan.title, subject: unit.plan.subject, lessons: unit.lessons.length }} group={{ book: { title: unit.plan.book_title, author: unit.plan.book_author }, yearGroup: unit.plan.year_group }} />
-                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {unit.lessons.map(lesson => {
                     const tc = typeColors[lesson.type] || GREEN
@@ -6918,12 +6934,6 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
             {/* Resources tab */}
             {tab === 'resources' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-                  <button onClick={() => onNavigate('resources', { planId: unit.plan.id, tab: 'plan' })}
-                    style={{ height: 32, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                    ✨ Create resource
-                  </button>
-                </div>
                 {unit.resources.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
                     <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
@@ -6983,12 +6993,6 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
             {/* Presentations tab */}
             {tab === 'presentations' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-                  <button onClick={() => onNavigate('presentations', { planId: unit.plan.id, tab: 'plan' })}
-                    style={{ height: 32, padding: '0 14px', background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                    ✨ Create presentation
-                  </button>
-                </div>
                 {unit.presentations.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED, background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12 }}>
                     <div style={{ fontSize: 36, marginBottom: 10 }}>🎬</div>
