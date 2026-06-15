@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, bingoMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
+  const { prompt, raw, worksheetMode, writingFrameMode, comprehensionMode, exitTicketMode, vocabCardsMode, knowledgeOrgMode, bingoMode, wordsearchMode, assistantMode, history, systemPrompt: clientSystemPrompt } = req.body
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -292,6 +292,30 @@ Rules:
 - Content must be accurate and aligned to UK National Curriculum for the year group and subject`
   }
 
+  if (wordsearchMode) {
+    maxTokens = 1500
+    systemPrompt = `You are an expert UK primary school teacher creating a print-ready word search puzzle for the classroom.
+You must return ONLY valid JSON — no markdown, no explanation, no backticks.
+The JSON must have this exact structure:
+{
+  "title": "Short title e.g. The Creakers Vocabulary Word Search",
+  "subject": "English",
+  "yearGroup": "Year 3",
+  "gridSize": 12,
+  "words": [
+    { "word": "GIGANTIC", "clue": "Very large in size" },
+    { "word": "VIKING", "clue": "A Scandinavian seafarer or raider" }
+  ]
+}
+Rules:
+- "gridSize" must be 10 for Year 1-2, 12 for Year 3-4, or 15 for Year 5-6
+- Generate exactly 10 words
+- "word" must be a single word, UPPERCASE, letters only (no spaces, hyphens or punctuation), and no longer than (gridSize - 1) characters
+- "clue" is a short, simple definition or description a primary pupil can understand (under 15 words)
+- All words must be unique
+- Content must be accurate and aligned to UK National Curriculum for the year group and subject`
+  }
+
   if (comprehensionMode) {
     maxTokens = 4000
     systemPrompt = `You are an expert UK primary school teacher creating print-ready differentiated reading comprehension worksheets.
@@ -434,6 +458,7 @@ Rules:
     if (vocabCardsMode) return res.status(200).json({ vocabCards: parsed })
     if (knowledgeOrgMode) return res.status(200).json({ knowledgeOrg: parsed })
     if (bingoMode) return res.status(200).json({ bingo: parsed })
+    if (wordsearchMode) return res.status(200).json({ wordsearch: parsed })
     if (raw) return res.status(200).json({ result: parsed })
     return res.status(200).json({ books: parsed })
   } catch (err) {

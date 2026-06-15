@@ -1,5 +1,5 @@
 // TeachReads App v2
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { supabase } from './supabaseClient'
 
 // TeachReads shared constants and styles
@@ -1691,6 +1691,180 @@ function BingoOutput({ bingo }) {
               </div>
             )
           })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Word Search PDF Download ──────────────────────────────────────────────────
+
+function buildWordsearchGrid(words, gridSize) {
+  const grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(null))
+  const placed = []
+  const directions = [
+    { dr: 0, dc: 1 },  // horizontal
+    { dr: 1, dc: 0 },  // vertical
+  ]
+  const sorted = [...words]
+    .map(w => ({ ...w, word: (w.word || '').toUpperCase().replace(/[^A-Z]/g, '') }))
+    .filter(w => w.word.length > 0 && w.word.length <= gridSize)
+    .sort((a, b) => b.word.length - a.word.length)
+
+  for (const item of sorted) {
+    const word = item.word
+    let bestPlacement = null
+    for (let attempt = 0; attempt < 200 && !bestPlacement; attempt++) {
+      const dir = directions[Math.floor(Math.random() * directions.length)]
+      const maxRow = dir.dr === 1 ? gridSize - word.length : gridSize - 1
+      const maxCol = dir.dc === 1 ? gridSize - word.length : gridSize - 1
+      if (maxRow < 0 || maxCol < 0) continue
+      const row = Math.floor(Math.random() * (maxRow + 1))
+      const col = Math.floor(Math.random() * (maxCol + 1))
+      let fits = true
+      for (let i = 0; i < word.length; i++) {
+        const r = row + dir.dr * i
+        const c = col + dir.dc * i
+        const existing = grid[r][c]
+        if (existing !== null && existing !== word[i]) { fits = false; break }
+      }
+      if (fits) bestPlacement = { row, col, dir }
+    }
+    if (bestPlacement) {
+      for (let i = 0; i < word.length; i++) {
+        const r = bestPlacement.row + bestPlacement.dir.dr * i
+        const c = bestPlacement.col + bestPlacement.dir.dc * i
+        grid[r][c] = word[i]
+      }
+      placed.push(item)
+    }
+  }
+
+  // Fill remaining cells with random letters
+  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      if (grid[r][c] === null) grid[r][c] = ALPHA[Math.floor(Math.random() * ALPHA.length)]
+    }
+  }
+
+  return { grid, placed }
+}
+
+async function downloadWordsearchPdf(ws) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  const { jsPDF } = window.jspdf || {}
+  if (!jsPDF) throw new Error('jsPDF not loaded')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210; const pageH = 297; const margin = 16
+  const contentW = pageW - margin * 2
+  const gridSize = ws.gridSize || 12
+  const [gr, gg, gb] = [29, 158, 117] // GREEN
+
+  const { grid, placed } = buildWordsearchGrid(ws.words || [], gridSize)
+
+  // Header
+  doc.setFillColor(gr, gg, gb)
+  doc.rect(0, 0, pageW, 22, 'F')
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
+  doc.text('Word Search', pageW/2, 8, { align: 'center' })
+  doc.setFontSize(14); doc.setFont('helvetica','bold')
+  doc.text(ws.title || '', pageW/2, 16, { align: 'center' })
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60)
+  doc.text(`${ws.yearGroup || ''} · ${ws.subject || ''} · ${gridSize}x${gridSize} grid`, margin, 32)
+
+  // Grid
+  const gridTop = 40
+  const cellSize = Math.min(contentW / gridSize, 11)
+  const gridW = cellSize * gridSize
+  const startX = margin + (contentW - gridW) / 2
+  const startY = gridTop
+
+  doc.setDrawColor(180, 178, 169); doc.setLineWidth(0.3)
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      const cx = startX + c * cellSize
+      const cy = startY + r * cellSize
+      doc.rect(cx, cy, cellSize, cellSize)
+      doc.setFontSize(Math.min(cellSize * 2.2, 11))
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(44,44,42)
+      doc.text(grid[r][c], cx + cellSize/2, cy + cellSize/2 + cellSize * 0.18, { align: 'center' })
+    }
+  }
+
+  const gridBottom = startY + gridW
+  let y = gridBottom + 12
+
+  // Word list / clues
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(8, 80, 65)
+  doc.text('Find these words:', margin, y)
+  y += 7
+
+  placed.forEach((item, i) => {
+    if (y > pageH - margin - 10) { doc.addPage(); y = margin + 6 }
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+    const clueLines = doc.splitTextToSize(item.clue || '', contentW - 38)
+    doc.text(item.word, margin, y)
+    doc.setFont('helvetica','normal'); doc.setTextColor(90,90,90)
+    doc.text(clueLines, margin + 36, y)
+    y += Math.max(6, clueLines.length * 5) + 2
+  })
+
+  // Footer
+  const totalPages = doc.internal.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
+    doc.text(`TeachReads  |  ${ws.title || ''}`, margin, pageH - 4)
+    doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' })
+  }
+
+  doc.save(`${(ws.title || 'wordsearch').replace(/[^a-z0-9]/gi,'_')}_wordsearch.pdf`)
+}
+
+// ── Word Search Output Component ─────────────────────────────────────────────
+
+function WordsearchOutput({ wordsearch: ws }) {
+  const [downloading, setDownloading] = useState(false)
+  const gridSize = ws.gridSize || 12
+  const preview = useMemo(() => buildWordsearchGrid(ws.words || [], gridSize), [ws])
+
+  async function handleDownload() {
+    setDownloading(true)
+    try { await downloadWordsearchPdf(ws) }
+    catch(e) { console.error('Wordsearch PDF error:', e) }
+    setDownloading(false)
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ background: NAVY, borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{ws.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{ws.yearGroup} · {ws.subject} · {gridSize}x{gridSize} word search</div>
+        </div>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{ height: 36, padding: '0 16px', background: downloading ? NAVY_LIGHT : GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {downloading ? '⏳ Generating...' : '📄 Download PDF'}
+        </button>
+      </div>
+      <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden', padding: 16, background: BG }}>
+        <div style={{ fontSize: 12, color: MUTED, marginBottom: 10 }}>Preview — the downloaded PDF will use a fresh, randomly-arranged grid.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridSize}, 1fr)`, gap: 1, maxWidth: 420, margin: '0 auto 16px', border: `0.5px solid ${BORDER}` }}>
+          {preview.grid.flatMap((row, r) => row.map((letter, c) => (
+            <div key={`${r}-${c}`} style={{ aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: gridSize > 12 ? 9 : 11, fontFamily: 'monospace', color: TEXT, background: '#fff', border: `0.5px solid ${PAGE_BG}` }}>
+              {letter}
+            </div>
+          )))}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#085041', marginBottom: 8 }}>Find these words:</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {preview.placed.map((item, i) => (
+            <div key={i} style={{ fontSize: 12, color: TEXT }}>
+              <span style={{ fontWeight: 600 }}>{item.word}</span> — <span style={{ color: MUTED }}>{item.clue}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -3920,6 +4094,7 @@ const RESOURCE_TYPES = [
   { id: 'vocab_cards',    label: 'Vocabulary cards',        emoji: '🃏', desc: 'Key terms with definitions' },
   { id: 'comprehension',  label: 'Reading comprehension',   emoji: '🔍', desc: 'Questions to check understanding of a text' },
   { id: 'bingo',          label: 'Bingo game',              emoji: '🎲', desc: 'Vocabulary or maths facts bingo, with caller cards' },
+  { id: 'wordsearch',     label: 'Word search',             emoji: '🔡', desc: 'Find-the-word puzzle with a clue list' },
 ]
 
 function BookGridStarRating({ title, author }) {
@@ -4967,6 +5142,42 @@ Use ${bingoTypeHint}.`
       return
     }
 
+    // Route wordsearch type
+    if (selectedResourceType === 'wordsearch') {
+      const wsPrompt = `Create a word search puzzle for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: wsPrompt, wordsearchMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const wordsearch = data.wordsearch
+        setResource({ ...wordsearch, _type: 'wordsearch' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: wordsearch.title,
+              meta: `${wordsearch.yearGroup} · ${wordsearch.subject} · ${wordsearch.gridSize}x${wordsearch.gridSize} word search`,
+              resource_type: 'wordsearch',
+              sections: [{ heading: 'Words', content: wordsearch.words.map(w => `${w.word}: ${w.clue}`).join('\n') }],
+              prompt: (wsPrompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Wordsearch save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Wordsearch save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     // Route exit_ticket type
     if (selectedResourceType === 'exit_ticket') {
       const etPrompt = `Create a differentiated exit ticket for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
@@ -5229,6 +5440,39 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Bingo save error:', e?.message) }
+      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
+    // Detect wordsearch requests
+    const isWordsearch = /word ?search/i.test(prompt)
+    if (isWordsearch) {
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, wordsearchMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const wordsearch = data.wordsearch
+        setResource({ ...wordsearch, _type: 'wordsearch' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id,
+              title: wordsearch.title,
+              meta: `${wordsearch.yearGroup} · ${wordsearch.subject} · ${wordsearch.gridSize}x${wordsearch.gridSize} word search`,
+              resource_type: 'wordsearch',
+              sections: [{ heading: 'Words', content: wordsearch.words.map(w => `${w.word}: ${w.clue}`).join('\n') }],
+              prompt: (prompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Wordsearch save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch(e) { console.error('Wordsearch save error:', e?.message) }
       } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
@@ -5701,8 +5945,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                         !(r.meta || '').toLowerCase().includes(catalogueSearch.toLowerCase())) return false
                     return true
                   })
-                  const typeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', adhoc: 'Quick resource' }
-                  const typeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, adhoc: { bg: PAGE_BG, color: MUTED } }
+                  const typeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', wordsearch: 'Word search', adhoc: 'Quick resource' }
+                  const typeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, wordsearch: { bg: '#F0F9FF', color: '#075985' }, adhoc: { bg: PAGE_BG, color: MUTED } }
 
                   if (filtered.length === 0) return (
                     <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED }}>
@@ -5806,6 +6050,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           ? <KnowledgeOrgOutput knowledgeOrg={resource} />
           : resource && resource._type === 'bingo'
           ? <BingoOutput bingo={resource} />
+          : resource && resource._type === 'wordsearch'
+          ? <WordsearchOutput wordsearch={resource} />
           : resource && <ResourceOutput key={resource._genId} resource={resource} />
         }
 
