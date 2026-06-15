@@ -6032,9 +6032,9 @@ function PresentationDownloadButton({ presentation }) {
     setDownloading(false)
   }
   return (
-    <button onClick={handle} disabled={downloading}
-      style={{ height: 26, padding: '0 10px', background: downloading ? PAGE_BG : LIGHT_GREEN, border: `0.5px solid ${downloading ? BORDER : GREEN}`, borderRadius: 6, fontSize: 11, fontWeight: 500, color: downloading ? MUTED : '#085041', cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
-      {downloading ? '⏳' : '📄 Download'}
+    <button onClick={handle} disabled={downloading} title="Download"
+      style={{ height: 26, padding: '0 8px', background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 6, fontSize: 11, color: MUTED, cursor: downloading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+      {downloading ? '⏳' : '⬇'}
     </button>
   )
 }
@@ -6290,7 +6290,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
           <div style={{ display: "flex", borderBottom: `0.5px solid ${BORDER}` }}>
             {tabBtn('adhoc', 'Quick presentation', '⚡')}
             {tabBtn('plan', 'From a plan', '📋')}
-            {tabBtn('catalogue', 'My presentations', '🎬')}
+            {tabBtn('catalogue', 'My catalogue', '🎬')}
           </div>
 
           <div style={{ padding: "20px" }}>
