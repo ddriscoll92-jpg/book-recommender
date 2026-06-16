@@ -27,7 +27,7 @@ test.describe('Home screen (pre-login)', () => {
   })
 
   test('nav How it works link scrolls to section', async ({ page }) => {
-    await page.getByText('How it works').click()
+    await page.locator('span').filter({ hasText: 'How it works' }).click()
     // After scroll, the how-it-works section should be in view
     const section = page.locator('#how-it-works')
     await expect(section).toBeVisible({ timeout: 5_000 })
@@ -111,7 +111,7 @@ test.describe('Home screen (pre-login)', () => {
 
   test('benefits section shows all 4 features', async ({ page }) => {
     await expect(page.getByText('Smart book recommendations')).toBeVisible()
-    await expect(page.getByText('Full units of work')).toBeVisible()
+    await expect(page.getByText('Full units of work', { exact: true })).toBeVisible()
     await expect(page.getByText('Classroom resources')).toBeVisible()
     await expect(page.getByText('Your school library')).toBeVisible()
   })
