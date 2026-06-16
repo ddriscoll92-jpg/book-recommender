@@ -110,10 +110,10 @@ test.describe('Home screen (pre-login)', () => {
   })
 
   test('benefits section shows all 4 features', async ({ page }) => {
-    await expect(page.getByText('Smart book recommendations')).toBeVisible()
+    await expect(page.getByText('Smart book recommendations', { exact: true })).toBeVisible()
     await expect(page.getByText('Full units of work', { exact: true })).toBeVisible()
-    await expect(page.getByText('Classroom resources')).toBeVisible()
-    await expect(page.getByText('Your school library')).toBeVisible()
+    await expect(page.getByText('Classroom resources', { exact: true })).toBeVisible()
+    await expect(page.getByText('Your school library', { exact: true })).toBeVisible()
   })
 
   test('how it works shows 3 steps', async ({ page }) => {

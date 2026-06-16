@@ -14,15 +14,15 @@
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: getByText('Full units of work')
+Locator: getByText('Classroom resources')
 Expected: visible
-Error: strict mode violation: getByText('Full units of work') resolved to 2 elements:
+Error: strict mode violation: getByText('Classroom resources') resolved to 2 elements:
     1) <p>Find books, generate full units of work and creat…</p> aka getByText('Find books, generate full')
-    2) <span>Full units of work </span> aka getByText('Full units of work', { exact: true })
+    2) <span>Classroom resources </span> aka getByText('Classroom resources', { exact: true })
 
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
-  - waiting for getByText('Full units of work')
+  - waiting for getByText('Classroom resources')
 
 ```
 
@@ -148,7 +148,6 @@ Call log:
 # Test source
 
 ```ts
-  14  | 
   15  |   // ── Nav ──────────────────────────────────────────────────────────────────
   16  | 
   17  |   test('nav shows TeachReads brand', async ({ page }) => {
@@ -164,7 +163,7 @@ Call log:
   27  |   })
   28  | 
   29  |   test('nav How it works link scrolls to section', async ({ page }) => {
-  30  |     await page.getByText('How it works').click()
+  30  |     await page.locator('span').filter({ hasText: 'How it works' }).click()
   31  |     // After scroll, the how-it-works section should be in view
   32  |     const section = page.locator('#how-it-works')
   33  |     await expect(section).toBeVisible({ timeout: 5_000 })
@@ -248,9 +247,9 @@ Call log:
   111 | 
   112 |   test('benefits section shows all 4 features', async ({ page }) => {
   113 |     await expect(page.getByText('Smart book recommendations')).toBeVisible()
-> 114 |     await expect(page.getByText('Full units of work')).toBeVisible()
-      |                                                        ^ Error: expect(locator).toBeVisible() failed
-  115 |     await expect(page.getByText('Classroom resources')).toBeVisible()
+  114 |     await expect(page.getByText('Full units of work', { exact: true })).toBeVisible()
+> 115 |     await expect(page.getByText('Classroom resources')).toBeVisible()
+      |                                                         ^ Error: expect(locator).toBeVisible() failed
   116 |     await expect(page.getByText('Your school library')).toBeVisible()
   117 |   })
   118 | 
