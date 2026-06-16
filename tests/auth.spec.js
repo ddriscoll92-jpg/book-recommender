@@ -22,8 +22,8 @@ async function signIn(page, email, password) {
 
 // Helper: open profile dropdown and click Sign Out
 async function signOut(page) {
-  // Profile area is a div in the nav (not a button) — target by its position as last child
-  await page.locator('nav > div > div').last().click()
+  // Click the ▼ chevron in the nav profile area
+  await page.getByText('▼').first().click()
   await page.getByText('Sign Out').click()
 }
 
@@ -93,10 +93,9 @@ test.describe('Authentication', () => {
     await signIn(page2, EMAIL, PASSWORD)
     await expect(page2.getByRole('button', { name: 'Book Recommender' })).toBeVisible({ timeout: 15_000 })
 
-    // On device 1, trigger a checkTrial action (book search) — should get kicked out
-    await page1.getByRole('button', { name: 'Book Recommender' }).click()
-    await page1.fill('input[placeholder*="book"]', 'Charlotte')
-    await page1.keyboard.press('Enter')
+    // On device 1, trigger a checkTrial action by navigating to My Books
+    await page1.getByRole('button', { name: 'My Books' }).click()
+    await page1.waitForTimeout(3_000)
 
     // Device 1 should be redirected back to auth with a session message
     await expect(page1.locator('#auth-card')).toBeVisible({ timeout: 15_000 })
