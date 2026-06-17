@@ -416,7 +416,7 @@ async function callAPI(prompt, raw = false) {
   return raw ? data.result : data.books
 }
 
-function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo }) {
+function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, avatarUrl, trialInfo, setInviteModalOpen }) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768)
@@ -445,13 +445,14 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
       {[
         { label: '👤  Profile & settings', dest: 'profile' },
         { label: '⭐  Plan options', dest: 'upgrade' },
+        { label: '📨  Invite a colleague', dest: 'invite' },
         ...(userEmail === ADMIN_EMAIL ? [{ label: '📊  Admin dashboard', dest: 'admin' }] : []),
         { label: '📋  Privacy & Terms', dest: 'legal' },
         { label: '✉️  Contact us', dest: 'contact' },
         { label: '🚪  Sign Out', dest: 'signout' },
       ].map((item, i) => (
         <div key={i}
-          onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
+          onClick={() => { if (item.dest === 'profile') { setProfileOpen(false); onOpenProfile && onOpenProfile() } else if (item.dest === 'invite') { setProfileOpen(false); setInviteModalOpen(true) } else if (item.dest) { setProfileOpen(false); onNavigate(item.dest) } }}
           style={{ padding: '10px 14px', fontSize: 13, color: i === 3 ? '#A32D2D' : TEXT, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 3 ? `0.5px solid ${BORDER}` : 'none' }}
           onMouseEnter={e => e.currentTarget.style.background = PAGE_BG}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -7940,6 +7941,76 @@ function AdminDashboard({ onNavigate, userEmail }) {
 
 // ── Auth Page ─────────────────────────────────────────────────────────────────
 
+function InviteModal({ onClose }) {
+  const [email, setEmail] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleInvite() {
+    if (!email.trim()) return
+    setSending(true); setError('')
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send invite')
+      setSent(true)
+    } catch(err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    }
+    setSending(false)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={onClose}>
+      <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 420, padding: '1.5rem', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: TEXT }}>📨 Invite a colleague</div>
+          <span onClick={onClose} style={{ fontSize: 18, color: MUTED, cursor: 'pointer', lineHeight: 1 }}>✕</span>
+        </div>
+        {sent ? (
+          <div>
+            <div style={{ background: LIGHT_GREEN, border: `0.5px solid ${GREEN}`, borderRadius: 8, padding: '12px 14px', fontSize: 13, color: '#085041', marginBottom: 16 }}>
+              ✓ Invite sent to <strong>{email}</strong> — they'll receive an email with a link to join LessonNest.
+            </div>
+            <button onClick={() => { setSent(false); setEmail('') }} style={{ width: '100%', height: 38, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+              Invite another colleague
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 16 }}>
+              Enter your colleague's email address and we'll send them an invitation to join LessonNest.
+            </p>
+            <input
+              type="email"
+              placeholder="colleague@school.co.uk"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleInvite()}
+              style={{ width: '100%', height: 40, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 12px', fontSize: 13, color: TEXT, background: BG, fontFamily: "'DM Sans', sans-serif", outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+            />
+            {error && <div style={{ fontSize: 12, color: '#A32D2D', marginBottom: 10 }}>{error}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleInvite} disabled={sending || !email.trim()}
+                style={{ flex: 1, height: 38, background: sending || !email.trim() ? PAGE_BG : GREEN, color: sending || !email.trim() ? MUTED : LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: sending || !email.trim() ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                {sending ? 'Sending...' : 'Send invite'}
+              </button>
+              <button onClick={onClose} style={{ flex: 1, height: 38, background: PAGE_BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ContactModal({ onClose }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -8311,6 +8382,7 @@ export default function App() {
   const [resourcesInitialPlanId, setResourcesInitialPlanId] = useState(null)
   const [presentationsInitialPlanId, setPresentationsInitialPlanId] = useState(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [trialInfo, setTrialInfo] = useState(null)
@@ -8502,7 +8574,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} />
+      <NavBar currentPage={navPage} onNavigate={handleNavigate} userName={userName} userEmail={userEmail} onOpenProfile={() => setProfileModalOpen(true)} avatarUrl={avatarUrl} trialInfo={trialInfo} setInviteModalOpen={setInviteModalOpen} />
       {approachingLimitWarning && (
         <div style={{ background: '#FEF3C7', borderBottom: '1px solid #FDE68A', padding: '10px 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: '#92400E', fontWeight: 500 }}>
@@ -8568,6 +8640,7 @@ export default function App() {
       {legalPage && legalPage !== 'contact' && <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />}
       {legalPage === 'contact' && <ContactModal onClose={() => setLegalPage(null)} />}
       {profileModalOpen && <ProfileModal session={session} onClose={() => setProfileModalOpen(false)} onUpdated={(name, url) => { if (name) setDisplayName(name); if (url) setAvatarUrl(url); if (session?.user?.id) loadProfilePreferences(session.user.id) }} />}
+      {inviteModalOpen && <InviteModal onClose={() => setInviteModalOpen(false)} />}
       {limitBlockedInfo && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setLimitBlockedInfo(null)}>
           <div style={{ background: BG, borderRadius: 14, width: '100%', maxWidth: 420, padding: '1.5rem', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
