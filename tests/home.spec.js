@@ -14,8 +14,8 @@ test.describe('Home screen (pre-login)', () => {
 
   // ── Nav ──────────────────────────────────────────────────────────────────
 
-  test('nav shows TeachReads brand', async ({ page }) => {
-    await expect(page.getByText('TeachReads').first()).toBeVisible()
+  test('nav shows LessonNest brand', async ({ page }) => {
+    await expect(page.getByText('LessonNest').first()).toBeVisible()
   })
 
   test('nav has Sign in button', async ({ page }) => {
