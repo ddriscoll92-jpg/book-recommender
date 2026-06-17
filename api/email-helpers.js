@@ -118,3 +118,4 @@ export async function sendPaymentFailedEmail(to, name) {
   `)
   return sendEmail({ to, subject: 'Action needed: LessonNest payment failed', html })
 }
+
