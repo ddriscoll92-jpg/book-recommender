@@ -1,8 +1,8 @@
-// TeachReads App v2
+// LessonNest App v2
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { supabase } from './supabaseClient'
 
-// TeachReads shared constants and styles
+// LessonNest shared constants and styles
 const GREEN = '#1D9E75'
 const LIGHT_GREEN = '#E1F5EE'
 const TEXT = '#2C2C2A'
@@ -475,7 +475,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <div style={{ width: 28, height: 28, background: GREEN, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📚</div>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em' }}>TeachReads</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em' }}>LessonNest</span>
         </div>
 
         {isMobile ? (
@@ -895,7 +895,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
             </button>
           </div>
         )}
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -1167,7 +1167,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           <span style={{ flexShrink: 0 }}>⚠️</span>
           <span>Book details are sourced from Open Library and may not be complete. Always verify before ordering.</span>
         </div>
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -1313,7 +1313,7 @@ async function downloadKnowledgeOrgPdf(ko) {
   doc.text(ko.title, margin, 12)
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(139,147,167)
   doc.text(`${ko.yearGroup}  |  ${ko.subject}`, margin, 18)
-  doc.setFontSize(8); doc.text('TeachReads', pageW - margin, 12, { align: 'right' })
+  doc.setFontSize(8); doc.text('LessonNest', pageW - margin, 12, { align: 'right' })
 
   // 2x2 panel grid
   const gridY = 28; const gridH = pageH - gridY - margin
@@ -1478,7 +1478,7 @@ async function downloadVocabCardsPdf(vc) {
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
-    doc.text(`TeachReads  |  ${vc.title}  |  ${vc.yearGroup} ${vc.subject}`, margin, pageH - 4)
+    doc.text(`LessonNest  |  ${vc.title}  |  ${vc.yearGroup} ${vc.subject}`, margin, pageH - 4)
     doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' })
   }
 
@@ -1635,7 +1635,7 @@ async function downloadBingoPdf(bingo, numGrids = 6) {
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
-    doc.text(`TeachReads  |  ${bingo.title || ''}`, margin, pageH - 4)
+    doc.text(`LessonNest  |  ${bingo.title || ''}`, margin, pageH - 4)
     doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' })
   }
 
@@ -1823,7 +1823,7 @@ async function downloadWordsearchPdf(ws) {
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150)
-    doc.text(`TeachReads  |  ${ws.title || ''}`, margin, pageH - 4)
+    doc.text(`LessonNest  |  ${ws.title || ''}`, margin, pageH - 4)
     doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' })
   }
 
@@ -1904,7 +1904,7 @@ async function downloadSlideshowPptx(slideshow, lesson, plan, group) {
   const margin = 0.5
 
   function addFooter(slide, pageLabel) {
-    slide.addText(`TeachReads  ·  ${slideshow.title || ''}`, { x: margin, y: H - 0.32, w: 6, h: 0.25, fontSize: 8, color: 'B4B2A9', fontFace: 'Calibri' })
+    slide.addText(`LessonNest  ·  ${slideshow.title || ''}`, { x: margin, y: H - 0.32, w: 6, h: 0.25, fontSize: 8, color: 'B4B2A9', fontFace: 'Calibri' })
     if (pageLabel) slide.addText(pageLabel, { x: W - margin - 1.5, y: H - 0.32, w: 1.5, h: 0.25, fontSize: 8, color: 'B4B2A9', align: 'right', fontFace: 'Calibri' })
   }
 
@@ -2328,7 +2328,7 @@ async function downloadComprehensionPdf(comp) {
     doc.setFillColor(tr,tg,tb)
     doc.rect(0, pageH - 10, pageW, 10, 'F')
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
-    doc.text(`TeachReads  |  ${comp.title}  |  ${tier.level}`, margin, pageH - 4)
+    doc.text(`LessonNest  |  ${comp.title}  |  ${tier.level}`, margin, pageH - 4)
     doc.text(`Page ${ti + 1} of ${comp.tiers.length}`, pageW - margin, pageH - 4, { align: 'right' })
   })
 
@@ -2589,7 +2589,7 @@ async function downloadWritingFramePdf(wf) {
     doc.setFillColor(tr,tg,tb)
     doc.rect(0, pageH-10, pageW, 10, 'F')
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
-    doc.text(`TeachReads  |  ${wf.title}  |  ${tier.level}`, margin, pageH-4)
+    doc.text(`LessonNest  |  ${wf.title}  |  ${tier.level}`, margin, pageH-4)
     doc.text(`Page ${ti+1} of ${wf.tiers.length}`, pageW-margin, pageH-4, { align:'right' })
   })
 
@@ -2720,9 +2720,9 @@ async function downloadWorksheetPdf(worksheet) {
     doc.setFontSize(9); doc.setFont('helvetica', 'normal')
     doc.text(`${tier.level}  |  ${worksheet.yearGroup}  |  ${worksheet.subject}`, margin, 20)
 
-    // TeachReads tag top right
+    // LessonNest tag top right
     doc.setFontSize(7); doc.setTextColor(220, 255, 240)
-    doc.text('TeachReads', pageW - margin, 11, { align: 'right' })
+    doc.text('LessonNest', pageW - margin, 11, { align: 'right' })
 
     y = 36
 
@@ -2846,7 +2846,7 @@ async function downloadWorksheetPdf(worksheet) {
     doc.setFillColor(tc.r, tc.g, tc.b)
     doc.rect(0, pageH - 10, pageW, 10, 'F')
     doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(255, 255, 255)
-    doc.text(`TeachReads  ·  ${worksheet.title}  ·  ${tier.level}`, margin, pageH - 4)
+    doc.text(`LessonNest  ·  ${worksheet.title}  ·  ${tier.level}`, margin, pageH - 4)
     doc.text(`Page ${ti + 1} of ${worksheet.tiers.length}`, pageW - margin, pageH - 4, { align: 'right' })
   })
 
@@ -3006,7 +3006,7 @@ function ResourceOutput({ resource }) {
         doc.text(sanitise(resourceToUse.title), margin, 13)
         doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(139,147,167)
         doc.text(sanitise(resourceToUse.meta || ''), margin, 22)
-        doc.setFontSize(8); doc.text('Generated by TeachReads', margin, 29)
+        doc.setFontSize(8); doc.text('Generated by LessonNest', margin, 29)
         y = 42
         resourceToUse.sections?.forEach(sec => {
           checkY(14)
@@ -3029,7 +3029,7 @@ function ResourceOutput({ resource }) {
             new Paragraph({ children: [new TextRun({ text: sec.heading, bold: true, color: 'FFFFFF', size: 22 })], shading: { type: ShadingType.SOLID, color: '1D9E75' }, spacing: { before: 300, after: 140 }, indent: { left: 100, right: 100 } }),
             new Paragraph({ children: [new TextRun({ text: sec.content, color: '5F5E5A', size: 20 })], spacing: { after: 200 }, indent: { left: 100 } }),
           ]) || []),
-          new Paragraph({ children: [new TextRun({ text: 'Generated by TeachReads', color: 'B4B2A9', size: 16, italics: true })], spacing: { before: 600 }, alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: 'Generated by LessonNest', color: 'B4B2A9', size: 16, italics: true })], spacing: { before: 600 }, alignment: AlignmentType.CENTER }),
         ]
         const docFile = new Document({ sections: [{ properties: {}, children }] })
         const blob = await Packer.toBlob(docFile)
@@ -3366,7 +3366,7 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           )
         })}
 
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -4563,7 +4563,7 @@ function MyBooksPage({ onNavigate, onSelectBook }) {
           </>
         )}
 
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
 
@@ -4669,7 +4669,7 @@ function ResourceDownloadButton({ resource }) {
             new Paragraph({ children: [new TextRun({ text: sec.heading, bold: true, color: 'FFFFFF', size: 22 })], shading: { type: ShadingType.SOLID, color: '1D9E75' }, spacing: { before: 300, after: 140 }, indent: { left: 100, right: 100 } }),
             new Paragraph({ children: [new TextRun({ text: sec.content, color: '5F5E5A', size: 20 })], spacing: { after: 200 }, indent: { left: 100 } }),
           ]) || []),
-          new Paragraph({ children: [new TextRun({ text: 'Generated by TeachReads', color: 'B4B2A9', size: 16, italics: true })], spacing: { before: 600 }, alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: 'Generated by LessonNest', color: 'B4B2A9', size: 16, italics: true })], spacing: { before: 600 }, alignment: AlignmentType.CENTER }),
         ]
         const docFile = new Document({ sections: [{ properties: {}, children }] })
         const blob = await Packer.toBlob(docFile)
@@ -6016,7 +6016,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           : resource && <ResourceOutput key={resource._genId} resource={resource} />
         }
 
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -6615,7 +6615,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
           </div>
         )}
 
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -7086,7 +7086,7 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
           </div>
         )}
 
-        <div style={s.footer}>TeachReads · For UK primary school teachers</div>
+        <div style={s.footer}>LessonNest · For UK primary school teachers</div>
       </div>
     </div>
   )
@@ -7200,7 +7200,7 @@ function UpgradeSuccessPage({ onNavigate }) {
       <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 64, marginBottom: 20 }}>🎉</div>
         <h1 style={{ fontFamily: "'Lora', serif", fontSize: 28, fontWeight: 500, color: TEXT, marginBottom: 12 }}>
-          Welcome to TeachReads Pro!
+          Welcome to LessonNest Pro!
         </h1>
         <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 32 }}>
           Your subscription is now active. You now have full access to all features. Happy planning!
@@ -7372,7 +7372,7 @@ function UpgradePage({ onNavigate, trialInfo }) {
 
         <button onClick={() => onNavigate('search')}
           style={{ width: '100%', height: 40, background: 'transparent', border: `0.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13, color: MUTED, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-          ← Back to TeachReads
+          ← Back to LessonNest
         </button>
 
         <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 14 }}>
@@ -7873,7 +7873,7 @@ function AdminDashboard({ onNavigate, userEmail }) {
       <div style={{ background: NAVY, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 32, height: 32, background: GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📊</div>
-          <div style={{ fontFamily: "'Lora', serif", fontSize: 18, color: '#fff' }}>TeachReads Admin</div>
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 18, color: '#fff' }}>LessonNest Admin</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={loadStats} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>↺ Refresh</button>
@@ -8034,9 +8034,9 @@ function LegalPage({ type, onClose }) {
     title: 'Privacy Policy',
     updated: today,
     sections: [
-      { heading: 'Who we are', body: `TeachReads is operated by Daniel Driscoll ("we", "us", "our"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at dd.driscoll92@gmail.com.` },
+      { heading: 'Who we are', body: `LessonNest is operated by Daniel Driscoll ("we", "us", "our"). We are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. Contact us at dd.driscoll92@gmail.com.` },
       { heading: 'What data we collect', body: `We collect: your name and email address when you create an account; usage data including lesson plans, resources and book searches you generate; profile information you choose to provide (school name, region, year groups); your profile picture if you upload one; subscription and billing information if you upgrade to a paid plan.` },
-      { heading: 'How we use your data', body: `We use your data to: provide and improve the TeachReads service; personalise your experience (pre-filling year group and subject preferences); send transactional emails (account confirmation, password reset); communicate about your subscription; analyse usage patterns to improve the product. We do not sell your data to third parties or use it for advertising.` },
+      { heading: 'How we use your data', body: `We use your data to: provide and improve the LessonNest service; personalise your experience (pre-filling year group and subject preferences); send transactional emails (account confirmation, password reset); communicate about your subscription; analyse usage patterns to improve the product. We do not sell your data to third parties or use it for advertising.` },
       { heading: 'Data storage', body: `Your data is stored securely using Supabase (PostgreSQL database hosted on AWS in the EU). Profile pictures are stored in Supabase Storage. We use Anthropic's Claude API to generate lesson plans and resources — prompts and responses are not stored by Anthropic beyond their standard processing.` },
       { heading: 'Data retention', body: `We retain your data for as long as you have an account. If you delete your account, all your data is permanently deleted within 30 days. You can delete your account at any time from Profile & settings → Account.` },
       { heading: 'Your rights', body: `Under UK GDPR you have the right to: access your personal data; correct inaccurate data; delete your data ("right to be forgotten"); restrict or object to processing; data portability. To exercise any of these rights, contact us at dd.driscoll92@gmail.com.` },
@@ -8049,14 +8049,14 @@ function LegalPage({ type, onClose }) {
     title: 'Terms of Service',
     updated: today,
     sections: [
-      { heading: '1. Acceptance', body: `By creating a TeachReads account, you agree to these Terms of Service. If you do not agree, please do not use the service. These terms are governed by the laws of England and Wales.` },
-      { heading: '2. The service', body: `TeachReads provides AI-powered book recommendations, lesson planning and classroom resource generation for UK primary school teachers. The service is provided "as is". AI-generated content may occasionally contain inaccuracies — always review content before using it in the classroom.` },
+      { heading: '1. Acceptance', body: `By creating a LessonNest account, you agree to these Terms of Service. If you do not agree, please do not use the service. These terms are governed by the laws of England and Wales.` },
+      { heading: '2. The service', body: `LessonNest provides AI-powered book recommendations, lesson planning and classroom resource generation for UK primary school teachers. The service is provided "as is". AI-generated content may occasionally contain inaccuracies — always review content before using it in the classroom.` },
       { heading: '3. Accounts', body: `You must provide accurate information when creating your account. You are responsible for maintaining the security of your password. You must be at least 18 years old to create an account. One account per person — do not share your account credentials.` },
       { heading: '4. Free trial', body: `New accounts receive a 5-day free trial with limited usage. Trial limits are enforced per feature. At the end of the trial period you must upgrade to a paid plan to continue using the service.` },
       { heading: '5. Paid plans', body: `Paid plans are billed monthly. You can cancel at any time from your account settings — access continues until the end of the billing period. We reserve the right to change pricing with 30 days notice. No refunds are provided for partial months.` },
-      { heading: '6. Your content', body: `You retain ownership of any content you create using TeachReads (lesson plans, resources etc.). You grant us a limited licence to store and display your content to provide the service. You may not use TeachReads to generate content that is unlawful, harmful or infringes third-party rights.` },
-      { heading: '7. Intellectual property', body: `TeachReads, its logo and the software are owned by us and protected by intellectual property law. You may not copy, modify or distribute the TeachReads software.` },
-      { heading: '8. Limitation of liability', body: `To the maximum extent permitted by law, TeachReads shall not be liable for any indirect, incidental or consequential damages arising from use of the service. Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.` },
+      { heading: '6. Your content', body: `You retain ownership of any content you create using LessonNest (lesson plans, resources etc.). You grant us a limited licence to store and display your content to provide the service. You may not use LessonNest to generate content that is unlawful, harmful or infringes third-party rights.` },
+      { heading: '7. Intellectual property', body: `LessonNest, its logo and the software are owned by us and protected by intellectual property law. You may not copy, modify or distribute the LessonNest software.` },
+      { heading: '8. Limitation of liability', body: `To the maximum extent permitted by law, LessonNest shall not be liable for any indirect, incidental or consequential damages arising from use of the service. Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.` },
       { heading: '9. Changes to terms', body: `We may update these terms. Continued use of the service after changes constitutes acceptance. We will notify you of material changes by email.` },
       { heading: '10. Contact', body: `For questions about these terms, contact us at dd.driscoll92@gmail.com.` },
     ]
@@ -8161,7 +8161,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
       <div style={{ background: NAVY, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, background: GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📚</div>
-          <span style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: '#fff' }}>TeachReads</span>
+          <span style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: '#fff' }}>LessonNest</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <span style={{ fontSize: 13, color: NAVY_MUTED, cursor: 'pointer' }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>How it works</span>
@@ -8201,7 +8201,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
           )}
           <div style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 16, padding: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
             <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, color: TEXT, marginBottom: 4 }}>{mode === 'signup' ? 'Get started free' : 'Welcome back'}</h2>
-            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>{mode === 'signup' ? '5-day free trial · No credit card required' : 'Sign in to your TeachReads account'}</p>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>{mode === 'signup' ? '5-day free trial · No credit card required' : 'Sign in to your LessonNest account'}</p>
             <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: PAGE_BG, borderRadius: 8, padding: 4 }}>
               {[['signup', 'Create account'], ['login', 'Sign in']].map(([id, label]) => (
                 <button key={id} onClick={() => { setMode(id); setError(''); setSuccess('') }}
@@ -8285,7 +8285,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
       <div style={{ background: NAVY, padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 24, height: 24, background: GREEN, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>📚</div>
-          <span style={{ fontFamily: "'Lora', serif", fontSize: 15, color: '#fff' }}>TeachReads</span>
+          <span style={{ fontFamily: "'Lora', serif", fontSize: 15, color: '#fff' }}>LessonNest</span>
         </div>
         <span style={{ fontSize: 12, color: NAVY_MUTED }}>For UK primary school teachers</span>
         <div style={{ display: 'flex', gap: 20 }}>
@@ -8302,7 +8302,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
 }
 // ── Root App ──────────────────────────────────────────────────────────────────
 
-// TeachReads App v2
+// LessonNest App v2
 
 export default function App() {
   const [session, setSession] = useState(undefined)
