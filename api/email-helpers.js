@@ -1,8 +1,8 @@
 // Shared helper for sending transactional emails via Resend.
 // Not an API route itself — imported by other serverless functions.
 
-const FROM = 'TeachReads <onboarding@resend.dev>'
-const APP_URL = process.env.VITE_APP_URL || 'https://book-recommender-git-main-danny-driscoll-s-projects.vercel.app'
+const FROM = 'LessonNest <hello@lessonnest.co.uk>'
+const APP_URL = process.env.VITE_APP_URL || 'https://lessonnest.co.uk'
 
 async function sendEmail({ to, subject, html }) {
   if (!to) {
@@ -34,13 +34,13 @@ function wrapper(bodyHtml) {
   return `
     <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #2C2C2A;">
       <div style="background: #1E2433; padding: 20px 24px; border-radius: 12px 12px 0 0;">
-        <span style="font-family: Georgia, serif; font-size: 20px; font-weight: 500; color: #fff;">TeachReads</span>
+        <span style="font-family: Georgia, serif; font-size: 20px; font-weight: 500; color: #fff;">LessonNest</span>
       </div>
       <div style="border: 1px solid #D3D1C7; border-top: none; border-radius: 0 0 12px 12px; padding: 28px 24px;">
         ${bodyHtml}
       </div>
       <p style="color: #B4B2A9; font-size: 12px; text-align: center; margin-top: 20px;">
-        TeachReads · For UK primary school teachers
+        LessonNest · For UK primary school teachers
       </p>
     </div>
   `
@@ -53,9 +53,9 @@ function button(label, href) {
 export async function sendWelcomeEmail(to, name) {
   const greeting = name ? `Hi ${name},` : 'Hi there,'
   const html = wrapper(`
-    <h2 style="font-family: Georgia, serif; font-weight: 500; color: #1E2433; margin: 0 0 12px;">Welcome to TeachReads! 🎉</h2>
+    <h2 style="font-family: Georgia, serif; font-weight: 500; color: #1E2433; margin: 0 0 12px;">Welcome to LessonNest! 🎉</h2>
     <p style="font-size: 14px; line-height: 1.6;">${greeting}</p>
-    <p style="font-size: 14px; line-height: 1.6;">Thanks for verifying your email — you're all set to start using TeachReads.</p>
+    <p style="font-size: 14px; line-height: 1.6;">Thanks for verifying your email — you're all set to start using LessonNest.</p>
     <p style="font-size: 14px; line-height: 1.6;">Here's what you can do:</p>
     <ul style="font-size: 14px; line-height: 1.8; color: #5F5E5A;">
       <li>Find books tailored to your year group and topic</li>
@@ -66,7 +66,7 @@ export async function sendWelcomeEmail(to, name) {
     ${button('Get started →', APP_URL)}
     <p style="font-size: 13px; color: #5F5E5A; margin-top: 24px;">Your free trial is active — enjoy exploring!</p>
   `)
-  return sendEmail({ to, subject: 'Welcome to TeachReads 🎉', html })
+  return sendEmail({ to, subject: 'Welcome to LessonNest 🎉', html })
 }
 
 export async function sendTrialEndingEmail(to, name, daysLeft) {
@@ -75,11 +75,11 @@ export async function sendTrialEndingEmail(to, name, daysLeft) {
   const html = wrapper(`
     <h2 style="font-family: Georgia, serif; font-weight: 500; color: #1E2433; margin: 0 0 12px;">Your trial ends ${dayWord}</h2>
     <p style="font-size: 14px; line-height: 1.6;">${greeting}</p>
-    <p style="font-size: 14px; line-height: 1.6;">Your TeachReads free trial ends ${dayWord}. To keep access to your saved plans, resources and the AI Assistant, upgrade to a paid plan.</p>
+    <p style="font-size: 14px; line-height: 1.6;">Your LessonNest free trial ends ${dayWord}. To keep access to your saved plans, resources and the AI Assistant, upgrade to a paid plan.</p>
     ${button('Upgrade now →', `${APP_URL}?upgrade=1`)}
     <p style="font-size: 13px; color: #5F5E5A; margin-top: 24px;">If you do nothing, your account will move to the free tier and some features may become unavailable.</p>
   `)
-  return sendEmail({ to, subject: `Your TeachReads trial ends ${dayWord}`, html })
+  return sendEmail({ to, subject: `Your LessonNest trial ends ${dayWord}`, html })
 }
 
 export async function sendPlanUpgradedEmail(to, name, planName) {
@@ -87,11 +87,11 @@ export async function sendPlanUpgradedEmail(to, name, planName) {
   const html = wrapper(`
     <h2 style="font-family: Georgia, serif; font-weight: 500; color: #1E2433; margin: 0 0 12px;">You're on the ${planName} plan! 🎉</h2>
     <p style="font-size: 14px; line-height: 1.6;">${greeting}</p>
-    <p style="font-size: 14px; line-height: 1.6;">Thanks for upgrading to TeachReads ${planName}. Your new plan is active now — enjoy the extra usage and features.</p>
-    ${button('Go to TeachReads →', APP_URL)}
+    <p style="font-size: 14px; line-height: 1.6;">Thanks for upgrading to LessonNest ${planName}. Your new plan is active now — enjoy the extra usage and features.</p>
+    ${button('Go to LessonNest →', APP_URL)}
     <p style="font-size: 13px; color: #5F5E5A; margin-top: 24px;">You can manage your subscription anytime from your account settings.</p>
   `)
-  return sendEmail({ to, subject: `You're now on the TeachReads ${planName} plan`, html })
+  return sendEmail({ to, subject: `You're now on the LessonNest ${planName} plan`, html })
 }
 
 export async function sendSubscriptionCancelledEmail(to, name) {
@@ -99,12 +99,12 @@ export async function sendSubscriptionCancelledEmail(to, name) {
   const html = wrapper(`
     <h2 style="font-family: Georgia, serif; font-weight: 500; color: #1E2433; margin: 0 0 12px;">Your subscription has been cancelled</h2>
     <p style="font-size: 14px; line-height: 1.6;">${greeting}</p>
-    <p style="font-size: 14px; line-height: 1.6;">We're sorry to see you go. Your TeachReads subscription has been cancelled and your account has moved to the free tier.</p>
+    <p style="font-size: 14px; line-height: 1.6;">We're sorry to see you go. Your LessonNest subscription has been cancelled and your account has moved to the free tier.</p>
     <p style="font-size: 14px; line-height: 1.6;">Your saved plans and resources are still there if you'd like to come back.</p>
     ${button('Reactivate anytime →', `${APP_URL}?upgrade=1`)}
     <p style="font-size: 13px; color: #5F5E5A; margin-top: 24px;">If this was a mistake or you have feedback, just reply to this email.</p>
   `)
-  return sendEmail({ to, subject: 'Your TeachReads subscription has been cancelled', html })
+  return sendEmail({ to, subject: 'Your LessonNest subscription has been cancelled', html })
 }
 
 export async function sendPaymentFailedEmail(to, name) {
@@ -112,9 +112,9 @@ export async function sendPaymentFailedEmail(to, name) {
   const html = wrapper(`
     <h2 style="font-family: Georgia, serif; font-weight: 500; color: #1E2433; margin: 0 0 12px;">We couldn't process your payment</h2>
     <p style="font-size: 14px; line-height: 1.6;">${greeting}</p>
-    <p style="font-size: 14px; line-height: 1.6;">We tried to renew your TeachReads subscription, but the payment didn't go through. Please update your payment details to keep your plan active.</p>
+    <p style="font-size: 14px; line-height: 1.6;">We tried to renew your LessonNest subscription, but the payment didn't go through. Please update your payment details to keep your plan active.</p>
     ${button('Update payment details →', `${APP_URL}?billing=1`)}
     <p style="font-size: 13px; color: #5F5E5A; margin-top: 24px;">If you don't update your details, your account may be moved to the free tier.</p>
   `)
-  return sendEmail({ to, subject: 'Action needed: TeachReads payment failed', html })
+  return sendEmail({ to, subject: 'Action needed: LessonNest payment failed', html })
 }
