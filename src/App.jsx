@@ -8431,6 +8431,8 @@ export default function App() {
       setSession(session)
       if (session) loadProfilePreferences(session.user.id)
       if (event === 'PASSWORD_RECOVERY') setPage('password_reset')
+      // When user arrives via invite link, prompt them to set a password
+      if (event === 'SIGNED_IN' && session?.user?.app_metadata?.provider === 'email' && !session?.user?.last_sign_in_at) setPage('password_reset')
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -8606,11 +8608,12 @@ export default function App() {
       {page === 'password_reset' && (
         <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: BG, borderRadius: 14, padding: '2rem', width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
-            <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, color: TEXT, marginBottom: 8 }}>Set new password</h2>
-            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Enter your new password below.</p>
+            <div style={{ fontSize: 32, marginBottom: 12, textAlign: 'center' }}>🔑</div>
+            <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, color: TEXT, marginBottom: 8, textAlign: 'center' }}>Set your password</h2>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20, textAlign: 'center' }}>Choose a password for your LessonNest account.</p>
             <input
               type="password"
-              placeholder="New password (min 6 characters)"
+              placeholder="Password (min 6 characters)"
               value={newPassword}
               onChange={e => setNewPasswordReset(e.target.value)}
               style={{ width: '100%', height: 42, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 14px', fontSize: 14, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}
@@ -8621,12 +8624,12 @@ export default function App() {
                 if (newPassword.length < 6) { setResetMsg('Password must be at least 6 characters.'); return }
                 const { error } = await supabase.auth.updateUser({ password: newPassword })
                 if (error) { setResetMsg(error.message); return }
-                setResetMsg('✅ Password updated successfully!')
+                setResetMsg('✅ Password set successfully!')
                 setTimeout(() => { setNewPasswordReset(''); setResetMsg(''); setPage('search') }, 2000)
               }}
               style={{ width: '100%', height: 44, background: GREEN, color: LIGHT_GREEN, border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
             >
-              Update password
+              Set password
             </button>
           </div>
         </div>
