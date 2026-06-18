@@ -14,14 +14,14 @@
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: getByText(/Step 2/i)
+Locator: getByText(/Step 2 — Select a lesson/i)
 Expected: visible
 Timeout: 5000ms
 Error: element(s) not found
 
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
-  - waiting for getByText(/Step 2/i)
+  - waiting for getByText(/Step 2 — Select a lesson/i)
 
 ```
 
@@ -68,6 +68,9 @@ Call log:
 # Test source
 
 ```ts
+  6   | // Helper: sign in
+  7   | async function signIn(page) {
+  8   |   await page.goto('/')
   9   |   await page.waitForSelector('#auth-card', { timeout: 15_000 })
   10  |   const signInTab = page.getByRole('button', { name: 'Sign in' }).first()
   11  |   if (await signInTab.isVisible()) await signInTab.click()
@@ -165,54 +168,52 @@ Call log:
   103 | 
   104 |   test('From a plan tab shows resource type selector', async ({ page }) => {
   105 |     await page.getByRole('button', { name: /From a plan/i }).click()
-  106 |     // Need to select a plan first before resource types appear at Step 3
-  107 |     // Just verify Step 1 and 2 labels are present
-  108 |     await expect(page.getByText(/Step 1/i)).toBeVisible()
-> 109 |     await expect(page.getByText(/Step 2/i)).toBeVisible()
-      |                                             ^ Error: expect(locator).toBeVisible() failed
-  110 |   })
+> 106 |     await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible()
+      |                                                               ^ Error: expect(locator).toBeVisible() failed
+  107 |     await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible()
+  108 |   })
+  109 | 
+  110 |   // ── My catalogue tab ─────────────────────────────────────────────────────
   111 | 
-  112 |   // ── My catalogue tab ─────────────────────────────────────────────────────
-  113 | 
-  114 |   test('My catalogue tab shows search input', async ({ page }) => {
-  115 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  116 |     await expect(page.getByPlaceholder('Search by title, topic or subject...')).toBeVisible()
-  117 |   })
-  118 | 
-  119 |   test('My catalogue tab shows type filter', async ({ page }) => {
-  120 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  121 |     await expect(page.getByRole('option', { name: 'All types' })).toBeAttached()
-  122 |   })
-  123 | 
-  124 |   test('My catalogue tab shows subject filter', async ({ page }) => {
-  125 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  126 |     await expect(page.getByRole('option', { name: 'All subjects' })).toBeAttached()
-  127 |   })
-  128 | 
-  129 |   test('My catalogue tab shows year filter', async ({ page }) => {
-  130 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  131 |     await expect(page.getByRole('option', { name: 'All years' })).toBeAttached()
-  132 |   })
-  133 | 
-  134 |   test('My catalogue tab shows favourites filter', async ({ page }) => {
-  135 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  136 |     await expect(page.getByText('⭐ Favourites')).toBeVisible()
-  137 |   })
-  138 | 
-  139 |   test('My catalogue tab shows refresh button', async ({ page }) => {
-  140 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  141 |     await expect(page.getByTitle('Refresh')).toBeVisible()
-  142 |   })
-  143 | 
-  144 |   test('empty catalogue shows correct message', async ({ page }) => {
-  145 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  146 |     const emptyMsg = page.getByText(/Generate a resource using Quick resource/i)
-  147 |     const hasItems = await page.locator('[resource_type]').count() > 0
-  148 |     if (!hasItems) {
-  149 |       await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
-  150 |     }
-  151 |   })
+  112 |   test('My catalogue tab shows search input', async ({ page }) => {
+  113 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  114 |     await expect(page.getByPlaceholder('Search by title, topic or subject...')).toBeVisible()
+  115 |   })
+  116 | 
+  117 |   test('My catalogue tab shows type filter', async ({ page }) => {
+  118 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  119 |     await expect(page.getByRole('option', { name: 'All types' })).toBeAttached()
+  120 |   })
+  121 | 
+  122 |   test('My catalogue tab shows subject filter', async ({ page }) => {
+  123 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  124 |     await expect(page.getByRole('option', { name: 'All subjects' })).toBeAttached()
+  125 |   })
+  126 | 
+  127 |   test('My catalogue tab shows year filter', async ({ page }) => {
+  128 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  129 |     await expect(page.getByRole('option', { name: 'All years' })).toBeAttached()
+  130 |   })
+  131 | 
+  132 |   test('My catalogue tab shows favourites filter', async ({ page }) => {
+  133 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  134 |     await expect(page.getByText('⭐ Favourites')).toBeVisible()
+  135 |   })
+  136 | 
+  137 |   test('My catalogue tab shows refresh button', async ({ page }) => {
+  138 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  139 |     await expect(page.getByTitle('Refresh')).toBeVisible()
+  140 |   })
+  141 | 
+  142 |   test('empty catalogue shows correct message', async ({ page }) => {
+  143 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  144 |     const emptyMsg = page.getByText(/Generate a resource using Quick resource/i)
+  145 |     const hasItems = await page.locator('[resource_type]').count() > 0
+  146 |     if (!hasItems) {
+  147 |       await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
+  148 |     }
+  149 |   })
+  150 | 
+  151 | })
   152 | 
-  153 | })
-  154 | 
 ```

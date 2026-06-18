@@ -101,10 +101,9 @@ test.describe('My Resources page', () => {
     await expect(page.getByPlaceholder(/Search plans/i)).toBeVisible()
   })
 
-  test('From a plan tab shows resource type selector', async ({ page }) => {
+  test('From a plan tab shows Step 1 plan picker', async ({ page }) => {
     await page.getByRole('button', { name: /From a plan/i }).click()
-    await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible()
-    await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible()
+    await expect(page.getByText(/Step 1 — Select a plan/i)).toBeVisible()
   })
 
   // ── My catalogue tab ─────────────────────────────────────────────────────
