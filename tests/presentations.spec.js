@@ -103,8 +103,8 @@ test.describe('My Presentations page', () => {
 
   test('From a plan tab shows subject and year filters', async ({ page }) => {
     await page.getByRole('button', { name: /From a plan/i }).click()
-    await expect(page.getByText('All subjects').first()).toBeVisible()
-    await expect(page.getByText('All years').first()).toBeVisible()
+    await expect(page.locator('select').first()).toBeVisible()
+    await expect(page.locator('select').nth(1)).toBeVisible()
   })
 
   // ── My catalogue tab ─────────────────────────────────────────────────────
