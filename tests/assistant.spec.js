@@ -18,7 +18,7 @@ async function signIn(page) {
 // Helper: navigate to AI Assistant
 async function goToAssistant(page) {
   await page.getByRole('button', { name: 'AI Assistant' }).click()
-  await expect(page.getByText('AI Teaching Assistant')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('heading', { name: 'AI Teaching Assistant' })).toBeVisible({ timeout: 10_000 })
 }
 
 test.describe('AI Assistant page', () => {
@@ -31,7 +31,7 @@ test.describe('AI Assistant page', () => {
   // ── Page structure ──────────────────────────────────────────────────────
 
   test('page header is visible', async ({ page }) => {
-    await expect(page.getByText('AI Teaching Assistant')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'AI Teaching Assistant' })).toBeVisible()
   })
 
   test('page subheading is visible', async ({ page }) => {
@@ -49,15 +49,15 @@ test.describe('AI Assistant page', () => {
   // ── Suggested prompts ───────────────────────────────────────────────────
 
   test('all 5 suggested prompts are visible', async ({ page }) => {
-    await expect(page.getByText(/differentiate a lesson on fractions/i)).toBeVisible()
-    await expect(page.getByText(/strategies for supporting a pupil with dyslexia/i)).toBeVisible()
-    await expect(page.getByText(/teach the 5 times table/i)).toBeVisible()
-    await expect(page.getByText(/positive report comment/i)).toBeVisible()
-    await expect(page.getByText(/Ofsted look for/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: /differentiate a lesson on fractions/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /strategies for supporting a pupil with dyslexia/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /teach the 5 times table/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /positive report comment/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Ofsted look for/i })).toBeVisible()
   })
 
   test('clicking a suggested prompt fills the input', async ({ page }) => {
-    await page.getByText(/differentiate a lesson on fractions/i).click()
+    await page.getByRole('button', { name: /differentiate a lesson on fractions/i }).click()
     const textarea = page.locator('textarea')
     await expect(textarea).not.toBeEmpty()
   })
