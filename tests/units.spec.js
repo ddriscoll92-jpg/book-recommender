@@ -41,13 +41,13 @@ test.describe('My Units page', () => {
   // ── Picker ───────────────────────────────────────────────────────────────
 
   test('picker shows units or empty state', async ({ page }) => {
-    const viewUnit = page.getByText('View unit →').first()
-    const emptyMsg = page.getByText(/No units yet/i)
-    const hasUnits = await viewUnit.isVisible().catch(() => false)
-    if (hasUnits) {
-      await expect(viewUnit).toBeVisible()
+    // Wait for loading to finish then check for either units or empty state
+    await page.waitForTimeout(1000)
+    const unitCount = await page.getByText(/View unit/i).count()
+    if (unitCount > 0) {
+      await expect(page.getByText(/View unit/i).first()).toBeVisible()
     } else {
-      await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
+      await expect(page.getByText(/No units yet/i)).toBeVisible({ timeout: 5_000 })
     }
   })
 
@@ -61,28 +61,28 @@ test.describe('My Units page', () => {
 
   test('filter bar is visible with search input', async ({ page }) => {
     const viewUnit = page.getByText('View unit →').first()
-    const hasUnits = await viewUnit.isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (hasUnits) {
       await expect(page.getByPlaceholder(/Search by book/i)).toBeVisible()
     }
   })
 
   test('subject filter is visible', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (hasUnits) {
       await expect(page.getByRole('option', { name: 'All subjects' })).toBeAttached()
     }
   })
 
   test('year filter is visible', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (hasUnits) {
       await expect(page.getByRole('option', { name: 'All years' })).toBeAttached()
     }
   })
 
   test('units are grouped by book title', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (hasUnits) {
       // Book titles appear as group headers
       const groupHeaders = page.locator('[style*="Lora"]').first()
@@ -91,7 +91,7 @@ test.describe('My Units page', () => {
   })
 
   test('each plan row has edit and delete buttons', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (hasUnits) {
       await expect(page.getByTitle('✏️').first().or(page.locator('button').filter({ hasText: '✏️' }).first())).toBeVisible().catch(() => {})
       await expect(page.locator('button').filter({ hasText: '🗑️' }).first()).toBeVisible()
@@ -101,72 +101,72 @@ test.describe('My Units page', () => {
   // ── Unit detail ──────────────────────────────────────────────────────────
 
   test('clicking View unit opens unit detail', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
   })
 
   test('unit detail shows book card', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     // Book card shows year group, subject and lesson count
     await expect(page.getByText(/lessons/).first()).toBeVisible()
   })
 
   test('unit detail shows Lessons tab', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByRole('button', { name: /Lessons/i }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('unit detail shows Resources tab', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByRole('button', { name: /Resources/i }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('unit detail shows Presentations tab', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByRole('button', { name: /Presentations/i }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('Back to all units link returns to picker', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await page.getByText('← All units').click()
-    await expect(page.getByText('View unit →').first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByText(/View unit/i).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('Lessons tab shows lesson rows with learning intentions', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await expect(page.getByText(/Learning intention:/i).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('Resources tab shows Create resource button', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await page.getByRole('button', { name: /Resources/i }).first().click()
     await expect(page.getByRole('button', { name: /Create resource/i })).toBeVisible()
   })
 
   test('Presentations tab shows Create presentation button', async ({ page }) => {
-    const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+    const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.getByText('View unit →').first().click()
+    await page.getByText(/View unit/i).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await page.getByRole('button', { name: /Presentations/i }).first().click()
     await expect(page.getByRole('button', { name: /Create presentation/i })).toBeVisible()
