@@ -11,6 +11,7 @@
     "test:assistant": "playwright test tests/assistant.spec.js",
     "test:presentations": "playwright test tests/presentations.spec.js",
     "test:resources": "playwright test tests/resources.spec.js",
+    "test:units": "playwright test tests/units.spec.js",
     "test:report": "playwright show-report"
   },
   "dependencies": {
