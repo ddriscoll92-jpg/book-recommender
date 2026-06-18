@@ -15,6 +15,7 @@
     "test:books": "playwright test tests/books.spec.js",
     "test:recommender": "playwright test tests/recommender.spec.js",
     "test:profile": "playwright test tests/profile.spec.js",
+    "test:navigation": "playwright test tests/navigation.spec.js",
     "test:report": "playwright show-report"
   },
   "dependencies": {
