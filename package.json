@@ -13,6 +13,7 @@
     "test:resources": "playwright test tests/resources.spec.js",
     "test:units": "playwright test tests/units.spec.js",
     "test:books": "playwright test tests/books.spec.js",
+    "test:recommender": "playwright test tests/recommender.spec.js",
     "test:report": "playwright show-report"
   },
   "dependencies": {
