@@ -99,7 +99,7 @@ test.describe('Profile & settings', () => {
 
   test('Password tab switches content', async ({ page }) => {
     await page.getByText('🔑 Password').click()
-    await expect(page.getByText('New password')).toBeVisible()
+    await expect(page.getByText('Choose a strong password of at least 6 characters.')).toBeVisible()
   })
 
   test('Password tab shows confirm password field label', async ({ page }) => {
