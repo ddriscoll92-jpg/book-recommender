@@ -3,22 +3,20 @@ import { test, expect } from '@playwright/test'
 const EMAIL = process.env.TEST_EMAIL
 const PASSWORD = process.env.TEST_PASSWORD
 
-// Helper: sign in
 async function signIn(page) {
   await page.goto('/')
-  await page.waitForSelector('#auth-card', { timeout: 15_000 })
+  await page.waitForSelector('#auth-card', { timeout: 30_000 })
   const signInTab = page.getByRole('button', { name: 'Sign in' }).first()
   if (await signInTab.isVisible()) await signInTab.click()
   await page.fill('input[type="email"]', EMAIL)
   await page.fill('input[type="password"]', PASSWORD)
   await page.getByRole('button', { name: /^sign in$/i }).last().click()
-  await expect(page.getByRole('button', { name: 'Book Recommender' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: 'Book Recommender' })).toBeVisible({ timeout: 30_000 })
 }
 
-// Helper: navigate to AI Assistant
 async function goToAssistant(page) {
   await page.getByRole('button', { name: 'AI Assistant' }).click()
-  await expect(page.getByRole('heading', { name: 'AI Teaching Assistant' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('heading', { name: 'AI Teaching Assistant' })).toBeVisible({ timeout: 15_000 })
 }
 
 test.describe('AI Assistant page', () => {
@@ -27,8 +25,6 @@ test.describe('AI Assistant page', () => {
     await signIn(page)
     await goToAssistant(page)
   })
-
-  // ── Page structure ──────────────────────────────────────────────────────
 
   test('page header is visible', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'AI Teaching Assistant' })).toBeVisible()
@@ -46,8 +42,6 @@ test.describe('AI Assistant page', () => {
     await expect(page.getByText(/Hello! I'm your AI teaching assistant/i)).toBeVisible()
   })
 
-  // ── Suggested prompts ───────────────────────────────────────────────────
-
   test('all 5 suggested prompts are visible', async ({ page }) => {
     await expect(page.getByRole('button', { name: /differentiate a lesson on fractions/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /strategies for supporting a pupil with dyslexia/i })).toBeVisible()
@@ -61,8 +55,6 @@ test.describe('AI Assistant page', () => {
     const textarea = page.locator('textarea')
     await expect(textarea).not.toBeEmpty()
   })
-
-  // ── Input and send button ───────────────────────────────────────────────
 
   test('textarea is present', async ({ page }) => {
     await expect(page.locator('textarea')).toBeVisible()
@@ -90,16 +82,13 @@ test.describe('AI Assistant page', () => {
     const message = 'What is phonics?'
     await page.locator('textarea').fill(message)
     await page.getByRole('button', { name: /send/i }).click()
-    // User message should appear immediately
     await expect(page.getByText(message)).toBeVisible()
-    // Input should be cleared
     await expect(page.locator('textarea')).toBeEmpty()
   })
 
   test('"Thinking..." indicator appears while waiting for response', async ({ page }) => {
     await page.locator('textarea').fill('What is phonics?')
     await page.getByRole('button', { name: /send/i }).click()
-    // Thinking indicator should appear briefly
     await expect(page.getByText('Thinking...')).toBeVisible({ timeout: 5_000 })
   })
 

@@ -6,6 +6,7 @@ dotenv.config({ path: '.env.test' })
 export default defineConfig({
   testDir: './tests',
   timeout: 30_000,
+  workers: 1,
   retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
