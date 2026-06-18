@@ -60,7 +60,7 @@ test.describe('My Units page', () => {
   })
 
   test('filter bar is visible with search input', async ({ page }) => {
-    const viewUnit = page.getByText('View unit →').first()
+    
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (hasUnits) {
       await expect(page.getByPlaceholder(/Search by book/i)).toBeVisible()
@@ -103,14 +103,14 @@ test.describe('My Units page', () => {
   test('clicking View unit opens unit detail', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
   })
 
   test('unit detail shows book card', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     // Book card shows year group, subject and lesson count
     await expect(page.getByText(/lessons/).first()).toBeVisible()
@@ -119,28 +119,28 @@ test.describe('My Units page', () => {
   test('unit detail shows Lessons tab', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByRole('button', { name: /Lessons/i }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('unit detail shows Resources tab', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByRole('button', { name: /Resources/i }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('unit detail shows Presentations tab', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByRole('button', { name: /Presentations/i }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('Back to all units link returns to picker', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await page.getByText('← All units').click()
     await expect(page.locator('button').filter({ hasText: '✏️' }).first()).toBeVisible({ timeout: 5_000 })
@@ -149,7 +149,7 @@ test.describe('My Units page', () => {
   test('Lessons tab shows lesson rows with learning intentions', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await expect(page.getByText(/Learning intention:/i).first()).toBeVisible({ timeout: 5_000 })
   })
@@ -157,7 +157,7 @@ test.describe('My Units page', () => {
   test('Resources tab shows Create resource button', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await page.getByRole('button', { name: /Resources/i }).first().click()
     await expect(page.getByRole('button', { name: /Create resource/i })).toBeVisible()
@@ -166,7 +166,7 @@ test.describe('My Units page', () => {
   test('Presentations tab shows Create presentation button', async ({ page }) => {
     const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).first().isVisible().catch(() => false)
     if (!hasUnits) { test.skip(); return }
-    await page.locator('span').filter({ hasText: /View unit/i }).first().click()
+    await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
     await page.getByRole('button', { name: /Presentations/i }).first().click()
     await expect(page.getByRole('button', { name: /Create presentation/i })).toBeVisible()
