@@ -17,6 +17,14 @@ const NAVY = '#1E2433'
 const NAVY_LIGHT = '#2C3547'
 const NAVY_MUTED = '#8B93A7'
 
+// Lesson type colours — used across multiple components
+const LESSON_TYPE_COLORS = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
+const LESSON_TYPE_BGS = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
+
+// Resource type labels and colours — used across multiple components
+const RES_TYPE_LABELS = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', wordsearch: 'Word search', adhoc: 'Quick resource' }
+const RES_TYPE_COLORS = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, wordsearch: { bg: '#F0F9FF', color: '#075985' }, adhoc: { bg: '#f5f4f0', color: '#5F5E5A' } }
+
 const TRIAL_LIMITS = {
   book_searches: 10,
   load_mores: 20,
@@ -3715,7 +3723,7 @@ function PlanDetailModal({ plan, group, onClose }) {
     load()
   }, [plan.id])
 
-  const typeColors = { explore: '#7C5CBF', analyse: '#1D6FA8', teach: '#1D9E75', practise: '#D97706', apply: '#DC6B3A', create: '#B91C78' }
+  const typeColors = Object.fromEntries(Object.entries(LESSON_TYPE_COLORS).map(([k,v]) => [k.toLowerCase(), v]))
   const typeBgs = { explore: '#F3EEFF', analyse: '#E8F4FF', teach: '#E1F5EE', practise: '#FEF3C7', apply: '#FEF0E8', create: '#FCE7F3' }
 
   return (
@@ -5684,8 +5692,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                 ? realLessons.map(l => ({ num: l.lesson_number, title: l.title, type: l.type, intention: l.learning_intention || '', learningIntention: l.learning_intention || '' }))
                 : Array.from({ length: selectedPlan?.lessons || 0 }, (_, i) => ({ num: i+1, title: `Lesson ${i+1}`, type: '', intention: '', learningIntention: '' }))
 
-              const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
-              const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
+              const typeColors = LESSON_TYPE_COLORS
+              const typeBgs = LESSON_TYPE_BGS
 
               return (
                 <div>
@@ -5892,8 +5900,8 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
                     }
                     return true
                   })
-                  const typeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', wordsearch: 'Word search', adhoc: 'Quick resource' }
-                  const typeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, wordsearch: { bg: '#F0F9FF', color: '#075985' }, adhoc: { bg: PAGE_BG, color: MUTED } }
+                  const typeLabels = RES_TYPE_LABELS
+                  const typeColors = RES_TYPE_COLORS
 
                   if (filtered.length === 0) return (
                     <div style={{ textAlign: 'center', padding: '2.5rem', color: MUTED }}>
@@ -6266,8 +6274,8 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
     return true
   })
 
-  const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
-  const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
+  const typeColors = LESSON_TYPE_COLORS
+  const typeBgs = LESSON_TYPE_BGS
 
   function toggleLesson(num) {
     setSelectedLessonNums(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])
@@ -6644,10 +6652,10 @@ function UnitOverviewPage({ onNavigate, initialPlanId }) {
   const [confirmDeleteResId, setConfirmDeleteResId] = useState(null)
   const [confirmDeletePresId, setConfirmDeletePresId] = useState(null)
 
-  const typeColors = { Explore: '#7C5CBF', Analyse: '#1D6FA8', Teach: '#1D9E75', Practise: '#D97706', Apply: '#DC6B3A', Create: '#B91C78' }
-  const typeBgs = { Explore: '#F3EEFF', Analyse: '#E8F4FF', Teach: '#E1F5EE', Practise: '#FEF3C7', Apply: '#FEF0E8', Create: '#FCE7F3' }
-  const resTypeLabels = { worksheet: 'Worksheet', starter: 'Lesson starter', exit_ticket: 'Exit ticket', writing_frame: 'Writing frame', knowledge_org: 'Knowledge organiser', vocab_cards: 'Vocabulary cards', comprehension: 'Reading comprehension', bingo: 'Bingo game', wordsearch: 'Word search', adhoc: 'Quick resource' }
-  const resTypeColors = { worksheet: { bg: '#EEF2FF', color: '#3730A3' }, starter: { bg: '#FEF3C7', color: '#92400E' }, exit_ticket: { bg: '#ECFDF5', color: '#065F46' }, writing_frame: { bg: '#FCE7F3', color: '#9D174D' }, knowledge_org: { bg: '#EFF6FF', color: '#1E40AF' }, vocab_cards: { bg: '#FDF4FF', color: '#7E22CE' }, comprehension: { bg: '#FFF7ED', color: '#9A3412' }, bingo: { bg: '#F0FDF4', color: '#166534' }, wordsearch: { bg: '#F0F9FF', color: '#075985' }, adhoc: { bg: PAGE_BG, color: MUTED } }
+  const typeColors = LESSON_TYPE_COLORS
+  const typeBgs = LESSON_TYPE_BGS
+  const resTypeLabels = RES_TYPE_LABELS
+  const resTypeColors = RES_TYPE_COLORS
 
   // Load plan list for the picker
   useEffect(() => {
@@ -7576,9 +7584,10 @@ function ProfileModal({ session, onClose, onUpdated }) {
       await supabase.from('profiles').delete().eq('id', pmUserId)
       // Delete auth user via API (requires service role)
       try {
+        const { data: { session } } = await supabase.auth.getSession()
         await fetch('/api/delete-user', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
           body: JSON.stringify({ userId: pmUserId }),
         })
       } catch(e) { console.error('Auth user deletion failed:', e) }
@@ -7951,9 +7960,10 @@ function InviteModal({ onClose }) {
     if (!email.trim()) return
     setSending(true); setError('')
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ email: email.trim() }),
       })
       const data = await res.json()
