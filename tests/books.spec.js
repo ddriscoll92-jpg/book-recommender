@@ -134,14 +134,18 @@ test.describe('My Books page', () => {
 
   test('Add to library modal has title and author fields', async ({ page }) => {
     await page.getByRole('button', { name: /Add to library/i }).click()
-    await expect(page.getByPlaceholder(/Title/i)).toBeVisible({ timeout: 5_000 })
-    await expect(page.getByPlaceholder(/Author/i)).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByText(/Add book to library/i)).toBeVisible({ timeout: 5_000 })
+    // Click "Add manually" to reveal title/author fields
+    await page.getByText(/Add manually/i).click()
+    await expect(page.getByPlaceholder('Book title')).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByPlaceholder('Author name')).toBeVisible({ timeout: 5_000 })
   })
 
   test('Add to library modal can be closed', async ({ page }) => {
     await page.getByRole('button', { name: /Add to library/i }).click()
     await expect(page.getByText(/Add book to library/i)).toBeVisible({ timeout: 5_000 })
-    await page.keyboard.press('Escape')
+    // Close via the × button
+    await page.locator('button').filter({ hasText: '×' }).click()
     await expect(page.getByText(/Add book to library/i)).not.toBeVisible({ timeout: 3_000 })
   })
 

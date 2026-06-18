@@ -1,0 +1,215 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: books.spec.js >> My Books page >> Add to library modal has title and author fields
+- Location: tests/books.spec.js:135:7
+
+# Error details
+
+```
+Error: expect(locator).toBeVisible() failed
+
+Locator: getByPlaceholder(/Author/i)
+Expected: visible
+Error: strict mode violation: getByPlaceholder(/Author/i) resolved to 2 elements:
+    1) <input value="" placeholder="Search by book or author..."/> aka getByRole('textbox', { name: 'Search by book or author...' })
+    2) <input value="" placeholder="Search by title or author..."/> aka getByRole('textbox', { name: 'Search by title or author...' })
+
+Call log:
+  - Expect "toBeVisible" with timeout 5000ms
+  - waiting for getByPlaceholder(/Author/i)
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 📚
+      - generic [ref=e8]: LessonNest
+    - generic [ref=e9]:
+      - button "Book Recommender" [ref=e10] [cursor=pointer]
+      - button "My Books" [ref=e11] [cursor=pointer]
+      - button "My Units" [ref=e12] [cursor=pointer]
+      - button "My Resources" [ref=e13] [cursor=pointer]
+      - button "My Presentations" [ref=e14] [cursor=pointer]
+      - button "AI Assistant" [ref=e15] [cursor=pointer]
+    - generic [ref=e17] [cursor=pointer]:
+      - generic [ref=e18]: S
+      - generic [ref=e19]:
+        - generic [ref=e20]: simon
+        - generic [ref=e21]: Premium plan
+      - generic [ref=e22]: ▼
+  - generic [ref=e24]:
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: 📖
+        - generic [ref=e28]:
+          - heading "My Books" [level=1] [ref=e29]
+          - paragraph [ref=e30]: Your favourites, library and recently used books
+      - generic [ref=e31]:
+        - button "+ Find books" [ref=e32] [cursor=pointer]
+        - button "+ Add to library" [active] [ref=e33] [cursor=pointer]
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e36]: 🔍
+        - textbox "Search by book or author..." [ref=e37]
+      - generic [ref=e38]:
+        - generic [ref=e39]: Subject
+        - combobox [ref=e40] [cursor=pointer]:
+          - option "All subjects" [selected]
+      - generic [ref=e41]:
+        - generic [ref=e42]: Year
+        - combobox [ref=e43] [cursor=pointer]:
+          - option "All years" [selected]
+      - generic [ref=e44] [cursor=pointer]: 📝 Has plans
+      - generic [ref=e45]: 0 books
+    - generic [ref=e46]: Loading your books...
+    - generic [ref=e47]: LessonNest · For UK primary school teachers
+  - generic [ref=e49]:
+    - generic [ref=e50]:
+      - generic [ref=e51]: Add book to library
+      - button "×" [ref=e52] [cursor=pointer]
+    - generic [ref=e53]:
+      - generic [ref=e54]:
+        - button "🔍 Search" [ref=e55] [cursor=pointer]
+        - button "✏️ Add manually" [ref=e56] [cursor=pointer]
+      - generic [ref=e58]:
+        - textbox "Search by title or author..." [ref=e59]
+        - button "Search" [ref=e60] [cursor=pointer]
+```
+
+# Test source
+
+```ts
+  38  | 
+  39  |   // ── Action buttons ───────────────────────────────────────────────────────
+  40  | 
+  41  |   test('Find books button is visible', async ({ page }) => {
+  42  |     await expect(page.getByRole('button', { name: /Find books/i })).toBeVisible()
+  43  |   })
+  44  | 
+  45  |   test('Add to library button is visible', async ({ page }) => {
+  46  |     await expect(page.getByRole('button', { name: /Add to library/i })).toBeVisible()
+  47  |   })
+  48  | 
+  49  |   test('Find books button navigates to Book Recommender', async ({ page }) => {
+  50  |     await page.getByRole('button', { name: /Find books/i }).click()
+  51  |     await expect(page.getByRole('heading', { name: 'Book Recommender' })).toBeVisible({ timeout: 5_000 })
+  52  |   })
+  53  | 
+  54  |   // ── Filter bar ───────────────────────────────────────────────────────────
+  55  | 
+  56  |   test('search input is visible', async ({ page }) => {
+  57  |     await expect(page.getByPlaceholder(/Search/i).first()).toBeVisible()
+  58  |   })
+  59  | 
+  60  |   test('subject filter is visible', async ({ page }) => {
+  61  |     await expect(page.getByRole('option', { name: 'All subjects' }).first()).toBeAttached()
+  62  |   })
+  63  | 
+  64  |   test('year group filter is visible', async ({ page }) => {
+  65  |     await expect(page.getByRole('option', { name: 'All years' }).first()).toBeAttached()
+  66  |   })
+  67  | 
+  68  |   test('Has plans filter pill is visible', async ({ page }) => {
+  69  |     await expect(page.getByText('📝 Has plans')).toBeVisible()
+  70  |   })
+  71  | 
+  72  |   // ── Book grid ────────────────────────────────────────────────────────────
+  73  | 
+  74  |   test('books are displayed in a grid', async ({ page }) => {
+  75  |     await page.waitForTimeout(1500)
+  76  |     const hasBooks = await page.locator('[style*="grid"]').first().isVisible().catch(() => false)
+  77  |     if (hasBooks) {
+  78  |       await expect(page.locator('[style*="grid"]').first()).toBeVisible()
+  79  |     }
+  80  |   })
+  81  | 
+  82  |   test('book cards show title and author', async ({ page }) => {
+  83  |     await page.waitForTimeout(1500)
+  84  |     const bookCount = await page.locator('button').filter({ hasText: /View plans|Create plan/i }).count()
+  85  |     if (bookCount > 0) {
+  86  |       // Books have View plans or Create plan buttons
+  87  |       await expect(page.locator('button').filter({ hasText: /View plans|Create plan/i }).first()).toBeVisible()
+  88  |     }
+  89  |   })
+  90  | 
+  91  |   test('favourite star is visible on book cards', async ({ page }) => {
+  92  |     await page.waitForTimeout(1500)
+  93  |     const bookCount = await page.locator('button').filter({ hasText: /View plans|Create plan/i }).count()
+  94  |     if (bookCount > 0) {
+  95  |       await expect(page.locator('button').filter({ hasText: /⭐|☆/ }).first()).toBeVisible()
+  96  |     }
+  97  |   })
+  98  | 
+  99  |   // ── Sections ─────────────────────────────────────────────────────────────
+  100 | 
+  101 |   test('Favourites section is visible when books are starred', async ({ page }) => {
+  102 |     await page.waitForTimeout(1500)
+  103 |     const favSection = page.getByText('⭐ Favourites')
+  104 |     const hasFavs = await favSection.isVisible().catch(() => false)
+  105 |     if (hasFavs) {
+  106 |       await expect(favSection).toBeVisible()
+  107 |     }
+  108 |   })
+  109 | 
+  110 |   test('Library section is visible', async ({ page }) => {
+  111 |     await page.waitForTimeout(1500)
+  112 |     const libSection = page.getByText('📚 Library').first()
+  113 |     const hasLib = await libSection.isVisible().catch(() => false)
+  114 |     if (hasLib) {
+  115 |       await expect(libSection).toBeVisible()
+  116 |     }
+  117 |   })
+  118 | 
+  119 |   test('Recently used section is visible', async ({ page }) => {
+  120 |     await page.waitForTimeout(1500)
+  121 |     const recentSection = page.getByText('🕐 Recently used').first()
+  122 |     const hasRecent = await recentSection.isVisible().catch(() => false)
+  123 |     if (hasRecent) {
+  124 |       await expect(recentSection).toBeVisible()
+  125 |     }
+  126 |   })
+  127 | 
+  128 |   // ── Add to library modal ─────────────────────────────────────────────────
+  129 | 
+  130 |   test('Add to library opens a modal', async ({ page }) => {
+  131 |     await page.getByRole('button', { name: /Add to library/i }).click()
+  132 |     await expect(page.getByText(/Add book to library/i)).toBeVisible({ timeout: 5_000 })
+  133 |   })
+  134 | 
+  135 |   test('Add to library modal has title and author fields', async ({ page }) => {
+  136 |     await page.getByRole('button', { name: /Add to library/i }).click()
+  137 |     await expect(page.getByPlaceholder(/Title/i)).toBeVisible({ timeout: 5_000 })
+> 138 |     await expect(page.getByPlaceholder(/Author/i)).toBeVisible({ timeout: 5_000 })
+      |                                                    ^ Error: expect(locator).toBeVisible() failed
+  139 |   })
+  140 | 
+  141 |   test('Add to library modal can be closed', async ({ page }) => {
+  142 |     await page.getByRole('button', { name: /Add to library/i }).click()
+  143 |     await expect(page.getByText(/Add book to library/i)).toBeVisible({ timeout: 5_000 })
+  144 |     await page.keyboard.press('Escape')
+  145 |     await expect(page.getByText(/Add book to library/i)).not.toBeVisible({ timeout: 3_000 })
+  146 |   })
+  147 | 
+  148 |   // ── Has plans filter ─────────────────────────────────────────────────────
+  149 | 
+  150 |   test('Has plans filter toggles on click', async ({ page }) => {
+  151 |     const pill = page.getByText('📝 Has plans')
+  152 |     await pill.click()
+  153 |     // After clicking, it should be active (green background)
+  154 |     await expect(pill).toBeVisible()
+  155 |     await pill.click() // toggle off
+  156 |   })
+  157 | 
+  158 | })
+  159 | 
+```
