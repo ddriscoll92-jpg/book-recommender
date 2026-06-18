@@ -8,6 +8,7 @@
     "test": "playwright test",
     "test:auth": "playwright test tests/auth.spec.js",
     "test:home": "playwright test tests/home.spec.js",
+    "test:assistant": "playwright test tests/assistant.spec.js",
     "test:report": "playwright show-report"
   },
   "dependencies": {
