@@ -606,7 +606,7 @@ function StarRating({ title, author, subject, yearGroup, reason }) {
       const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).maybeSingle()
       if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
       else { setAvgRating(null); setRatingCount(0) }
-    } catch(e) { console.warn('Star rating error:', e) }
+    } catch(e) { }
     setSaving(false)
   }
 
@@ -660,7 +660,7 @@ function FavouriteButton({ title, author, subject, yearGroup, reason }) {
         await supabase.from('saved_books').insert({ user_id: user.id, title, author, subject, year_group: yearGroup, reason, is_favourite: true, last_accessed: new Date().toISOString() })
         setIsFav(true)
       }
-    } catch(e) { console.warn('Favourite error:', e) }
+    } catch(e) { }
     setLoading(false)
   }
 
@@ -886,7 +886,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences. Each objec
                         await supabase.from('saved_books').insert({ user_id: user.id, title: book.title, author: book.author, subject: searchMeta.subject, year_group: searchMeta.yearGroup, reason: book.reason, is_favourite: false, last_accessed: new Date().toISOString(), last_used: new Date().toISOString() })
                       }
                     }
-                  } catch(e) { console.warn('Could not save book:', e) }
+                  } catch(e) { }
                   onSelectBook(book)
                 }}>
                   <div style={s.bookTitle}>{book.title}</div>
@@ -3235,7 +3235,6 @@ Return ONLY a valid JSON object with no extra text or markdown fences:
           }
         }
       } catch (saveErr) {
-        console.warn('Could not save plan to database:', saveErr)
       }
     } catch {
       setPlans(prev => ({ ...prev, [key]: { error: true } }))
@@ -4051,7 +4050,7 @@ function BookGridStarRating({ title, author }) {
       const { data: avg } = await supabase.from('book_rating_averages').select('average_rating, rating_count').eq('book_title', title).maybeSingle()
       if (avg) { setAvgRating(parseFloat(avg.average_rating)); setRatingCount(parseInt(avg.rating_count)) }
       else { setAvgRating(null); setRatingCount(0) }
-    } catch(e) { console.warn('Star rating error:', e) }
+    } catch(e) { }
   }
 
   return (
@@ -8525,8 +8524,9 @@ export default function App() {
     }
 
     const { data: { user } } = await supabase.auth.getUser()
-    const newUsage = { ...usage, [action]: count + 1 }
-    await supabase.from('usage_counts').upsert({ user_id: user.id, ...newUsage })
+    // Atomic increment via Postgres RPC to prevent race conditions
+    const { data: newCount } = await supabase.rpc('increment_usage', { p_user_id: user.id, p_action: action })
+    const newUsage = { ...usage, [action]: newCount ?? count + 1 }
     setTrialInfo(prev => ({ ...prev, usage: newUsage }))
 
     // Warn when approaching the premium soft cap (90%+)
