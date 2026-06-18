@@ -103,10 +103,8 @@ test.describe('My Resources page', () => {
 
   test('From a plan tab shows resource type selector', async ({ page }) => {
     await page.getByRole('button', { name: /From a plan/i }).click()
-    // Need to select a plan first before resource types appear at Step 3
-    // Just verify Step 1 and 2 labels are present
-    await expect(page.getByText(/Step 1/i)).toBeVisible()
-    await expect(page.getByText(/Step 2/i)).toBeVisible()
+    await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible()
+    await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible()
   })
 
   // ── My catalogue tab ─────────────────────────────────────────────────────

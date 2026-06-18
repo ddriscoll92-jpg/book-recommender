@@ -14,14 +14,14 @@
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: getByText('Worksheet')
+Locator: getByText(/Step 2/i)
 Expected: visible
 Timeout: 5000ms
 Error: element(s) not found
 
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
-  - waiting for getByText('Worksheet')
+  - waiting for getByText(/Step 2/i)
 
 ```
 
@@ -68,9 +68,6 @@ Call log:
 # Test source
 
 ```ts
-  6   | // Helper: sign in
-  7   | async function signIn(page) {
-  8   |   await page.goto('/')
   9   |   await page.waitForSelector('#auth-card', { timeout: 15_000 })
   10  |   const signInTab = page.getByRole('button', { name: 'Sign in' }).first()
   11  |   if (await signInTab.isVisible()) await signInTab.click()
@@ -100,7 +97,7 @@ Call log:
   35  |   })
   36  | 
   37  |   test('page subheading is visible', async ({ page }) => {
-  38  |     await expect(page.getByText('Generate and browse classroom resources for your lessons')).toBeVisible()
+  38  |     await expect(page.getByText('Generate and browse all your classroom resources')).toBeVisible()
   39  |   })
   40  | 
   41  |   // ── Tabs ────────────────────────────────────────────────────────────────
@@ -168,53 +165,54 @@ Call log:
   103 | 
   104 |   test('From a plan tab shows resource type selector', async ({ page }) => {
   105 |     await page.getByRole('button', { name: /From a plan/i }).click()
-> 106 |     await expect(page.getByText('Worksheet')).toBeVisible()
-      |                                               ^ Error: expect(locator).toBeVisible() failed
-  107 |     await expect(page.getByText('Exit ticket')).toBeVisible()
-  108 |     await expect(page.getByText('Vocabulary cards')).toBeVisible()
-  109 |   })
-  110 | 
-  111 |   // ── My catalogue tab ─────────────────────────────────────────────────────
-  112 | 
-  113 |   test('My catalogue tab shows search input', async ({ page }) => {
-  114 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  115 |     await expect(page.getByPlaceholder('Search by title, topic or subject...')).toBeVisible()
-  116 |   })
-  117 | 
-  118 |   test('My catalogue tab shows type filter', async ({ page }) => {
-  119 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  120 |     await expect(page.getByRole('option', { name: 'All types' })).toBeAttached()
-  121 |   })
-  122 | 
-  123 |   test('My catalogue tab shows subject filter', async ({ page }) => {
-  124 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  125 |     await expect(page.getByRole('option', { name: 'All subjects' })).toBeAttached()
-  126 |   })
-  127 | 
-  128 |   test('My catalogue tab shows year filter', async ({ page }) => {
-  129 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  130 |     await expect(page.getByRole('option', { name: 'All years' })).toBeAttached()
-  131 |   })
-  132 | 
-  133 |   test('My catalogue tab shows favourites filter', async ({ page }) => {
-  134 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  135 |     await expect(page.getByText('⭐ Favourites')).toBeVisible()
-  136 |   })
-  137 | 
-  138 |   test('My catalogue tab shows refresh button', async ({ page }) => {
-  139 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  140 |     await expect(page.getByTitle('Refresh')).toBeVisible()
-  141 |   })
-  142 | 
-  143 |   test('empty catalogue shows correct message', async ({ page }) => {
-  144 |     await page.getByRole('button', { name: /My catalogue/i }).click()
-  145 |     const emptyMsg = page.getByText(/Generate a resource using Quick resource/i)
-  146 |     const hasItems = await page.locator('[resource_type]').count() > 0
-  147 |     if (!hasItems) {
-  148 |       await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
-  149 |     }
-  150 |   })
-  151 | 
-  152 | })
-  153 | 
+  106 |     // Need to select a plan first before resource types appear at Step 3
+  107 |     // Just verify Step 1 and 2 labels are present
+  108 |     await expect(page.getByText(/Step 1/i)).toBeVisible()
+> 109 |     await expect(page.getByText(/Step 2/i)).toBeVisible()
+      |                                             ^ Error: expect(locator).toBeVisible() failed
+  110 |   })
+  111 | 
+  112 |   // ── My catalogue tab ─────────────────────────────────────────────────────
+  113 | 
+  114 |   test('My catalogue tab shows search input', async ({ page }) => {
+  115 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  116 |     await expect(page.getByPlaceholder('Search by title, topic or subject...')).toBeVisible()
+  117 |   })
+  118 | 
+  119 |   test('My catalogue tab shows type filter', async ({ page }) => {
+  120 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  121 |     await expect(page.getByRole('option', { name: 'All types' })).toBeAttached()
+  122 |   })
+  123 | 
+  124 |   test('My catalogue tab shows subject filter', async ({ page }) => {
+  125 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  126 |     await expect(page.getByRole('option', { name: 'All subjects' })).toBeAttached()
+  127 |   })
+  128 | 
+  129 |   test('My catalogue tab shows year filter', async ({ page }) => {
+  130 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  131 |     await expect(page.getByRole('option', { name: 'All years' })).toBeAttached()
+  132 |   })
+  133 | 
+  134 |   test('My catalogue tab shows favourites filter', async ({ page }) => {
+  135 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  136 |     await expect(page.getByText('⭐ Favourites')).toBeVisible()
+  137 |   })
+  138 | 
+  139 |   test('My catalogue tab shows refresh button', async ({ page }) => {
+  140 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  141 |     await expect(page.getByTitle('Refresh')).toBeVisible()
+  142 |   })
+  143 | 
+  144 |   test('empty catalogue shows correct message', async ({ page }) => {
+  145 |     await page.getByRole('button', { name: /My catalogue/i }).click()
+  146 |     const emptyMsg = page.getByText(/Generate a resource using Quick resource/i)
+  147 |     const hasItems = await page.locator('[resource_type]').count() > 0
+  148 |     if (!hasItems) {
+  149 |       await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
+  150 |     }
+  151 |   })
+  152 | 
+  153 | })
+  154 | 
 ```
