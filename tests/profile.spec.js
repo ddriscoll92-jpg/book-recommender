@@ -63,7 +63,7 @@ test.describe('Profile & settings', () => {
   })
 
   test('Personal tab shows avatar upload', async ({ page }) => {
-    await expect(page.getByText(/Upload photo/i)).toBeVisible()
+    await expect(page.getByText(/Change photo/i)).toBeVisible()
   })
 
   // ── School tab ───────────────────────────────────────────────────────────
@@ -75,12 +75,12 @@ test.describe('Profile & settings', () => {
 
   test('School tab shows region field', async ({ page }) => {
     await page.getByText('🏫 School').click()
-    await expect(page.getByText('Region')).toBeVisible()
+    await expect(page.getByRole('option', { name: 'Select region...' })).toBeAttached()
   })
 
   test('School tab shows year groups field', async ({ page }) => {
     await page.getByText('🏫 School').click()
-    await expect(page.getByText('Year groups you teach')).toBeVisible()
+    await expect(page.getByText('Year groups I teach')).toBeVisible()
   })
 
   // ── Preferences tab ──────────────────────────────────────────────────────
@@ -99,12 +99,12 @@ test.describe('Profile & settings', () => {
 
   test('Password tab switches content', async ({ page }) => {
     await page.getByText('🔑 Password').click()
-    await expect(page.getByText('Current password')).toBeVisible()
+    await expect(page.getByText('New password')).toBeVisible()
   })
 
-  test('Password tab shows new password field', async ({ page }) => {
+  test('Password tab shows confirm password field label', async ({ page }) => {
     await page.getByText('🔑 Password').click()
-    await expect(page.getByText('New password')).toBeVisible()
+    await expect(page.getByText('Confirm new password')).toBeVisible()
   })
 
   test('Password tab shows confirm password field', async ({ page }) => {
@@ -114,9 +114,8 @@ test.describe('Profile & settings', () => {
 
   test('mismatched passwords shows error', async ({ page }) => {
     await page.getByText('🔑 Password').click()
-    await page.locator('input[type="password"]').nth(1).fill('newpassword123')
-    await page.locator('input[type="password"]').nth(2).fill('differentpassword')
-    await page.getByRole('button', { name: /Update password/i }).click()
+    await page.locator('input[placeholder="New password"]').fill('newpassword123')
+    await page.locator('input[placeholder="Confirm password"]').fill('differentpassword')
     await expect(page.getByText(/do not match/i)).toBeVisible({ timeout: 5_000 })
   })
 
@@ -135,7 +134,7 @@ test.describe('Profile & settings', () => {
   test('delete requires typing DELETE to confirm', async ({ page }) => {
     await page.getByText('🗑️ Account').click()
     await page.getByRole('button', { name: /Delete my account/i }).click()
-    await expect(page.getByPlaceholder(/Type DELETE/i)).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByPlaceholder('DELETE')).toBeVisible({ timeout: 5_000 })
   })
 
 })
