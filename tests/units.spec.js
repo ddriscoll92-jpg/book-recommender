@@ -167,8 +167,8 @@ test.describe('My Units page', () => {
     if (!hasUnits) { test.skip(); return }
     await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
-    await page.getByRole('button', { name: /Resources/i }).first().click()
-    await expect(page.getByRole('button', { name: /Create resource/i })).toBeVisible()
+    await page.getByRole('button', { name: /^Resources/i }).first().click()
+    await expect(page.getByText('✨ Create resource')).toBeVisible({ timeout: 5_000 })
   })
 
   test('Presentations tab shows Create presentation button', async ({ page }) => {
@@ -177,8 +177,8 @@ test.describe('My Units page', () => {
     if (!hasUnits) { test.skip(); return }
     await page.locator('[style*="cursor: pointer"]').filter({ hasText: /lessons/i }).first().click()
     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
-    await page.getByRole('button', { name: /Presentations/i }).first().click()
-    await expect(page.getByRole('button', { name: /Create presentation/i })).toBeVisible()
+    await page.getByRole('button', { name: /^Presentations/i }).first().click()
+    await expect(page.getByText('✨ Create presentation')).toBeVisible({ timeout: 5_000 })
   })
 
 })
