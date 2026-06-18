@@ -268,14 +268,14 @@ Call log:
   41  |   // ── Picker ───────────────────────────────────────────────────────────────
   42  | 
   43  |   test('picker shows units or empty state', async ({ page }) => {
-  44  |     const viewUnit = page.getByText('View unit →').first()
-  45  |     const emptyMsg = page.getByText(/No units yet/i)
-  46  |     const hasUnits = await viewUnit.isVisible().catch(() => false)
-  47  |     if (hasUnits) {
-  48  |       await expect(viewUnit).toBeVisible()
+  44  |     // Wait for loading to finish then check for either units or empty state
+  45  |     await page.waitForTimeout(1000)
+  46  |     const unitCount = await page.getByText(/View unit/i).count()
+  47  |     if (unitCount > 0) {
+  48  |       await expect(page.getByText(/View unit/i).first()).toBeVisible()
   49  |     } else {
-> 50  |       await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
-      |                              ^ Error: expect(locator).toBeVisible() failed
+> 50  |       await expect(page.getByText(/No units yet/i)).toBeVisible({ timeout: 5_000 })
+      |                                                     ^ Error: expect(locator).toBeVisible() failed
   51  |     }
   52  |   })
   53  | 
@@ -289,28 +289,28 @@ Call log:
   61  | 
   62  |   test('filter bar is visible with search input', async ({ page }) => {
   63  |     const viewUnit = page.getByText('View unit →').first()
-  64  |     const hasUnits = await viewUnit.isVisible().catch(() => false)
+  64  |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   65  |     if (hasUnits) {
   66  |       await expect(page.getByPlaceholder(/Search by book/i)).toBeVisible()
   67  |     }
   68  |   })
   69  | 
   70  |   test('subject filter is visible', async ({ page }) => {
-  71  |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  71  |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   72  |     if (hasUnits) {
   73  |       await expect(page.getByRole('option', { name: 'All subjects' })).toBeAttached()
   74  |     }
   75  |   })
   76  | 
   77  |   test('year filter is visible', async ({ page }) => {
-  78  |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  78  |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   79  |     if (hasUnits) {
   80  |       await expect(page.getByRole('option', { name: 'All years' })).toBeAttached()
   81  |     }
   82  |   })
   83  | 
   84  |   test('units are grouped by book title', async ({ page }) => {
-  85  |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  85  |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   86  |     if (hasUnits) {
   87  |       // Book titles appear as group headers
   88  |       const groupHeaders = page.locator('[style*="Lora"]').first()
@@ -319,7 +319,7 @@ Call log:
   91  |   })
   92  | 
   93  |   test('each plan row has edit and delete buttons', async ({ page }) => {
-  94  |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  94  |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   95  |     if (hasUnits) {
   96  |       await expect(page.getByTitle('✏️').first().or(page.locator('button').filter({ hasText: '✏️' }).first())).toBeVisible().catch(() => {})
   97  |       await expect(page.locator('button').filter({ hasText: '🗑️' }).first()).toBeVisible()
@@ -329,51 +329,51 @@ Call log:
   101 |   // ── Unit detail ──────────────────────────────────────────────────────────
   102 | 
   103 |   test('clicking View unit opens unit detail', async ({ page }) => {
-  104 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  104 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   105 |     if (!hasUnits) { test.skip(); return }
-  106 |     await page.getByText('View unit →').first().click()
+  106 |     await page.getByText(/View unit/i).first().click()
   107 |     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
   108 |   })
   109 | 
   110 |   test('unit detail shows book card', async ({ page }) => {
-  111 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  111 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   112 |     if (!hasUnits) { test.skip(); return }
-  113 |     await page.getByText('View unit →').first().click()
+  113 |     await page.getByText(/View unit/i).first().click()
   114 |     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
   115 |     // Book card shows year group, subject and lesson count
   116 |     await expect(page.getByText(/lessons/).first()).toBeVisible()
   117 |   })
   118 | 
   119 |   test('unit detail shows Lessons tab', async ({ page }) => {
-  120 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  120 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   121 |     if (!hasUnits) { test.skip(); return }
-  122 |     await page.getByText('View unit →').first().click()
+  122 |     await page.getByText(/View unit/i).first().click()
   123 |     await expect(page.getByRole('button', { name: /Lessons/i }).first()).toBeVisible({ timeout: 5_000 })
   124 |   })
   125 | 
   126 |   test('unit detail shows Resources tab', async ({ page }) => {
-  127 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  127 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   128 |     if (!hasUnits) { test.skip(); return }
-  129 |     await page.getByText('View unit →').first().click()
+  129 |     await page.getByText(/View unit/i).first().click()
   130 |     await expect(page.getByRole('button', { name: /Resources/i }).first()).toBeVisible({ timeout: 5_000 })
   131 |   })
   132 | 
   133 |   test('unit detail shows Presentations tab', async ({ page }) => {
-  134 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  134 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   135 |     if (!hasUnits) { test.skip(); return }
-  136 |     await page.getByText('View unit →').first().click()
+  136 |     await page.getByText(/View unit/i).first().click()
   137 |     await expect(page.getByRole('button', { name: /Presentations/i }).first()).toBeVisible({ timeout: 5_000 })
   138 |   })
   139 | 
   140 |   test('Back to all units link returns to picker', async ({ page }) => {
-  141 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  141 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
   142 |     if (!hasUnits) { test.skip(); return }
-  143 |     await page.getByText('View unit →').first().click()
+  143 |     await page.getByText(/View unit/i).first().click()
   144 |     await expect(page.getByText('← All units')).toBeVisible({ timeout: 5_000 })
   145 |     await page.getByText('← All units').click()
-  146 |     await expect(page.getByText('View unit →').first()).toBeVisible({ timeout: 5_000 })
+  146 |     await expect(page.getByText(/View unit/i).first()).toBeVisible({ timeout: 5_000 })
   147 |   })
   148 | 
   149 |   test('Lessons tab shows lesson rows with learning intentions', async ({ page }) => {
-  150 |     const hasUnits = await page.getByText('View unit →').first().isVisible().catch(() => false)
+  150 |     const hasUnits = await page.getByText(/View unit/i).first().isVisible().catch(() => false)
 ```

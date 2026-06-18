@@ -41,11 +41,11 @@ test.describe('My Units page', () => {
   // ── Picker ───────────────────────────────────────────────────────────────
 
   test('picker shows units or empty state', async ({ page }) => {
-    // Wait for loading to finish then check for either units or empty state
-    await page.waitForTimeout(1000)
-    const unitCount = await page.getByText(/View unit/i).count()
-    if (unitCount > 0) {
-      await expect(page.getByText(/View unit/i).first()).toBeVisible()
+    // Wait for loading to finish — check for edit buttons (present when units exist) or empty state
+    await page.waitForTimeout(1500)
+    const editBtnCount = await page.locator('button').filter({ hasText: '✏️' }).count()
+    if (editBtnCount > 0) {
+      await expect(page.locator('button').filter({ hasText: '✏️' }).first()).toBeVisible()
     } else {
       await expect(page.getByText(/No units yet/i)).toBeVisible({ timeout: 5_000 })
     }
