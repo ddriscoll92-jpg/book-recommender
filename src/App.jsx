@@ -8359,7 +8359,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
                 <div style={{ width: 32, height: 32, background: GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: LIGHT_GREEN, marginBottom: 14 }}>{step.n}</div>
                 <div style={{ fontSize: 15, fontWeight: 500, color: TEXT, marginBottom: 8 }}>{step.title}</div>
                 <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{step.desc}</div>
-                {i < steps.length - 1 && <div style={{ position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: BORDER }}>→</div>}
+                {!isMobile && i < steps.length - 1 && <div style={{ position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: BORDER }}>→</div>}
               </div>
             ))}
           </div>
