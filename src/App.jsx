@@ -3517,7 +3517,11 @@ function MyPlanDownloadButton({ plan, group, size }) {
   function openDropdown() {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      setDropPos({ top: rect.top - 4, left: rect.right })
+      const menuWidth = 170
+      setDropPos({
+        top: Math.max(220, rect.top - 4),
+        left: Math.max(menuWidth, Math.min(rect.right, window.innerWidth - 8)),
+      })
     }
     setOpen(o => !o)
   }
@@ -4620,7 +4624,11 @@ function ResourceDownloadButton({ resource }) {
   function openDropdown() {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      setDropPos({ top: rect.top - 4, left: rect.right })
+      const menuWidth = 160
+      setDropPos({
+        top: Math.max(200, rect.top - 4),
+        left: Math.max(menuWidth, Math.min(rect.right, window.innerWidth - 8)),
+      })
     }
     setOpen(o => !o)
   }
