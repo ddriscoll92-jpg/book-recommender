@@ -8175,6 +8175,12 @@ const ADMIN_EMAIL = 'dd.driscoll92@gmail.com'
 
 function AuthPage({ onAuth, onLegal, infoMessage }) {
   const [localLegal, setLocalLegal] = useState(null)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
   const [mode, setMode] = useState('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -8238,25 +8244,25 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
   return (
     <>
     <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: NAVY, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
+      <div style={{ background: NAVY, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 1rem' : '0 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, background: GREEN, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📚</div>
           <span style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: '#fff' }}>LessonNest</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <span style={{ fontSize: 13, color: NAVY_MUTED, cursor: 'pointer' }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>How it works</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 24 }}>
+          {!isMobile && <span style={{ fontSize: 13, color: NAVY_MUTED, cursor: 'pointer' }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>How it works</span>}
           <button onClick={() => { setMode('login'); document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth' }) }} style={{ height: 32, padding: '0 14px', background: 'transparent', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 13, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Sign in</button>
           <button onClick={() => { setMode('signup'); document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth' }) }} style={{ height: 32, padding: '0 14px', background: GREEN, border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 500, color: LIGHT_GREEN, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Get started free</button>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 56px)', maxWidth: 1200, margin: '0 auto', padding: '0 2rem', gap: '3rem', alignItems: 'center' }}>
-        <div style={{ padding: '3rem 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', minHeight: isMobile ? 'auto' : 'calc(100vh - 56px)', maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 1.25rem' : '0 2rem', gap: isMobile ? '2rem' : '3rem', alignItems: 'center' }}>
+        <div style={{ padding: isMobile ? '2rem 0 0' : '3rem 0' }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: GREEN, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>For UK primary school teachers</div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#FEF3C7', border: '0.5px solid #F59E0B', borderRadius: 20, padding: '5px 14px', marginBottom: 18, width: 'fit-content' }}>
             <span style={{ fontSize: 14 }}>🎁</span>
             <span style={{ fontSize: 13, fontWeight: 500, color: '#92400E' }}>5-day free trial — no credit card required</span>
           </div>
-          <h1 style={{ fontFamily: "'Lora', serif", fontSize: 38, fontWeight: 500, color: TEXT, lineHeight: 1.25, marginBottom: 18 }}>Lesson planning,<br /><span style={{ color: GREEN }}>powered by AI</span></h1>
+          <h1 style={{ fontFamily: "'Lora', serif", fontSize: isMobile ? 30 : 38, fontWeight: 500, color: TEXT, lineHeight: 1.25, marginBottom: 18 }}>Lesson planning,<br /><span style={{ color: GREEN }}>powered by AI</span></h1>
           <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 36, maxWidth: 440 }}>Find books, generate full units of work and create classroom resources — all in one place. Save hours of planning every week.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 40 }}>
             {benefits.map((b, i) => (
@@ -8275,7 +8281,7 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
             <span style={{ fontSize: 13, color: MUTED }}>Trusted by UK primary teachers</span>
           </div>
         </div>
-        <div id="auth-card" style={{ padding: '2rem 0' }}>
+        <div id="auth-card" style={{ padding: isMobile ? '0 0 2rem' : '2rem 0' }}>
           {infoMessage && (
             <div style={{ background: '#FEF3C7', border: '0.5px solid #F59E0B', borderRadius: 10, padding: '0.75rem 1rem', fontSize: 13, color: '#92400E', marginBottom: 16 }}>{infoMessage}</div>
           )}
@@ -8335,11 +8341,11 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
           </div>
         </div>
       </div>
-      <div id="how-it-works" style={{ background: BG, borderTop: `0.5px solid ${BORDER}`, padding: '4rem 2rem' }}>
+      <div id="how-it-works" style={{ background: BG, borderTop: `0.5px solid ${BORDER}`, padding: isMobile ? '3rem 1.25rem' : '4rem 2rem' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <h2 style={{ fontFamily: "'Lora', serif", fontSize: 26, fontWeight: 500, color: TEXT, textAlign: 'center', marginBottom: 8 }}>How it works</h2>
           <p style={{ fontSize: 15, color: MUTED, textAlign: 'center', marginBottom: 40 }}>Three steps from finding a book to having a full unit of work ready to teach</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 20 }}>
             {steps.map((step, i) => (
               <div key={i} style={{ background: PAGE_BG, borderRadius: 12, padding: '1.5rem', position: 'relative' }}>
                 <div style={{ width: 32, height: 32, background: GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: LIGHT_GREEN, marginBottom: 14 }}>{step.n}</div>
