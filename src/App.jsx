@@ -65,7 +65,7 @@ const s = {
   h1: { fontFamily: "'Lora', serif", fontSize: 24, fontWeight: 500, color: TEXT, lineHeight: 1.2 },
   headerSub: { fontSize: 13, color: MUTED, marginTop: 3 },
   card: { background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 12, padding: '1.25rem', marginBottom: 12 },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 12 },
   label: { display: 'block', fontSize: 11, fontWeight: 500, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 },
   labelOpt: { fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11, color: '#888780' },
   input: { width: '100%', height: 38, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '0 10px', fontSize: 14, color: TEXT, background: BG, outline: 'none', fontFamily: "'DM Sans', sans-serif" },
@@ -1401,7 +1401,7 @@ function KnowledgeOrgOutput({ knowledgeOrg: ko }) {
         </button>
       </div>
       <div style={{ border: `0.5px solid ${BORDER}`, borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden', padding: 16, background: BG }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           {ko.panels.map((panel, pi) => (
             <div key={pi} style={{ border: `1.5px solid ${panel.colour}`, borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ background: panel.colour, padding: '8px 12px' }}>
@@ -2910,7 +2910,7 @@ function WorksheetOutput({ worksheet }) {
               </div>
               {/* Questions preview */}
               <div style={{ background: ts.bg, padding: '12px 16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
                   {(tier.questions || []).slice(0, 6).map((q, qi) => (
                     <div key={qi} style={{ background: BG, border: `0.5px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
                       <div style={{ width: 18, height: 18, borderRadius: '50%', background: ts.headerBg, color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{qi + 1}</div>
@@ -4275,7 +4275,7 @@ function BookModal({ book, onClose, onSave, isEdit }) {
               {!isEdit && form.title && <div style={{ background: LIGHT_GREEN, borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#085041' }}>✓ Imported: <strong>{form.title}</strong> by {form.author}</div>}
               <div><label style={s.label}>Title</label><input style={inputStyle} placeholder="Book title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
               <div><label style={s.label}>Author</label><input style={inputStyle} placeholder="Author name" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} /></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
                 <div><label style={s.label}>Subject</label>
                   <select style={selectStyle} value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}>
                     <option value="">Select...</option>
@@ -7335,7 +7335,7 @@ function UpgradePage({ onNavigate, trialInfo }) {
         )}
 
         {/* Plan cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: '2rem' }}>
           {planOptions.map(plan => {
             const action = getPlanAction(plan.id)
             const isCurrent = action === 'current'
@@ -8078,7 +8078,7 @@ function ContactModal({ onClose }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
                 <div><label style={labelStyle}>Your name *</label><input style={inputStyle} placeholder="Sarah Jones" value={name} onChange={e => setName(e.target.value)} /></div>
                 <div><label style={labelStyle}>Email address *</label><input style={inputStyle} type="email" placeholder="sarah@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} /></div>
               </div>
