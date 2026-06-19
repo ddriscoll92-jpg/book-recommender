@@ -8306,8 +8306,8 @@ function AuthPage({ onAuth, onLegal, infoMessage }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {mode === 'signup' && <div><label style={{ ...s.label, marginBottom: 5 }}>Your name</label><input style={inputStyle} placeholder="e.g. Sarah Jones" value={name} onChange={e => setName(e.target.value)} /></div>}
-              <div><label style={{ ...s.label, marginBottom: 5 }}>Email address</label><input style={inputStyle} type="email" placeholder="your@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
-              {mode !== 'reset' && <div><label style={{ ...s.label, marginBottom: 5 }}>Password</label><input style={inputStyle} type="password" placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>}
+              <div><label style={{ ...s.label, marginBottom: 5 }}>Email address</label><input style={inputStyle} type="email" autoComplete="email" placeholder="your@school.co.uk" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
+              {mode !== 'reset' && <div><label style={{ ...s.label, marginBottom: 5 }}>Password</label><input style={inputStyle} type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>}
               {error && <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>{error}</div>}
               {success && <div style={{ background: LIGHT_GREEN, color: '#085041', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>{success}</div>}
               {mode === 'signup' && (
