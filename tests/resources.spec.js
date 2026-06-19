@@ -101,13 +101,14 @@ test.describe('My Resources page', () => {
     await expect(page.getByPlaceholder(/Search plans/i)).toBeVisible()
   })
 
-  test('From a plan tab shows resource type tiles after selecting a plan', async ({ page }) => {
+  test('From a plan tab shows resource type tiles after selecting a plan and lesson', async ({ page }) => {
     await page.getByRole('button', { name: /From a plan/i }).click()
     await expect(page.getByText(/Step 1 — Select a plan/i)).toBeVisible()
     // Click the first plan's Select button
     await page.getByText('Select →').first().click()
-    // Step 2 and 3 should now appear
     await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible({ timeout: 5_000 })
+    // Click the first lesson row to reveal Step 3
+    await page.getByText('Exploring Coastal Settings').or(page.locator('text=/^1\s/')).first().click()
     await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible({ timeout: 5_000 })
   })
 

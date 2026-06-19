@@ -76,16 +76,17 @@ test.describe('Authentication', () => {
     await expect(page.locator('#auth-card')).toBeVisible()
   })
 
-  test('sign up with already registered email shows error', async ({ page }) => {
+  test('sign up with already registered email does not reveal account existence', async ({ page }) => {
+    // Supabase deliberately does not say "email already registered" for security —
+    // it shows the generic "check your email" message either way, so a malicious
+    // actor can't use signup to discover which emails have accounts.
     await page.goto('/')
     await page.waitForSelector('#auth-card', { timeout: 15_000 })
-    // Stay on Create account tab (default)
     await page.fill('input[placeholder*="Sarah"]', 'Test User')
     await page.fill('input[type="email"]', EMAIL)
     await page.fill('input[type="password"]', PASSWORD)
     await page.getByRole('button', { name: /start free.*trial/i }).click()
-    // Should show an error - email already registered
-    await expect(page.getByText(/already registered|already in use|already exists/i)).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByText(/check your email to confirm/i)).toBeVisible({ timeout: 8_000 })
   })
 
   // NOTE: Session enforcement (single active session kickout) is verified
