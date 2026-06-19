@@ -98,6 +98,27 @@ test.describe('My Units page', () => {
     }
   })
 
+  test('edit inline mode appears when pencil clicked', async ({ page }) => {
+    await page.waitForTimeout(1500)
+    const hasUnits = await page.locator('button').filter({ hasText: '✏️' }).count() > 0
+    if (!hasUnits) { test.skip(); return }
+    await page.locator('button').filter({ hasText: '✏️' }).first().click()
+    // Edit mode shows input fields
+    await expect(page.locator('input').filter({ visible: true }).first()).toBeVisible({ timeout: 3_000 })
+  })
+
+  test('delete confirmation appears when bin clicked', async ({ page }) => {
+    await page.waitForTimeout(1500)
+    const hasUnits = await page.locator('button').filter({ hasText: '🗑️' }).count() > 0
+    if (!hasUnits) { test.skip(); return }
+    await page.locator('button').filter({ hasText: '🗑️' }).first().click()
+    // Confirmation shows Delete and Cancel buttons
+    await expect(page.getByRole('button', { name: /^Delete$/ }).first()).toBeVisible({ timeout: 3_000 })
+    await expect(page.getByRole('button', { name: '✕' }).first()).toBeVisible({ timeout: 3_000 })
+    // Cancel to avoid actually deleting
+    await page.getByRole('button', { name: '✕' }).first().click()
+  })
+
   // ── Unit detail ──────────────────────────────────────────────────────────
 
   test('clicking View unit opens unit detail', async ({ page }) => {

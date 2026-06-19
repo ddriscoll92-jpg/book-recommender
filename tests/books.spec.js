@@ -141,6 +141,14 @@ test.describe('My Books page', () => {
     await expect(page.getByPlaceholder('Author name')).toBeVisible({ timeout: 5_000 })
   })
 
+  test('Add to library modal has subject and year dropdowns after Add manually', async ({ page }) => {
+    await page.getByRole('button', { name: /Add to library/i }).click()
+    await expect(page.getByText(/Add book to library/i)).toBeVisible({ timeout: 5_000 })
+    await page.getByText(/Add manually/i).click()
+    await expect(page.getByRole('option', { name: 'Select...' }).first()).toBeAttached()
+    await expect(page.getByRole('option', { name: 'Year 1' }).first()).toBeAttached()
+  })
+
   test('Add to library modal can be closed', async ({ page }) => {
     await page.getByRole('button', { name: /Add to library/i }).click()
     await expect(page.getByText(/Add book to library/i)).toBeVisible({ timeout: 5_000 })

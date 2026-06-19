@@ -76,6 +76,18 @@ test.describe('Authentication', () => {
     await expect(page.locator('#auth-card')).toBeVisible()
   })
 
+  test('sign up with already registered email shows error', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForSelector('#auth-card', { timeout: 15_000 })
+    // Stay on Create account tab (default)
+    await page.fill('input[placeholder*="Sarah"]', 'Test User')
+    await page.fill('input[type="email"]', EMAIL)
+    await page.fill('input[type="password"]', PASSWORD)
+    await page.getByRole('button', { name: /start free.*trial/i }).click()
+    // Should show an error - email already registered
+    await expect(page.getByText(/already registered|already in use|already exists/i)).toBeVisible({ timeout: 8_000 })
+  })
+
   // NOTE: Session enforcement (single active session kickout) is verified
   // manually — it requires two real devices/browsers and a triggered
   // checkTrial action. Automated testing of this flow is unreliable
