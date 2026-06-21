@@ -2775,9 +2775,15 @@ async function downloadWorksheetPdf(worksheet) {
     // ── Questions ──
     const qPerCol = 5
     const colW = (contentW - 6) / 2
+    const fullTextWForSizing = colW - 13 // matches fullTextW used at render time
 
     function getRowH(q) {
-      if (q.type === 'word') return 32
+      if (q.type === 'word') {
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const lineCount = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextWForSizing).length
+        // Base height covers up to 3 lines; grow for longer questions so text never gets cut off
+        return Math.max(32, 18 + Math.min(lineCount, 6) * 4.5)
+      }
       if (q.type === 'column') return 26
       if (q.type === 'number_line') return 24
       return 20
@@ -2825,14 +2831,14 @@ async function downloadWorksheetPdf(worksheet) {
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const lines = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextW)
-        doc.text(lines.slice(0, 3), textX, qy + 7)
+        doc.text(lines.slice(0, 6), textX, qy + 7)
         // Drawn answer line with the unit label after it (e.g. "_______ cm") — half box width
         doc.setFontSize(9.5)
         const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').trim()
         const ansY = qy + rowH - 6
         const halfLineW = fullTextW / 2
         const lineEndX = textX + halfLineW
-        doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
         doc.line(textX, ansY, lineEndX, ansY)
         if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
 
@@ -2885,7 +2891,7 @@ async function downloadWorksheetPdf(worksheet) {
           doc.text(wrappedLines.slice(0, 2), textX, qy + 7)
           // Drawn answer line — spans most of the box width for a proper write-in space
           const ansY = qy + rowH - 4
-          doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
           doc.line(textX, ansY, qx + colW - 4, ansY)
         }
       }
@@ -2897,15 +2903,18 @@ async function downloadWorksheetPdf(worksheet) {
 
     // ── Challenge box ──
     if (tier.challenge) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+      const cLines = doc.splitTextToSize(sanitizeForPdf(tier.challenge), contentW - 8)
+      const challengeBoxH = Math.max(18, 10 + cLines.length * 4.2)
+
       doc.setFillColor(255, 251, 235)
       doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.6)
-      doc.roundedRect(margin, y, contentW, 18, 2, 2, 'FD')
+      doc.roundedRect(margin, y, contentW, challengeBoxH, 2, 2, 'FD')
       doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
       doc.text('Challenge:', margin + 3, y + 6)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-      const cLines = doc.splitTextToSize(sanitizeForPdf(tier.challenge), contentW - 8)
       doc.text(cLines, margin + 3, y + 12)
-      y += 22
+      y += challengeBoxH + 4
     }
 
     // ── Footer ──
