@@ -2698,6 +2698,19 @@ function WritingFrameOutput({ writingFrame: wf }) {
 
 // ── Worksheet PDF Download ────────────────────────────────────────────────────
 
+// Strips/normalises characters that jsPDF's standard (WinAnsi) fonts can't render correctly,
+// which otherwise show up as garbled symbols like stray quote marks.
+function sanitizeForPdf(text) {
+  if (!text) return text
+  return String(text)
+    .replace(/[\u2212\u2013\u2014]/g, '-')   // minus sign, en dash, em dash → hyphen
+    .replace(/[\u00D7]/g, 'x')                // multiplication sign → x
+    .replace(/[\u00F7]/g, '/')                // division sign → /
+    .replace(/[\u2018\u2019]/g, "'")          // curly single quotes → straight
+    .replace(/[\u201C\u201D]/g, '"')          // curly double quotes → straight
+    .replace(/[\u2026]/g, '...')              // ellipsis
+}
+
 async function downloadWorksheetPdf(worksheet) {
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
   const { jsPDF } = window.jspdf || {}
@@ -2723,7 +2736,7 @@ async function downloadWorksheetPdf(worksheet) {
 
     // Title
     doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
-    doc.text(worksheet.title, margin, 11)
+    doc.text(sanitizeForPdf(worksheet.title), margin, 11)
 
     // Tier badge
     doc.setFontSize(9); doc.setFont('helvetica', 'normal')
@@ -2756,7 +2769,7 @@ async function downloadWorksheetPdf(worksheet) {
 
     // ── Instructions ──
     doc.setFontSize(9); doc.setFont('helvetica', 'italic'); doc.setTextColor(95, 94, 90)
-    doc.text(tier.instructions || '', margin, y)
+    doc.text(sanitizeForPdf(tier.instructions) || '', margin, y)
     y += 8
 
     // ── Questions ──
@@ -2803,8 +2816,8 @@ async function downloadWorksheetPdf(worksheet) {
         // Left-aligned column sum
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
         const colNumX = textX + 20
-        doc.text(q.top || '', colNumX, qy + 8, { align: 'right' })
-        doc.text(`${q.op || 'x'} ${q.bottom || ''}`, colNumX, qy + 14, { align: 'right' })
+        doc.text(sanitizeForPdf(q.top) || '', colNumX, qy + 8, { align: 'right' })
+        doc.text(`${sanitizeForPdf(q.op) || 'x'} ${sanitizeForPdf(q.bottom) || ''}`, colNumX, qy + 14, { align: 'right' })
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
         doc.line(textX, qy + 16, colNumX + 2, qy + 16)
         doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
@@ -2812,20 +2825,21 @@ async function downloadWorksheetPdf(worksheet) {
 
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const lines = doc.splitTextToSize(q.text || '', fullTextW)
+        const lines = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextW)
         doc.text(lines.slice(0, 3), textX, qy + 7)
-        // Drawn answer line instead of a cramped box
+        // Drawn answer line with the unit label after it (e.g. "_______ cm")
         doc.setFontSize(9.5)
-        const ansLabel = (q.answer || '___________').replace(/_{2,}/g, '').trim()
+        const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').trim()
         const ansY = qy + rowH - 6
-        doc.text(ansLabel ? `${ansLabel}:` : 'Answer:', textX, ansY)
-        const labelW = doc.getTextWidth(ansLabel ? `${ansLabel}: ` : 'Answer: ')
+        const unitW = ansLabel ? doc.getTextWidth(` ${ansLabel}`) : 0
+        const lineEndX = qx + colW - 4 - unitW
         doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
-        doc.line(textX + labelW, ansY, qx + colW - 4, ansY)
+        doc.line(textX, ansY, lineEndX, ansY)
+        if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
 
       } else if (q.type === 'number_line') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const qText = (q.q || '').replace(/___/g, '____')
+        const qText = sanitizeForPdf(q.q || '').replace(/___/g, '____')
         const wrappedLines = doc.splitTextToSize(qText, fullTextW)
         doc.text(wrappedLines.slice(0, 2), textX, qy + 6)
         // Draw an actual number line with tick marks
@@ -2845,11 +2859,31 @@ async function downloadWorksheetPdf(worksheet) {
       } else {
         // equation / missing
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const qText = (q.q || '').replace(/___/g, '____')
-        const hasBlanks = (q.q || '').includes('___')
-        const wrappedLines = doc.splitTextToSize(qText, fullTextW)
-        doc.text(wrappedLines.slice(0, 2), textX, qy + 7)
-        if (!hasBlanks) {
+        const rawQ = sanitizeForPdf(q.q || '')
+        const hasBlanks = rawQ.includes('___')
+
+        if (hasBlanks) {
+          // Split on the blank so we can draw a real line instead of printing underscores
+          const parts = rawQ.split(/_{3,}/)
+          const blankLineW = 16 // mm — width of the drawn answer line
+          // Wrap each text segment, then lay out segment + line + segment on one row
+          const textY = qy + 9
+          let cx = textX
+          parts.forEach((part, pi) => {
+            if (part) {
+              doc.text(part, cx, textY)
+              cx += doc.getTextWidth(part) + 1.5
+            }
+            if (pi < parts.length - 1) {
+              const lineY = textY - 1.2
+              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+              doc.line(cx, lineY, cx + blankLineW, lineY)
+              cx += blankLineW + 1.5
+            }
+          })
+        } else {
+          const wrappedLines = doc.splitTextToSize(rawQ, fullTextW)
+          doc.text(wrappedLines.slice(0, 2), textX, qy + 7)
           // Drawn answer line — spans most of the box width for a proper write-in space
           const ansY = qy + rowH - 4
           doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
@@ -2870,7 +2904,7 @@ async function downloadWorksheetPdf(worksheet) {
       doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
       doc.text('Challenge:', margin + 3, y + 6)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-      const cLines = doc.splitTextToSize(tier.challenge, contentW - 8)
+      const cLines = doc.splitTextToSize(sanitizeForPdf(tier.challenge), contentW - 8)
       doc.text(cLines, margin + 3, y + 12)
       y += 22
     }
