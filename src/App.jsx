@@ -2820,19 +2820,18 @@ async function downloadWorksheetPdf(worksheet) {
         doc.text(`${sanitizeForPdf(q.op) || 'x'} ${sanitizeForPdf(q.bottom) || ''}`, colNumX, qy + 14, { align: 'right' })
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
         doc.line(textX, qy + 16, colNumX + 2, qy + 16)
-        doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
         doc.line(textX, qy + 22, colNumX + 2, qy + 22)
 
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const lines = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextW)
         doc.text(lines.slice(0, 3), textX, qy + 7)
-        // Drawn answer line with the unit label after it (e.g. "_______ cm")
+        // Drawn answer line with the unit label after it (e.g. "_______ cm") — half box width
         doc.setFontSize(9.5)
         const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').trim()
         const ansY = qy + rowH - 6
-        const unitW = ansLabel ? doc.getTextWidth(` ${ansLabel}`) : 0
-        const lineEndX = qx + colW - 4 - unitW
+        const halfLineW = fullTextW / 2
+        const lineEndX = textX + halfLineW
         doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
         doc.line(textX, ansY, lineEndX, ansY)
         if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
@@ -2875,7 +2874,7 @@ async function downloadWorksheetPdf(worksheet) {
               cx += doc.getTextWidth(part) + 1.5
             }
             if (pi < parts.length - 1) {
-              const lineY = textY - 1.2
+              const lineY = textY + 0.8
               doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
               doc.line(cx, lineY, cx + blankLineW, lineY)
               cx += blankLineW + 1.5
