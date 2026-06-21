@@ -228,7 +228,7 @@ async function downloadPdf(book, yearGroup, idea, plan) {
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const GREEN_RGB = [29, 158, 117]
   const margin = 18
   let y = margin
@@ -1308,7 +1308,7 @@ async function downloadKnowledgeOrgPdf(ko) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }))
   const pageW = 297; const pageH = 210; const margin = 12; const contentW = pageW - margin * 2
 
   function hexToRgb(hex) {
@@ -1440,7 +1440,7 @@ async function downloadVocabCardsPdf(vc) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }))
   const pageW = 297; const pageH = 210; const margin = 10
 
   function hexToRgb(hex) {
@@ -1549,7 +1549,7 @@ async function downloadBingoPdf(bingo, numGrids = 6) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const pageW = 210; const pageH = 297; const margin = 16
   const contentW = pageW - margin * 2
   const gridSize = bingo.gridSize || 5
@@ -1768,7 +1768,7 @@ async function downloadWordsearchPdf(ws) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const pageW = 210; const pageH = 297; const margin = 16
   function hexToRgb(hex) {
     return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
@@ -1998,7 +1998,7 @@ async function downloadExitTicketPdf(et) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const pageW = 210; const pageH = 297; const margin = 12
 
   function hexToRgb(hex) {
@@ -2190,7 +2190,7 @@ async function downloadComprehensionPdf(comp) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const pageW = 210; const pageH = 297; const margin = 16; const contentW = pageW - 2 * margin
 
   function hexToRgb(hex) {
@@ -2413,7 +2413,7 @@ async function downloadWritingFramePdf(wf) {
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const pageW = 210; const pageH = 297; const margin = 16; const contentW = pageW - margin * 2
 
   function hexToRgb(hex) {
@@ -2701,7 +2701,8 @@ function WritingFrameOutput({ writingFrame: wf }) {
 // Strips/normalises characters that jsPDF's standard (WinAnsi) fonts can't render correctly,
 // which otherwise show up as garbled symbols like stray quote marks.
 function sanitizeForPdf(text) {
-  if (!text) return text
+  if (text == null) return text
+  if (Array.isArray(text)) return text.map(sanitizeForPdf)
   return String(text)
     .replace(/[\u2212\u2013\u2014]/g, '-')   // minus sign, en dash, em dash → hyphen
     .replace(/[\u00D7]/g, 'x')                // multiplication sign → x
@@ -2711,12 +2712,21 @@ function sanitizeForPdf(text) {
     .replace(/[\u2026]/g, '...')              // ellipsis
 }
 
+// Patches a jsPDF doc instance so every doc.text(...) call is automatically
+// sanitized — applied once per PDF generator right after the doc is created,
+// so individual call sites don't need to remember to sanitize manually.
+function patchPdfTextSanitizer(doc) {
+  const originalText = doc.text.bind(doc)
+  doc.text = (text, ...rest) => originalText(sanitizeForPdf(text), ...rest)
+  return doc
+}
+
 async function downloadWorksheetPdf(worksheet) {
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
   const { jsPDF } = window.jspdf || {}
   if (!jsPDF) throw new Error('jsPDF not loaded')
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
   const pageW = 210; const pageH = 297; const margin = 16; const contentW = pageW - margin * 2
 
   const TIER_COLORS = {
@@ -3086,7 +3096,7 @@ function ResourceOutput({ resource }) {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
         const { jsPDF } = window.jspdf || {}
         if (!jsPDF) throw new Error('jsPDF not loaded')
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+        const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
         const GREEN_RGB = [29, 158, 117]; const NAVY_RGB = [30, 36, 51]; const MUTED_RGB = [95, 94, 90]
         const margin = 18; const pageW = 210; const contentW = pageW - margin * 2
         let y = 0
@@ -4752,7 +4762,7 @@ function ResourceDownloadButton({ resource }) {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
         const { jsPDF } = window.jspdf || {}
         if (!jsPDF) throw new Error('jsPDF not loaded')
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+        const doc = patchPdfTextSanitizer(new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }))
         const GREEN_RGB = [29,158,117], NAVY_RGB = [30,36,51], MUTED_RGB = [95,94,90]
         const margin = 18, pageW = 210, contentW = pageW - margin * 2
         let y = 0

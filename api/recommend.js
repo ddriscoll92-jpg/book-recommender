@@ -217,6 +217,7 @@ The JSON must have this exact structure:
 }
 Rules:
 - Each tier has exactly 3 prompts
+- Title must be short enough to fit on one printed line — no more than 6 words
 - Prompts must be directly related to the lesson topic
 - Support prompts are simple retrieval and reflection
 - Core prompts require some explanation and understanding
@@ -244,7 +245,7 @@ The JSON must have this exact structure:
 Rules:
 - Generate exactly 12 vocabulary cards relevant to the topic
 - term: a single key word or short phrase (1-3 words)
-- definition: one clear, simple sentence a primary pupil can understand
+- definition: one clear, simple sentence a primary pupil can understand, no more than around 12-14 words — cards are a fixed printed size, so a longer definition will be cut off
 - colour: pick from this palette and cycle through them: #D97706 (amber), #2563EB (blue), #16A34A (green), #DC2626 (red), #7C3AED (purple), #DB2777 (pink)
 - Align vocabulary to UK National Curriculum for the year group and subject`
   }
@@ -267,12 +268,12 @@ The JSON must have this exact structure:
 }
 Rules:
 - Generate exactly 4 panels
-- "type": "bullets" for simple fact lists (6-8 items, each a short sentence or phrase)
-- "type": "terms" for term+definition pairs (5-6 items)
+- "type": "bullets" for simple fact lists (6-8 items, each a short phrase or sentence under 12 words so it fits on one printed line)
+- "type": "terms" for term+definition pairs (exactly 4-5 items — panels are a fixed print size, so more than 5 will be cut off) — each definition under 10 words so it fits on one printed line
 - Panel headings should suit the subject: History often uses Key Facts, Key Vocabulary, Key People, Key Dates. Science often uses Key Facts, Key Vocabulary, Key Processes, Did You Know. Geography often uses Key Facts, Key Vocabulary, Key Places, Did You Know.
 - colour: pick 4 distinct colours from: #2563EB (blue), #16A34A (green), #7C3AED (purple), #DC2626 (red), #D97706 (amber), #DB2777 (pink)
 - Content must be accurate and aligned to UK National Curriculum for the year group
-- Keep bullet items concise (under 15 words) and definitions under 20 words`
+- Keep bullet items concise (under 12 words) and definitions under 10 words — these are fixed-size printed panels, so anything longer risks being cut off`
   }
 
   if (bingoMode) {
