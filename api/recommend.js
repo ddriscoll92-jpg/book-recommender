@@ -57,12 +57,17 @@ The JSON must have this exact structure:
 }
 Rules:
 - Each tier must have exactly 10 questions
-- Question types: "equation" (simple sum with ___), "column" (stacked sum), "word" (word problem), "missing" (find the missing number), "number_line" (use a number line)
+- Question types: "equation" (simple sum with ___), "column" (stacked sum), "word" (word problem), "missing" (find the missing number), "number_line" (mark or count along a number line)
 - Support tier: simpler numbers, more scaffolding, smaller values
 - Core tier: age-expected difficulty, mixed question types
 - Extension tier: larger numbers, multi-step, reasoning
 - Align to UK National Curriculum for the year group mentioned
 - Make questions engaging and practical
+- CRITICAL — never reveal or imply the answer inside the question text. Do not state a value that already equals (or trivially gives away) the answer the pupil is meant to calculate. Re-read every question before including it and check that it cannot be answered correctly from the wording alone without doing the maths.
+- CRITICAL — every question must be fully self-contained and answerable using only the text given (plus a ruler/number line if specified). Do not reference a diagram, image, or external object that isn't actually provided.
+- For "number_line" questions: the worksheet itself will draw a blank, evenly-spaced number line from 0 to 10 beneath the question — so write the question to fit that scale exactly (e.g. "Mark 3 cm on the number line below" works only if 3 is between 0 and 10; do not ask pupils to mark or count to a value outside the 0–10 range, and do not describe a number line with a different range or starting point than 0–10)
+- For "word" questions, keep the "answer" field as a short unit label only (e.g. "cm", "apples", "mm") — never a sentence, and never the numeric answer itself
+- Double-check internal consistency: if a question states two measurements and asks for a total, difference, or comparison, make sure the numbers given actually require a genuine calculation rather than being identical, already in the same unit, or trivially comparable by eye
 - Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
   }
 

@@ -2764,9 +2764,10 @@ async function downloadWorksheetPdf(worksheet) {
     const colW = (contentW - 6) / 2
 
     function getRowH(q) {
-      if (q.type === 'word') return 30
+      if (q.type === 'word') return 32
       if (q.type === 'column') return 26
-      return 18
+      if (q.type === 'number_line') return 24
+      return 20
     }
 
     const leftQs  = tier.questions.slice(0, qPerCol)
@@ -2797,9 +2798,6 @@ async function downloadWorksheetPdf(worksheet) {
       doc.setTextColor(44, 44, 42)
       const textX = qx + 11
       const fullTextW = colW - 13
-      const ansBoxW = 16; const ansBoxH = 9
-      const ansBoxX = qx + colW - ansBoxW - 2
-      const shortTextW = ansBoxX - textX - 2
 
       if (q.type === 'column') {
         // Left-aligned column sum
@@ -2813,23 +2811,49 @@ async function downloadWorksheetPdf(worksheet) {
         doc.line(textX, qy + 22, colNumX + 2, qy + 22)
 
       } else if (q.type === 'word') {
-        doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const lines = doc.splitTextToSize(q.text || '', fullTextW)
         doc.text(lines.slice(0, 3), textX, qy + 7)
-        doc.setFontSize(8)
-        doc.text(q.answer || 'Answer: ___________', textX, qy + rowH - 5)
+        // Drawn answer line instead of a cramped box
+        doc.setFontSize(9.5)
+        const ansLabel = (q.answer || '___________').replace(/_{2,}/g, '').trim()
+        const ansY = qy + rowH - 6
+        doc.text(ansLabel ? `${ansLabel}:` : 'Answer:', textX, ansY)
+        const labelW = doc.getTextWidth(ansLabel ? `${ansLabel}: ` : 'Answer: ')
+        doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
+        doc.line(textX + labelW, ansY, qx + colW - 4, ansY)
+
+      } else if (q.type === 'number_line') {
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const qText = (q.q || '').replace(/___/g, '____')
+        const wrappedLines = doc.splitTextToSize(qText, fullTextW)
+        doc.text(wrappedLines.slice(0, 2), textX, qy + 6)
+        // Draw an actual number line with tick marks
+        const nlY = qy + rowH - 8
+        const nlStart = textX
+        const nlEnd = qx + colW - 4
+        const nlSteps = 10
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+        doc.line(nlStart, nlY, nlEnd, nlY)
+        doc.setFontSize(6)
+        for (let s = 0; s <= nlSteps; s++) {
+          const tx = nlStart + (s / nlSteps) * (nlEnd - nlStart)
+          doc.line(tx, nlY - 1.2, tx, nlY + 1.2)
+          if (s % 2 === 0) doc.text(String(s), tx, nlY + 4, { align: 'center' })
+        }
 
       } else {
-        doc.setFontSize(10); doc.setFont('helvetica', 'normal')
+        // equation / missing
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const qText = (q.q || '').replace(/___/g, '____')
         const hasBlanks = (q.q || '').includes('___')
-        const effectiveTextW = hasBlanks ? fullTextW : shortTextW
-        const wrappedLines = doc.splitTextToSize(qText, effectiveTextW)
-        doc.text(wrappedLines.slice(0, 2), textX, qy + (rowH - 2) / 2 + 1)
+        const wrappedLines = doc.splitTextToSize(qText, fullTextW)
+        doc.text(wrappedLines.slice(0, 2), textX, qy + 7)
         if (!hasBlanks) {
-          doc.setFillColor(245, 244, 240)
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-          doc.roundedRect(ansBoxX, qy + (rowH - 2 - ansBoxH) / 2, ansBoxW, ansBoxH, 1, 1, 'FD')
+          // Drawn answer line — spans most of the box width for a proper write-in space
+          const ansY = qy + rowH - 4
+          doc.setDrawColor(150, 148, 140); doc.setLineWidth(0.3)
+          doc.line(textX, ansY, qx + colW - 4, ansY)
         }
       }
     })
