@@ -2786,6 +2786,25 @@ async function downloadWorksheetPdf(worksheet) {
       }
       if (q.type === 'column') return 26
       if (q.type === 'number_line') return 24
+      if (q.type === 'equation' || q.type === 'missing' || !q.type) {
+        const rawQ = sanitizeForPdf(q.q || '')
+        if (rawQ.includes('___')) {
+          doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+          const parts = rawQ.split(/_{3,}/)
+          const blankLineW = 14
+          let measuredW = 0
+          parts.forEach((part, pi) => {
+            if (part) measuredW += doc.getTextWidth(part) + 1.5
+            if (pi < parts.length - 1) measuredW += blankLineW + 1.5
+          })
+          const fitsOneRow = measuredW <= fullTextWForSizing
+          if (!fitsOneRow) {
+            const displayText = rawQ.replace(/_{3,}/g, '______')
+            const lineCount = doc.splitTextToSize(displayText, fullTextWForSizing).length
+            return Math.max(20, 12 + Math.min(lineCount, 3) * 4.5 + 6)
+          }
+        }
+      }
       return 20
     }
 
@@ -2868,24 +2887,43 @@ async function downloadWorksheetPdf(worksheet) {
         const hasBlanks = rawQ.includes('___')
 
         if (hasBlanks) {
-          // Split on the blank so we can draw a real line instead of printing underscores
           const parts = rawQ.split(/_{3,}/)
-          const blankLineW = 16 // mm — width of the drawn answer line
-          // Wrap each text segment, then lay out segment + line + segment on one row
-          const textY = qy + 9
-          let cx = textX
+          const blankLineW = 14 // mm — width of the drawn answer line
+          const boxRightEdge = qx + colW - 3
+
+          // Measure total content width to decide if it fits on one row
+          let measuredW = 0
           parts.forEach((part, pi) => {
-            if (part) {
-              doc.text(part, cx, textY)
-              cx += doc.getTextWidth(part) + 1.5
-            }
-            if (pi < parts.length - 1) {
-              const lineY = textY + 0.8
-              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-              doc.line(cx, lineY, cx + blankLineW, lineY)
-              cx += blankLineW + 1.5
-            }
+            if (part) measuredW += doc.getTextWidth(part) + 1.5
+            if (pi < parts.length - 1) measuredW += blankLineW + 1.5
           })
+          const fitsOneRow = (textX + measuredW) <= boxRightEdge
+
+          if (fitsOneRow) {
+            const textY = qy + 9
+            let cx = textX
+            parts.forEach((part, pi) => {
+              if (part) {
+                doc.text(part, cx, textY)
+                cx += doc.getTextWidth(part) + 1.5
+              }
+              if (pi < parts.length - 1) {
+                const lineY = textY + 0.8
+                doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+                doc.line(cx, lineY, cx + blankLineW, lineY)
+                cx += blankLineW + 1.5
+              }
+            })
+          } else {
+            // Too long for one row — wrap question text normally, then a drawn
+            // answer line on its own row beneath, same pattern as word problems.
+            const displayText = rawQ.replace(/_{3,}/g, '______')
+            const wrappedLines = doc.splitTextToSize(displayText, fullTextW)
+            doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
+            const ansY = qy + rowH - 4
+            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+            doc.line(textX, ansY, textX + fullTextW / 2, ansY)
+          }
         } else {
           const wrappedLines = doc.splitTextToSize(rawQ, fullTextW)
           doc.text(wrappedLines.slice(0, 2), textX, qy + 7)
