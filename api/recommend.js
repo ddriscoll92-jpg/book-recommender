@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 You must return ONLY valid JSON — no markdown, no explanation, no backticks.
 The JSON must have this exact structure:
 {
-  "title": "Short worksheet title e.g. Adding 2-Digit Numbers",
+  "title": "Short worksheet title",
   "subject": "Maths",
   "yearGroup": "Year 2",
   "skill": "One-line description of the skill being practised",
@@ -29,12 +29,7 @@ The JSON must have this exact structure:
       "colour": "#DC2626",
       "emoji": "🔴",
       "instructions": "Short instruction for pupils",
-      "questions": [
-        { "type": "equation", "q": "5 + 3 = ___" },
-        { "type": "column", "top": "23", "op": "+", "bottom": "14" },
-        { "type": "word", "text": "Sam has 12 apples. He picks 5 more. How many does he have?", "answer": "___ apples" },
-        { "type": "missing", "q": "___ + 6 = 15" }
-      ],
+      "questions": [ ... ],
       "challenge": "Challenge question or extension task"
     },
     {
@@ -55,21 +50,49 @@ The JSON must have this exact structure:
     }
   ]
 }
-Rules:
+
+== QUESTION TYPES — MATHS SUBJECTS ==
+Use these types when the subject is Maths or Science (numerical):
+- "equation"   : { "type": "equation", "q": "5 + 3 = ___" }
+- "missing"    : { "type": "missing", "q": "___ + 6 = 15" }
+- "column"     : { "type": "column", "top": "23", "op": "+", "bottom": "14" }
+- "word"       : { "type": "word", "text": "Sam has 12 apples. He picks 5 more. How many does he have?", "answer": "apples" }
+- "number_line": { "type": "number_line", "q": "Mark 7 on the number line below." }
+
+== QUESTION TYPES — ENGLISH AND HUMANITIES SUBJECTS ==
+Use these types when the subject is English, History, Geography, RE, PSHE, or any non-numerical subject:
+- "short_answer": pupil writes a sentence or more. Use "lines" to control how many ruled lines appear (1-4).
+  { "type": "short_answer", "q": "Write a sentence describing the volcano using a simile.", "lines": 2 }
+- "gap_fill": complete a sentence with a missing word or phrase.
+  { "type": "gap_fill", "q": "The volcano ___ with rage as lava poured from its peak." }
+- "multiple_choice": circle the correct answer from 2-4 options.
+  { "type": "multiple_choice", "q": "Which word is a powerful adjective?", "options": ["ran", "enormous", "quickly", "and"] }
+- "word_choice": circle the best word from bracketed options inline.
+  { "type": "word_choice", "q": "The ash cloud was (big / suffocating / nice) and covered the city." }
+
+== RULES FOR ALL SUBJECTS ==
 - Each tier must have exactly 10 questions
-- Question types: "equation" (simple sum with ___), "column" (stacked sum), "word" (word problem), "missing" (find the missing number), "number_line" (mark or count along a number line)
-- Support tier: simpler numbers, more scaffolding, smaller values
+- Support tier: simpler language and shorter responses, more scaffolding
 - Core tier: age-expected difficulty, mixed question types
-- Extension tier: larger numbers, multi-step, reasoning
-- Align to UK National Curriculum for the year group mentioned
-- Make questions engaging and practical
-- CRITICAL — never reveal or imply the answer inside the question text. Do not state a value that already equals (or trivially gives away) the answer the pupil is meant to calculate. Re-read every question before including it and check that it cannot be answered correctly from the wording alone without doing the maths.
-- CRITICAL — every question must be fully self-contained and answerable using only the text given (plus a ruler/number line if specified). Do not reference a diagram, image, or external object that isn't actually provided.
-- For "number_line" questions: the worksheet itself will draw a blank, evenly-spaced number line from 0 to 10 beneath the question — so write the question to fit that scale exactly (e.g. "Mark 3 cm on the number line below" works only if 3 is between 0 and 10; do not ask pupils to mark or count to a value outside the 0–10 range, and do not describe a number line with a different range or starting point than 0–10)
-- For "word" questions, keep the "answer" field as a short unit label only (e.g. "cm", "apples", "mm") — never a sentence, and never the numeric answer itself
-- CRITICAL — use only plain ASCII characters for maths symbols: a hyphen "-" for subtraction (never an en dash or minus sign), "x" for multiplication, "/" for division, and straight quote marks. Do not use any special Unicode symbols anywhere in the worksheet.
-- Double-check internal consistency: if a question states two measurements and asks for a total, difference, or comparison, make sure the numbers given actually require a genuine calculation rather than being identical, already in the same unit, or trivially comparable by eye
-- Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
+- Extension tier: extended thinking, more complex responses, reasoning
+- Align to UK National Curriculum for the year group and subject
+- CRITICAL — every question must be fully self-contained. Do not reference a diagram, image, or external object not provided.
+- CRITICAL — use only plain ASCII characters. No Unicode dashes, smart quotes, or special symbols.
+- Colour MUST be: Support = #DC2626, Core = #D97706, Extension = #16A34A.
+
+== RULES FOR MATHS ONLY ==
+- Never reveal or imply the answer inside the question text.
+- For "word" questions, "answer" must be a short unit label only (e.g. "apples", "cm") — never a sentence or number.
+- For "number_line": values must be between 0 and 10 only.
+- Use only ASCII maths symbols: "-" for subtraction, "x" for multiplication, "/" for division.
+
+== RULES FOR ENGLISH/HUMANITIES ONLY ==
+- Use "short_answer" for any question expecting a written sentence or paragraph. Set "lines" to 1 for a word/phrase, 2 for a sentence, 3-4 for a longer response.
+- Use "gap_fill" for sentence completion tasks.
+- Use "multiple_choice" for identify/select tasks with distinct options.
+- Use "word_choice" for tasks where pupils choose between 2-3 inline words.
+- Do NOT use "equation", "column", "missing", or "number_line" for English/Humanities.
+- Do NOT use "word" type for English — use "short_answer" instead.\`
   }
 
   if (writingFrameMode) {

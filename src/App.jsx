@@ -2872,11 +2872,25 @@ async function downloadWorksheetPdf(worksheet) {
       if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const lineCount = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextWForSizing).length
-        // Base height covers up to 3 lines; grow for longer questions so text never gets cut off
         return Math.max(32, 18 + Math.min(lineCount, 6) * 4.5)
       }
       if (q.type === 'column') return 26
       if (q.type === 'number_line') return 24
+      if (q.type === 'short_answer') {
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const lineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
+        const numLines = Math.min(Math.max(q.lines || 2, 1), 4)
+        return Math.max(28, 10 + lineCount * 4.5 + numLines * 6)
+      }
+      if (q.type === 'multiple_choice') {
+        const numOpts = (q.options || []).length
+        return Math.max(24, 14 + numOpts * 5.5)
+      }
+      if (q.type === 'gap_fill' || q.type === 'word_choice') {
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const lineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
+        return Math.max(22, 10 + lineCount * 4.5 + 6)
+      }
       if (q.type === 'equation' || q.type === 'missing' || !q.type) {
         const rawQ = sanitizeForPdf(q.q || '')
         if (rawQ.includes('___')) {
@@ -2895,6 +2909,10 @@ async function downloadWorksheetPdf(worksheet) {
             return Math.max(20, 12 + Math.min(lineCount, 3) * 4.5 + 6)
           }
         }
+        // No blanks — ensure text and answer line don't overlap
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const lineCount = doc.splitTextToSize(sanitizeForPdf(rawQ), fullTextWForSizing).length
+        return Math.max(22, 8 + lineCount * 4.5 + 7)
       }
       return 20
     }
@@ -2974,6 +2992,83 @@ async function downloadWorksheetPdf(worksheet) {
           doc.line(tx, nlY - 1.2, tx, nlY + 1.2)
           if (s % 2 === 0) doc.text(String(s), tx, nlY + 4, { align: 'center' })
         }
+
+      } else if (q.type === 'short_answer') {
+        // Written response — question text + ruled answer lines
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextW)
+        doc.text(qLines.slice(0, 4), textX, qy + 7)
+        const numLines = Math.min(Math.max(q.lines || 2, 1), 4)
+        const lineStartY = qy + 7 + qLines.slice(0, 4).length * 4.5 + 3
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+        for (let li = 0; li < numLines; li++) {
+          const ly = lineStartY + li * 6
+          doc.line(textX, ly, qx + colW - 4, ly)
+          // Dashed second line for longer responses
+          if (li > 0) {
+            doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.25)
+            doc.line(textX, ly, qx + colW - 4, ly)
+            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+          }
+        }
+
+      } else if (q.type === 'gap_fill') {
+        // Sentence with inline blank — same rendering as equation with blanks
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const rawQ = sanitizeForPdf(q.q || '')
+        const parts = rawQ.split(/_{3,}/)
+        const blankLineW = 18
+        const boxRightEdge = qx + colW - 3
+        let measuredW = 0
+        parts.forEach((part, pi) => {
+          if (part) measuredW += doc.getTextWidth(part) + 1.5
+          if (pi < parts.length - 1) measuredW += blankLineW + 1.5
+        })
+        const fitsOneRow = (textX + measuredW) <= boxRightEdge
+        if (fitsOneRow) {
+          let cx = textX; const textY = qy + 9
+          parts.forEach((part, pi) => {
+            if (part) { doc.text(part, cx, textY); cx += doc.getTextWidth(part) + 1.5 }
+            if (pi < parts.length - 1) {
+              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+              doc.line(cx, textY + 0.8, cx + blankLineW, textY + 0.8)
+              cx += blankLineW + 1.5
+            }
+          })
+        } else {
+          const displayText = rawQ.replace(/_{3,}/g, '______')
+          const wrappedLines = doc.splitTextToSize(displayText, fullTextW)
+          doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
+          const ansY = qy + rowH - 5
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+          doc.line(textX, ansY, textX + fullTextW * 0.6, ansY)
+        }
+
+      } else if (q.type === 'word_choice') {
+        // Question with bracketed options — render as plain text, pupils circle their choice
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const rawQ = sanitizeForPdf(q.q || '')
+        const wrappedLines = doc.splitTextToSize(rawQ, fullTextW)
+        doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
+
+      } else if (q.type === 'multiple_choice') {
+        // Question + lettered options
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const wrappedQ = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextW)
+        doc.text(wrappedQ.slice(0, 2), textX, qy + 7)
+        const opts = q.options || []
+        const optLabels = ['A', 'B', 'C', 'D']
+        let oy = qy + 7 + wrappedQ.slice(0, 2).length * 4.5 + 2
+        opts.forEach((opt, oi) => {
+          // Small circle bullet
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.3)
+          doc.circle(textX + 2, oy - 1, 2, 'S')
+          doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(tc.r, tc.g, tc.b)
+          doc.text(optLabels[oi] || String(oi + 1), textX + 2, oy, { align: 'center' })
+          doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+          doc.text(sanitizeForPdf(opt), textX + 6, oy)
+          oy += 5.5
+        })
 
       } else {
         // equation / missing
