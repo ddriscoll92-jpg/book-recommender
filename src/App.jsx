@@ -2866,10 +2866,10 @@ async function downloadWorksheetPdf(worksheet) {
       const wbText = 'Word Bank:  ' + wbWords.join('   |   ')
       const wbLines = doc.splitTextToSize(wbText, contentW - 8)
       const wbH = Math.max(12, 6 + wbLines.length * 5)
-      doc.setFillColor(255, 251, 235)
-      doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.5)
+      doc.setFillColor(245, 245, 245)
+      doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
       doc.roundedRect(margin, y, contentW, wbH, 2, 2, 'FD')
-      doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(tc.r, tc.g, tc.b)
       doc.text(wbLines, margin + 4, y + 5)
       y += wbH + 4
     }
@@ -2881,6 +2881,11 @@ async function downloadWorksheetPdf(worksheet) {
     const qPerCol = Math.ceil(qCount / 2)
     const colW = (contentW - 6) / 2
     const fullTextWForSizing = colW - 13 // matches fullTextW used at render time
+
+    // Available vertical space for questions + challenge on this page
+    // Header (28) + name row (15) + instructions (~8) + word bank (~0-16) + footer (10) + margins
+    const approxUsedAbove = y // y is already positioned after instructions/wordbank
+    const availableH = pageH - approxUsedAbove - 10 // leave 10mm for footer
 
     function getRowH(q) {
       if (q.type === 'word') {
@@ -2942,6 +2947,20 @@ async function downloadWorksheetPdf(worksheet) {
 
     const leftQs  = allQs.slice(0, qPerCol)
     const rightQs = allQs.slice(qPerCol, qPerCol * 2)
+
+    // Scale down short_answer lines if total height would overflow the page
+    const rawTotalH = Math.max(
+      leftQs.reduce((s, q) => s + getRowH(q), 0),
+      rightQs.reduce((s, q) => s + getRowH(q), 0)
+    )
+    const challengeEstH = tier.challenge ? Math.max(18, 10 + Math.ceil(tier.challenge.length / 80) * 4.2) + 4 : 0
+    if (rawTotalH + challengeEstH > availableH) {
+      // Reduce short_answer lines to 1 max to save space
+      allQs.forEach(q => {
+        if (q.type === 'short_answer' && (q.lines || 2) > 1) q.lines = 1
+      })
+    }
+
     const leftOffsets  = leftQs.reduce((acc, q, i)  => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(leftQs[i-1]));  return acc }, [])
     const rightOffsets = rightQs.reduce((acc, q, i) => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(rightQs[i-1])); return acc }, [])
 
@@ -2989,7 +3008,7 @@ async function downloadWorksheetPdf(worksheet) {
         if (hasInlineBlank) {
           // Question already has an inline blank — render like equation with blanks, no extra line
           const parts = wordText.split(/_{3,}/)
-          const blankLineW = 16
+          const blankLineW = 26
           const boxRightEdge = qx + colW - 3
           let measuredW = 0
           parts.forEach((part, pi) => {
@@ -3062,12 +3081,6 @@ async function downloadWorksheetPdf(worksheet) {
         for (let li = 0; li < numLines; li++) {
           const ly = lineStartY + li * 6
           doc.line(textX, ly, qx + colW - 4, ly)
-          // Dashed second line for longer responses
-          if (li > 0) {
-            doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.25)
-            doc.line(textX, ly, qx + colW - 4, ly)
-            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          }
         }
 
       } else if (q.type === 'gap_fill') {
@@ -3075,7 +3088,7 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const parts = rawQ.split(/_{3,}/)
-        const blankLineW = 18
+        const blankLineW = 26
         const boxRightEdge = qx + colW - 3
         let measuredW = 0
         parts.forEach((part, pi) => {
@@ -3199,12 +3212,12 @@ async function downloadWorksheetPdf(worksheet) {
         y = 18
       }
 
-      doc.setFillColor(255, 251, 235)
-      doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.6)
+      doc.setFillColor(245, 245, 245)
+      doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.6)
       doc.roundedRect(margin, y, contentW, challengeBoxH, 2, 2, 'FD')
-      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(tc.r, tc.g, tc.b)
       doc.text('Challenge:', margin + 3, y + 6)
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(44, 44, 42)
       doc.text(cLines, margin + 3, y + 12)
       y += challengeBoxH + 4
     }
