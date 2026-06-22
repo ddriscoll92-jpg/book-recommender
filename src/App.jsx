@@ -2928,7 +2928,7 @@ async function downloadWorksheetPdf(worksheet) {
       if (q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const lineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
-        return Math.max(22, 10 + lineCount * 4.5 + 6)
+        return Math.max(22, 7 + lineCount * 4.5 + 6)
       }
       if (q.type === 'equation' || q.type === 'missing' || !q.type) {
         const rawQ = sanitizeForPdf(q.q || '')
@@ -3142,7 +3142,7 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const wrappedLines = doc.splitTextToSize(rawQ, fullTextW)
-        doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
+        doc.text(wrappedLines.slice(0, 6), textX, qy + 7)
 
       } else if (q.type === 'multiple_choice') {
         // Question + lettered options
