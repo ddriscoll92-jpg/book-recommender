@@ -2409,7 +2409,10 @@ function ComprehensionOutput({ comprehension: comp }) {
 
   async function handleDownload() {
     setDownloading(true)
-    try { await downloadComprehensionPdf(comp) }
+    try {
+      console.log('COMP STRUCTURE:', JSON.stringify(comp, null, 2).slice(0, 2000))
+      await downloadComprehensionPdf(comp)
+    }
     catch(e) { console.error('Comprehension PDF error:', e) }
     setDownloading(false)
   }
