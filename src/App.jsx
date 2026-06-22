@@ -2883,8 +2883,11 @@ async function downloadWorksheetPdf(worksheet) {
         return Math.max(28, 10 + lineCount * 4.5 + numLines * 6)
       }
       if (q.type === 'multiple_choice') {
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const qLineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
         const numOpts = (q.options || []).length
-        return Math.max(24, 14 + numOpts * 5.5)
+        // 7mm top pad + question lines + 2mm gap + options + 3mm bottom pad
+        return Math.max(28, 7 + Math.min(qLineCount, 3) * 4.5 + 2 + numOpts * 6 + 3)
       }
       if (q.type === 'gap_fill' || q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -3036,12 +3039,10 @@ async function downloadWorksheetPdf(worksheet) {
             }
           })
         } else {
+          // Wraps to multiple lines — just render text, no trailing answer line
           const displayText = rawQ.replace(/_{3,}/g, '______')
           const wrappedLines = doc.splitTextToSize(displayText, fullTextW)
           doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
-          const ansY = qy + rowH - 5
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-          doc.line(textX, ansY, textX + fullTextW * 0.6, ansY)
         }
 
       } else if (q.type === 'word_choice') {
@@ -3055,19 +3056,19 @@ async function downloadWorksheetPdf(worksheet) {
         // Question + lettered options
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const wrappedQ = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextW)
-        doc.text(wrappedQ.slice(0, 2), textX, qy + 7)
+        const qSlice = wrappedQ.slice(0, 3)
+        doc.text(qSlice, textX, qy + 7)
         const opts = q.options || []
         const optLabels = ['A', 'B', 'C', 'D']
-        let oy = qy + 7 + wrappedQ.slice(0, 2).length * 4.5 + 2
+        let oy = qy + 7 + qSlice.length * 4.5 + 2
         opts.forEach((opt, oi) => {
-          // Small circle bullet
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.3)
           doc.circle(textX + 2, oy - 1, 2, 'S')
           doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(tc.r, tc.g, tc.b)
           doc.text(optLabels[oi] || String(oi + 1), textX + 2, oy, { align: 'center' })
           doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
           doc.text(sanitizeForPdf(opt), textX + 6, oy)
-          oy += 5.5
+          oy += 6
         })
 
       } else {

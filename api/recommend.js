@@ -63,7 +63,7 @@ Use these types when the subject is Maths or Science (numerical):
 Use these types when the subject is English, History, Geography, RE, PSHE, or any non-numerical subject:
 - "short_answer": pupil writes a sentence or more. Use "lines" to control how many ruled lines appear (1-4).
   { "type": "short_answer", "q": "Write a sentence describing the volcano using a simile.", "lines": 2 }
-- "gap_fill": complete a sentence with a missing word or phrase.
+- "gap_fill": complete a sentence with a missing word or phrase. The "q" field MUST contain ___ to mark where the word goes.
   { "type": "gap_fill", "q": "The volcano ___ with rage as lava poured from its peak." }
 - "multiple_choice": circle the correct answer from 2-4 options.
   { "type": "multiple_choice", "q": "Which word is a powerful adjective?", "options": ["ran", "enormous", "quickly", "and"] }
