@@ -2996,12 +2996,10 @@ async function downloadWorksheetPdf(worksheet) {
         const colNumX = textX + 20
         doc.text(sanitizeForPdf(q.top) || '', colNumX, qy + 8, { align: 'right' })
         doc.text(`${sanitizeForPdf(q.op) || '+'} ${sanitizeForPdf(q.bottom) || ''}`, colNumX, qy + 14, { align: 'right' })
-        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.line(textX, qy + 16, colNumX + 2, qy + 16)
-        // Shaded answer box instead of bare second rule — makes it clear where to write
+        // Shaded answer box below operator line — no separate rule needed
         doc.setFillColor(240, 240, 240)
-        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.3)
-        doc.rect(textX, qy + 17, colNumX + 2 - textX, 6, 'FD')
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+        doc.rect(textX, qy + 16, colNumX + 2 - textX, 7, 'FD')
 
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -3032,13 +3030,17 @@ async function downloadWorksheetPdf(worksheet) {
             const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
             if (ansLabel) { doc.text(ansLabel, cx, textY) }
           } else {
+            // Wraps to multiple lines — render with underscores visible, no extra bottom line
+            // since the ___ in the text already makes the answer space clear
             const wrappedLines = doc.splitTextToSize(wordText.replace(/_{3,}/g, '______'), fullTextW)
             doc.text(wrappedLines.slice(0, 4), textX, qy + 7)
             const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
-            const ansY = qy + rowH - 6
-            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-            doc.line(textX, ansY, textX + fullTextW / 2, ansY)
-            if (ansLabel) doc.text(ansLabel, textX + fullTextW / 2 + 2, ansY)
+            if (ansLabel) {
+              const ansY = qy + rowH - 6
+              doc.setTextColor(tc.r, tc.g, tc.b)
+              doc.text(ansLabel, textX, ansY)
+              doc.setTextColor(44, 44, 42)
+            }
           }
         } else {
           // No inline blank — render question text then draw answer line at bottom
@@ -3090,7 +3092,7 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const parts = rawQ.split(/_{3,}/)
-        const blankLineW = 26
+        const blankLineW = 36
         const boxRightEdge = qx + colW - 3
         let measuredW = 0
         parts.forEach((part, pi) => {
@@ -3103,7 +3105,7 @@ async function downloadWorksheetPdf(worksheet) {
           parts.forEach((part, pi) => {
             if (part) { doc.text(part, cx, textY); cx += doc.getTextWidth(part) + 1.5 }
             if (pi < parts.length - 1) {
-              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.7)
               doc.line(cx, textY + 0.8, cx + blankLineW, textY + 0.8)
               cx += blankLineW + 1.5
             }
