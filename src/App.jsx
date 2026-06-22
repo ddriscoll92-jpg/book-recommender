@@ -1715,24 +1715,37 @@ function buildWordsearchGrid(words, gridSize) {
   const grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(null))
   const placed = []
   const directions = [
-    { dr: 0, dc: 1 },  // horizontal
-    { dr: 1, dc: 0 },  // vertical
+    { dr: 0, dc: 1 },   // horizontal →
+    { dr: 1, dc: 0 },   // vertical ↓
+    { dr: 1, dc: 1 },   // diagonal ↘
+    { dr: 1, dc: -1 },  // diagonal ↙
   ]
   const sorted = [...words]
     .map(w => ({ ...w, word: (w.word || '').toUpperCase().replace(/[^A-Z]/g, '') }))
     .filter(w => w.word.length > 0 && w.word.length <= gridSize)
     .sort((a, b) => b.word.length - a.word.length)
 
+  // Track direction usage to ensure variety — avoid placing too many in the same direction
+  const dirCount = [0, 0, 0, 0]
+
   for (const item of sorted) {
     const word = item.word
     let bestPlacement = null
-    for (let attempt = 0; attempt < 200 && !bestPlacement; attempt++) {
-      const dir = directions[Math.floor(Math.random() * directions.length)]
-      const maxRow = dir.dr === 1 ? gridSize - word.length : gridSize - 1
-      const maxCol = dir.dc === 1 ? gridSize - word.length : gridSize - 1
-      if (maxRow < 0 || maxCol < 0) continue
-      const row = Math.floor(Math.random() * (maxRow + 1))
-      const col = Math.floor(Math.random() * (maxCol + 1))
+
+    // Shuffle direction order weighted by usage (less-used directions tried first)
+    const dirOrder = [0, 1, 2, 3].sort((a, b) => dirCount[a] - dirCount[b])
+
+    for (let attempt = 0; attempt < 300 && !bestPlacement; attempt++) {
+      // Cycle through directions with a slight random nudge to mix things up
+      const dirIdx = dirOrder[attempt % 4]
+      const dir = directions[dirIdx]
+      const maxRow = dir.dr === 1 ? gridSize - word.length : (dir.dr === -1 ? word.length - 1 : gridSize - 1)
+      const maxCol = dir.dc === 1 ? gridSize - word.length : (dir.dc === -1 ? word.length - 1 : gridSize - 1)
+      const minRow = dir.dr === -1 ? word.length - 1 : 0
+      const minCol = dir.dc === -1 ? word.length - 1 : 0
+      if (maxRow < minRow || maxCol < minCol) continue
+      const row = minRow + Math.floor(Math.random() * (maxRow - minRow + 1))
+      const col = minCol + Math.floor(Math.random() * (maxCol - minCol + 1))
       let fits = true
       for (let i = 0; i < word.length; i++) {
         const r = row + dir.dr * i
@@ -1740,7 +1753,7 @@ function buildWordsearchGrid(words, gridSize) {
         const existing = grid[r][c]
         if (existing !== null && existing !== word[i]) { fits = false; break }
       }
-      if (fits) bestPlacement = { row, col, dir }
+      if (fits) bestPlacement = { row, col, dir, dirIdx }
     }
     if (bestPlacement) {
       for (let i = 0; i < word.length; i++) {
@@ -1748,6 +1761,7 @@ function buildWordsearchGrid(words, gridSize) {
         const c = bestPlacement.col + bestPlacement.dir.dc * i
         grid[r][c] = word[i]
       }
+      dirCount[bestPlacement.dirIdx]++
       placed.push({ ...item, colour: WORDSEARCH_COLOURS[placed.length % WORDSEARCH_COLOURS.length] })
     }
   }
@@ -2391,8 +2405,21 @@ function ComprehensionOutput({ comprehension: comp }) {
                   {(tier.questions || []).map((q, qi) => (
                     <div key={qi} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <div style={{ width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${ts.headerBg}`, color: ts.headerBg, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{qi + 1}</div>
-                      <div style={{ fontSize: 12, color: TEXT }}>
-                        {q.q}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: TEXT, marginBottom: 6 }}>{q.q}</div>
+                        {q.type !== 'multiple_choice' && Array.from({ length: q.lines || 2 }).map((_, li) => (
+                          <div key={li} style={{ borderBottom: `1px solid ${BORDER}`, marginBottom: 8, height: 20 }} />
+                        ))}
+                        {q.type === 'multiple_choice' && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 4 }}>
+                            {(q.options || []).map((opt, oi) => (
+                              <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: TEXT }}>
+                                <div style={{ width: 12, height: 12, border: `1px solid ${BORDER}`, borderRadius: 2, flexShrink: 0 }} />
+                                {opt}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
