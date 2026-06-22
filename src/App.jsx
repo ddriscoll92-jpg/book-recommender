@@ -3150,7 +3150,7 @@ async function downloadWorksheetPdf(worksheet) {
             if (afterText) {
               doc.setTextColor(44, 44, 42)
               const afterLines = doc.splitTextToSize(afterText, fullTextW)
-              doc.text(afterLines.slice(0, 2), textX, baseY + 8)
+              doc.text(afterLines.slice(0, 2), textX, baseY + 5)
             }
           }
         } else {
@@ -3170,7 +3170,7 @@ async function downloadWorksheetPdf(worksheet) {
               doc.text(afterText, Math.max(textX + minBlank, lineEnd) + 2, dropTextY)
             } else {
               const afterLines = doc.splitTextToSize(afterText, fullTextW)
-              doc.text(afterLines.slice(0, 2), textX, dropTextY + 5)
+              doc.text(afterLines.slice(0, 2), textX, dropTextY + 4)
             }
           }
         }
