@@ -2920,9 +2920,17 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const parts = rawQ.split(/_{3,}/)
-        const beforeCount = doc.splitTextToSize(parts[0] || '', fullTextWForSizing).length
-        const afterCount = parts[1] ? doc.splitTextToSize(parts[1].trimStart(), fullTextWForSizing).length : 0
-        // before lines + answer line (6mm) + after lines if they wrap
+        const beforeText = parts[0] || ''
+        const afterText  = parts[1] ? parts[1].trimStart() : ''
+        const beforeW    = doc.getTextWidth(beforeText.trimEnd())
+        const afterW     = afterText ? doc.getTextWidth(afterText) : 0
+        // If everything fits on one row: single line height
+        if (beforeW + 20 + afterW + 3 <= fullTextWForSizing) {
+          return Math.max(18, 14)
+        }
+        // Otherwise: before lines + answer line row + after lines
+        const beforeCount = Math.min(doc.splitTextToSize(beforeText.trimEnd(), fullTextWForSizing).length, 3)
+        const afterCount  = afterText ? Math.min(doc.splitTextToSize(afterText, fullTextWForSizing).length, 2) : 0
         return Math.max(22, 7 + beforeCount * 4.5 + 6 + afterCount * 4.5 + 3)
       }
       if (q.type === 'word_choice') {
@@ -3098,42 +3106,57 @@ async function downloadWorksheetPdf(worksheet) {
         }
 
       } else if (q.type === 'gap_fill') {
-        // Sentence with inline blank — same rendering as equation with blanks
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const parts = rawQ.split(/_{3,}/)
-        const blankLineW = 36
-        const boxRightEdge = qx + colW - 3
-        let measuredW = 0
-        parts.forEach((part, pi) => {
-          if (part) measuredW += doc.getTextWidth(part) + 1.5
-          if (pi < parts.length - 1) measuredW += blankLineW + 1.5
-        })
-        const fitsOneRow = (textX + measuredW) <= boxRightEdge
-        if (fitsOneRow) {
-          let cx = textX; const textY = qy + 9
-          parts.forEach((part, pi) => {
-            if (part) { doc.text(part, cx, textY); cx += doc.getTextWidth(part) + 1.5 }
-            if (pi < parts.length - 1) {
-              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-              doc.line(cx, textY + 0.8, cx + blankLineW, textY + 0.8)
-              cx += blankLineW + 1.5
-            }
-          })
-        } else {
-          // Wraps — render text before blank, then full-width answer line, then trailing text below
-          const cleanQ = parts[0].trimEnd()
-          const afterBlank = parts[1] ? parts[1].trimStart() : ''
-          const beforeLines = doc.splitTextToSize(cleanQ, fullTextW)
-          doc.text(beforeLines.slice(0, 3), textX, qy + 7)
-          const lineY = qy + 7 + beforeLines.slice(0, 3).length * 4.5 + 1
-          // Line always fills full box width
+        const beforeText = parts[0] || ''
+        const afterText  = parts[1] ? parts[1].trimStart() : ''
+        const boxRight   = qx + colW - 4
+        const textY      = qy + 9
+
+        // Measure how much of beforeText fits on the first row
+        const beforeW = doc.getTextWidth(beforeText.trimEnd())
+        const afterW  = afterText ? doc.getTextWidth(afterText) : 0
+        const spaceAfterBefore = boxRight - textX - beforeW - 1.5 // remaining on first row
+
+        // Minimum blank = 20mm, maximum = remaining space on row (capped at 2/3 box width)
+        const minBlank   = 20
+        const maxBlank   = Math.min(fullTextW * 0.67, spaceAfterBefore)
+        const afterFitsNext = afterW > 0 && afterW < fullTextW
+
+        if (beforeW + Math.max(minBlank, 0) + afterW + 3 <= fullTextW) {
+          // Everything fits on one row — line fills remaining space before after-text
+          doc.text(beforeText.trimEnd(), textX, textY)
+          const lineStart = textX + beforeW + 1.5
+          const lineEnd   = afterText
+            ? Math.max(lineStart + minBlank, boxRight - afterW - 3)
+            : Math.max(lineStart + minBlank, Math.min(lineStart + fullTextW * 0.5, boxRight))
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          doc.line(textX, lineY, qx + colW - 4, lineY)
-          // Trailing text (e.g. "and sends fire...") wraps onto the line below
-          if (afterBlank) {
-            doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
-            const afterLines = doc.splitTextToSize(afterBlank, fullTextW)
+          doc.line(lineStart, textY + 0.8, lineEnd, textY + 0.8)
+          if (afterText) doc.text(afterText, lineEnd + 2, textY)
+        } else {
+          // Doesn't all fit — render before text (may wrap), then line on next row, then after text
+          const beforeLines = doc.splitTextToSize(beforeText.trimEnd(), fullTextW)
+          const bSlice = beforeLines.slice(0, 3)
+          doc.text(bSlice, textX, qy + 7)
+          // Measure how much of the last before-line is used
+          const lastLineW = doc.getTextWidth(bSlice[bSlice.length - 1] || '')
+          const lineY = qy + 7 + bSlice.length * 4.5 + 1
+          // Line fills remainder of last line row, min 20mm
+          const dynLineStart = textX + (bSlice.length === 1 ? lastLineW + 1.5 : 0)
+          const dynLineEnd   = afterText
+            ? Math.max(dynLineStart + minBlank, boxRight - afterW - 3)
+            : boxRight
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+          if (dynLineStart + minBlank < boxRight) {
+            doc.line(dynLineStart, lineY, Math.min(dynLineEnd, boxRight), lineY)
+          } else {
+            // Before text already fills row — line goes on next row
+            doc.line(textX, lineY, Math.min(textX + fullTextW * 0.6, boxRight), lineY)
+          }
+          if (afterText) {
+            doc.setTextColor(44, 44, 42)
+            const afterLines = doc.splitTextToSize(afterText, fullTextW)
             doc.text(afterLines.slice(0, 2), textX, lineY + 5)
           }
         }
