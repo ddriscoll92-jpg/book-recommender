@@ -3105,7 +3105,7 @@ async function downloadWorksheetPdf(worksheet) {
           parts.forEach((part, pi) => {
             if (part) { doc.text(part, cx, textY); cx += doc.getTextWidth(part) + 1.5 }
             if (pi < parts.length - 1) {
-              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.7)
+              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
               doc.line(cx, textY + 0.8, cx + blankLineW, textY + 0.8)
               cx += blankLineW + 1.5
             }
@@ -3117,11 +3117,15 @@ async function downloadWorksheetPdf(worksheet) {
           const wrappedLines = doc.splitTextToSize(cleanQ, fullTextW)
           doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
           const lineY = qy + 7 + wrappedLines.slice(0, 3).length * 4.5 + 1
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.7)
-          doc.line(textX, lineY, textX + blankLineW, lineY)
+          // Line spans to right edge of box minus any trailing text (e.g. full stop)
+          doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+          const afterW = afterBlank ? doc.getTextWidth(afterBlank) + 2 : 0
+          const lineEndX = qx + colW - 4 - afterW
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+          doc.line(textX, lineY, lineEndX, lineY)
           if (afterBlank) {
-            doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
-            doc.text(afterBlank, textX + blankLineW + 1.5, lineY)
+            doc.setTextColor(44, 44, 42)
+            doc.text(afterBlank, lineEndX + 1.5, lineY)
           }
         }
 
