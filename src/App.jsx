@@ -440,7 +440,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
     { id: 'books', label: 'My Books', active: true },
     { id: 'unit', label: 'My Units', active: true },
     { id: 'resources', label: 'My Resources', active: true },
-    { id: 'presentations', label: 'My Presentations', active: true },
+    { id: 'presentations', label: 'My Presentations', badge: 'Beta', active: true },
     { id: 'assistant', label: 'AI Assistant', active: true },
   ]
 
@@ -514,6 +514,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
                   style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: currentPage === item.id ? NAVY_LIGHT : 'transparent', color: item.active ? (currentPage === item.id ? '#FFFFFF' : NAVY_MUTED) : NAVY_LIGHT, fontSize: 13, fontWeight: 500, cursor: item.active ? 'pointer' : 'default', fontFamily: "'DM Sans', sans-serif", position: 'relative' }}
                 >
                   {item.label}
+                  {item.badge && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '1px 5px', borderRadius: 8, verticalAlign: 'middle', letterSpacing: 0.2 }}>{item.badge}</span>}
                   {!item.active && <span style={{ marginLeft: 5, fontSize: 9, background: NAVY_LIGHT, color: NAVY_MUTED, padding: '1px 5px', borderRadius: 10, verticalAlign: 'middle', fontWeight: 500 }}>Soon</span>}
                 </button>
               ))}
@@ -552,6 +553,7 @@ function NavBar({ currentPage, onNavigate, userName, userEmail, onOpenProfile, a
               style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 20px', background: currentPage === item.id ? NAVY_LIGHT : 'transparent', border: 'none', color: currentPage === item.id ? '#FFFFFF' : NAVY_MUTED, fontSize: 15, fontWeight: currentPage === item.id ? 600 : 400, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
             >
               {item.label}
+              {item.badge && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '1px 5px', borderRadius: 8, verticalAlign: 'middle', letterSpacing: 0.2 }}>{item.badge}</span>}
             </button>
           ))}
           {/* Trial info on mobile */}
@@ -6704,7 +6706,7 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.75rem" }}>
           <div style={{ width: 52, height: 52, background: GREEN, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>🎬</div>
           <div>
-            <h1 style={s.h1}>My Presentations</h1>
+            <h1 style={s.h1}>My Presentations <span style={{ fontSize: 12, fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: 6, padding: '2px 8px', verticalAlign: 'middle', letterSpacing: 0.3 }}>Beta</span></h1>
             <p style={s.headerSub}>Generate and browse teaching slideshows for your lessons</p>
           </div>
         </div>
