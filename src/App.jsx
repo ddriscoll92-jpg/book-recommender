@@ -4818,6 +4818,43 @@ function ResourceDownloadButton({ resource }) {
     setOpen(false); setDownloading(format)
     const res = { title: resource.title, meta: resource.meta, sections: resource.sections }
     try {
+      // For structured resource types, regenerate the full PDF via API
+      // rather than using the generic sections-based renderer which loses question/card structure
+      if (format === 'pdf' && resource.prompt) {
+        const modeMap = {
+          comprehension: 'comprehensionMode',
+          knowledge_org: 'knowledgeOrgMode',
+          vocab_cards: 'vocabCardsMode',
+          wordsearch: 'wordsearchMode',
+          exit_ticket: 'exitTicketMode',
+          writing_frame: 'writingFrameMode',
+          worksheet: 'worksheetMode',
+          bingo: 'bingoMode',
+        }
+        const modeKey = modeMap[resource.resource_type]
+        const downloadFnMap = {
+          comprehension: (data) => downloadComprehensionPdf(data.comprehension),
+          knowledge_org: (data) => downloadKnowledgeOrgPdf(data.knowledgeOrg),
+          vocab_cards: (data) => downloadVocabCardsPdf(data.vocabCards),
+          wordsearch: (data) => downloadWordsearchPdf(data.wordsearch),
+          exit_ticket: (data) => downloadExitTicketPdf(data.exitTicket),
+          writing_frame: (data) => downloadWritingFramePdf(data.writingFrame),
+          worksheet: (data) => downloadWorksheetPdf(data.worksheet),
+          bingo: (data) => downloadBingoPdf(data.bingo),
+        }
+        if (modeKey && downloadFnMap[resource.resource_type]) {
+          const apiRes = await fetch('/api/recommend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: resource.prompt, [modeKey]: true }),
+          })
+          if (!apiRes.ok) throw new Error(`Failed to regenerate ${resource.resource_type} PDF`)
+          const data = await apiRes.json()
+          await downloadFnMap[resource.resource_type](data)
+          setDownloading(null)
+          return
+        }
+      }
       if (format === 'txt') {
         const lines = [res.title, '='.repeat(60), res.meta || '', '']
         res.sections?.forEach(sec => { lines.push(sec.heading.toUpperCase()); lines.push('-'.repeat(40)); lines.push(sec.content); lines.push('') })
