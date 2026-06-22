@@ -2916,7 +2916,16 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5)
         return Math.max(28, 7 + Math.min(qLineCount, 3) * 4.5 + 2 + optsH + 3)
       }
-      if (q.type === 'gap_fill' || q.type === 'word_choice') {
+      if (q.type === 'gap_fill') {
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
+        const rawQ = sanitizeForPdf(q.q || '')
+        const parts = rawQ.split(/_{3,}/)
+        const beforeCount = doc.splitTextToSize(parts[0] || '', fullTextWForSizing).length
+        const afterCount = parts[1] ? doc.splitTextToSize(parts[1].trimStart(), fullTextWForSizing).length : 0
+        // before lines + answer line (6mm) + after lines if they wrap
+        return Math.max(22, 7 + beforeCount * 4.5 + 6 + afterCount * 4.5 + 3)
+      }
+      if (q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const lineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
         return Math.max(22, 10 + lineCount * 4.5 + 6)
@@ -3111,21 +3120,20 @@ async function downloadWorksheetPdf(worksheet) {
             }
           })
         } else {
-          // Wraps — render question text without underscores, then draw a coloured answer line below
-          const cleanQ = parts[0].trimEnd() // text before the blank
-          const afterBlank = parts[1] ? parts[1].trimStart() : '' // text after (e.g. full stop)
-          const wrappedLines = doc.splitTextToSize(cleanQ, fullTextW)
-          doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
-          const lineY = qy + 7 + wrappedLines.slice(0, 3).length * 4.5 + 1
-          // Line spans to right edge of box minus any trailing text (e.g. full stop)
-          doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-          const afterW = afterBlank ? doc.getTextWidth(afterBlank) + 2 : 0
-          const lineEndX = qx + colW - 4 - afterW
+          // Wraps — render text before blank, then full-width answer line, then trailing text below
+          const cleanQ = parts[0].trimEnd()
+          const afterBlank = parts[1] ? parts[1].trimStart() : ''
+          const beforeLines = doc.splitTextToSize(cleanQ, fullTextW)
+          doc.text(beforeLines.slice(0, 3), textX, qy + 7)
+          const lineY = qy + 7 + beforeLines.slice(0, 3).length * 4.5 + 1
+          // Line always fills full box width
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          doc.line(textX, lineY, lineEndX, lineY)
+          doc.line(textX, lineY, qx + colW - 4, lineY)
+          // Trailing text (e.g. "and sends fire...") wraps onto the line below
           if (afterBlank) {
-            doc.setTextColor(44, 44, 42)
-            doc.text(afterBlank, lineEndX + 1.5, lineY)
+            doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+            const afterLines = doc.splitTextToSize(afterBlank, fullTextW)
+            doc.text(afterLines.slice(0, 2), textX, lineY + 5)
           }
         }
 
