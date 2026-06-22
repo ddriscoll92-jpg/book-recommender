@@ -92,7 +92,7 @@ Use these types when the subject is English, History, Geography, RE, PSHE, or an
 - Use "multiple_choice" for identify/select tasks with distinct options.
 - Use "word_choice" for tasks where pupils choose between 2-3 inline words.
 - Do NOT use "equation", "column", "missing", or "number_line" for English/Humanities.
-- Do NOT use "word" type for English — use "short_answer" instead.\`
+- Do NOT use "word" type for English — use "short_answer" instead.`
   }
 
   if (writingFrameMode) {
