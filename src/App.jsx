@@ -8750,7 +8750,7 @@ export default function App() {
       if (!resetAt || resetAt < monthStart) {
         const { data: { user } } = await supabase.auth.getUser()
         const freshUsage = { user_id: user.id, book_searches: 0, load_mores: 0, lesson_ideas: 0, units_of_work: 0, resources: 0, ai_chat: 0 }
-        await supabase.from('usage_counts').upsert(freshUsage)
+        await supabase.from('usage_counts').upsert(freshUsage, { onConflict: 'user_id' })
         usage = freshUsage
         setTrialInfo(prev => ({ ...prev, usage: freshUsage }))
       }
@@ -8776,7 +8776,7 @@ export default function App() {
       units_of_work: newUsage.units_of_work || 0,
       resources: newUsage.resources || 0,
       ai_chat: newUsage.ai_chat || 0,
-    })
+    }, { onConflict: 'user_id' })
     setTrialInfo(prev => ({ ...prev, usage: newUsage }))
 
     // Warn when approaching the premium soft cap (90%+)
