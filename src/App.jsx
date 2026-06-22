@@ -2861,7 +2861,10 @@ async function downloadWorksheetPdf(worksheet) {
     y += 8
 
     // ── Questions ──
-    const qPerCol = 5
+    // Pad to at least 10 questions to avoid layout gaps; AI should always return 10 but guard anyway
+    const allQs = tier.questions || []
+    const qCount = Math.max(allQs.length, 1)
+    const qPerCol = Math.ceil(qCount / 2)
     const colW = (contentW - 6) / 2
     const fullTextWForSizing = colW - 13 // matches fullTextW used at render time
 
@@ -2896,12 +2899,12 @@ async function downloadWorksheetPdf(worksheet) {
       return 20
     }
 
-    const leftQs  = tier.questions.slice(0, qPerCol)
-    const rightQs = tier.questions.slice(qPerCol, qPerCol * 2)
+    const leftQs  = allQs.slice(0, qPerCol)
+    const rightQs = allQs.slice(qPerCol, qPerCol * 2)
     const leftOffsets  = leftQs.reduce((acc, q, i)  => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(leftQs[i-1]));  return acc }, [])
     const rightOffsets = rightQs.reduce((acc, q, i) => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(rightQs[i-1])); return acc }, [])
 
-    tier.questions.forEach((q, qi) => {
+    allQs.forEach((q, qi) => {
       const col = qi < qPerCol ? 0 : 1
       const row = qi % qPerCol
       const qx = margin + col * (colW + 6)
@@ -2926,14 +2929,17 @@ async function downloadWorksheetPdf(worksheet) {
       const fullTextW = colW - 13
 
       if (q.type === 'column') {
-        // Left-aligned column sum
+        // Left-aligned column sum with shaded answer box
         doc.setFontSize(10); doc.setFont('helvetica', 'normal')
         const colNumX = textX + 20
         doc.text(sanitizeForPdf(q.top) || '', colNumX, qy + 8, { align: 'right' })
-        doc.text(`${sanitizeForPdf(q.op) || 'x'} ${sanitizeForPdf(q.bottom) || ''}`, colNumX, qy + 14, { align: 'right' })
+        doc.text(`${sanitizeForPdf(q.op) || '+'} ${sanitizeForPdf(q.bottom) || ''}`, colNumX, qy + 14, { align: 'right' })
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
         doc.line(textX, qy + 16, colNumX + 2, qy + 16)
-        doc.line(textX, qy + 22, colNumX + 2, qy + 22)
+        // Shaded answer box instead of bare second rule — makes it clear where to write
+        doc.setFillColor(240, 240, 240)
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.3)
+        doc.rect(textX, qy + 17, colNumX + 2 - textX, 6, 'FD')
 
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -2941,7 +2947,8 @@ async function downloadWorksheetPdf(worksheet) {
         doc.text(lines.slice(0, 6), textX, qy + 7)
         // Drawn answer line with the unit label after it (e.g. "_______ cm") — half box width
         doc.setFontSize(9.5)
-        const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').trim()
+        // Strip underscores and any leading numeric value to prevent leaking the answer on the printed sheet
+        const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
         const ansY = qy + rowH - 6
         const halfLineW = fullTextW / 2
         const lineEndX = textX + halfLineW
@@ -3032,6 +3039,12 @@ async function downloadWorksheetPdf(worksheet) {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
       const cLines = doc.splitTextToSize(sanitizeForPdf(tier.challenge), contentW - 8)
       const challengeBoxH = Math.max(18, 10 + cLines.length * 4.2)
+
+      // Guard: if the challenge box won't fit above the footer, start a new page
+      if (y + challengeBoxH > pageH - 18) {
+        doc.addPage()
+        y = 18
+      }
 
       doc.setFillColor(255, 251, 235)
       doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.6)
