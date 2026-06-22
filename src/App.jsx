@@ -2860,6 +2860,20 @@ async function downloadWorksheetPdf(worksheet) {
     doc.text(sanitizeForPdf(tier.instructions) || '', margin, y)
     y += 8
 
+    // ── Word Bank (English/Humanities support tiers) ──
+    if (tier.wordBank && tier.wordBank.length > 0) {
+      const wbWords = tier.wordBank.map(w => sanitizeForPdf(w)).filter(Boolean)
+      const wbText = 'Word Bank:  ' + wbWords.join('   |   ')
+      const wbLines = doc.splitTextToSize(wbText, contentW - 8)
+      const wbH = Math.max(12, 6 + wbLines.length * 5)
+      doc.setFillColor(255, 251, 235)
+      doc.setDrawColor(217, 119, 6); doc.setLineWidth(0.5)
+      doc.roundedRect(margin, y, contentW, wbH, 2, 2, 'FD')
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14)
+      doc.text(wbLines, margin + 4, y + 5)
+      y += wbH + 4
+    }
+
     // ── Questions ──
     // Pad to at least 10 questions to avoid layout gaps; AI should always return 10 but guard anyway
     const allQs = tier.questions || []
@@ -2885,9 +2899,15 @@ async function downloadWorksheetPdf(worksheet) {
       if (q.type === 'multiple_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const qLineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
-        const numOpts = (q.options || []).length
-        // 7mm top pad + question lines + 2mm gap + options + 3mm bottom pad
-        return Math.max(28, 7 + Math.min(qLineCount, 3) * 4.5 + 2 + numOpts * 6 + 3)
+        const optTextW = fullTextWForSizing - 6
+        doc.setFontSize(9)
+        let optsH = 0
+        ;(q.options || []).forEach(opt => {
+          const optLines = doc.splitTextToSize(sanitizeForPdf(opt), optTextW)
+          optsH += Math.max(6, optLines.slice(0, 2).length * 4.5 + 1.5)
+        })
+        doc.setFontSize(9.5)
+        return Math.max(28, 7 + Math.min(qLineCount, 3) * 4.5 + 2 + optsH + 3)
       }
       if (q.type === 'gap_fill' || q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -2964,18 +2984,53 @@ async function downloadWorksheetPdf(worksheet) {
 
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const lines = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextW)
-        doc.text(lines.slice(0, 6), textX, qy + 7)
-        // Drawn answer line with the unit label after it (e.g. "_______ cm") — half box width
-        doc.setFontSize(9.5)
-        // Strip underscores and any leading numeric value to prevent leaking the answer on the printed sheet
-        const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
-        const ansY = qy + rowH - 6
-        const halfLineW = fullTextW / 2
-        const lineEndX = textX + halfLineW
-        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
-        doc.line(textX, ansY, lineEndX, ansY)
-        if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
+        const wordText = sanitizeForPdf(q.text) || ''
+        const hasInlineBlank = wordText.includes('___')
+        if (hasInlineBlank) {
+          // Question already has an inline blank — render like equation with blanks, no extra line
+          const parts = wordText.split(/_{3,}/)
+          const blankLineW = 16
+          const boxRightEdge = qx + colW - 3
+          let measuredW = 0
+          parts.forEach((part, pi) => {
+            if (part) measuredW += doc.getTextWidth(part) + 1.5
+            if (pi < parts.length - 1) measuredW += blankLineW + 1.5
+          })
+          const fitsOneRow = (textX + measuredW) <= boxRightEdge
+          if (fitsOneRow) {
+            let cx = textX; const textY = qy + 9
+            parts.forEach((part, pi) => {
+              if (part) { doc.text(part, cx, textY); cx += doc.getTextWidth(part) + 1.5 }
+              if (pi < parts.length - 1) {
+                doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+                doc.line(cx, textY + 0.8, cx + blankLineW, textY + 0.8)
+                cx += blankLineW + 1.5
+              }
+            })
+            // Unit label after last part if present
+            const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
+            if (ansLabel) { doc.text(ansLabel, cx, textY) }
+          } else {
+            const wrappedLines = doc.splitTextToSize(wordText.replace(/_{3,}/g, '______'), fullTextW)
+            doc.text(wrappedLines.slice(0, 4), textX, qy + 7)
+            const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
+            const ansY = qy + rowH - 6
+            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+            doc.line(textX, ansY, textX + fullTextW / 2, ansY)
+            if (ansLabel) doc.text(ansLabel, textX + fullTextW / 2 + 2, ansY)
+          }
+        } else {
+          // No inline blank — render question text then draw answer line at bottom
+          const lines = doc.splitTextToSize(wordText, fullTextW)
+          doc.text(lines.slice(0, 6), textX, qy + 7)
+          const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
+          const ansY = qy + rowH - 6
+          const halfLineW = fullTextW / 2
+          const lineEndX = textX + halfLineW
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+          doc.line(textX, ansY, lineEndX, ansY)
+          if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
+        }
 
       } else if (q.type === 'number_line') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -3067,8 +3122,10 @@ async function downloadWorksheetPdf(worksheet) {
           doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(tc.r, tc.g, tc.b)
           doc.text(optLabels[oi] || String(oi + 1), textX + 2, oy, { align: 'center' })
           doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
-          doc.text(sanitizeForPdf(opt), textX + 6, oy)
-          oy += 6
+          const optTextW = fullTextW - 6
+          const optLines = doc.splitTextToSize(sanitizeForPdf(opt), optTextW)
+          doc.text(optLines.slice(0, 2), textX + 6, oy)
+          oy += Math.max(6, optLines.slice(0, 2).length * 4.5 + 1.5)
         })
 
       } else {

@@ -88,11 +88,12 @@ Use these types when the subject is English, History, Geography, RE, PSHE, or an
 
 == RULES FOR ENGLISH/HUMANITIES ONLY ==
 - Use "short_answer" for any question expecting a written sentence or paragraph. Set "lines" to 1 for a word/phrase, 2 for a sentence, 3-4 for a longer response.
-- Use "gap_fill" for sentence completion tasks.
+- Use "gap_fill" for sentence completion tasks. The "q" field MUST contain ___ to mark where the word goes.
 - Use "multiple_choice" for identify/select tasks with distinct options.
 - Use "word_choice" for tasks where pupils choose between 2-3 inline words.
 - Do NOT use "equation", "column", "missing", or "number_line" for English/Humanities.
-- Do NOT use "word" type for English — use "short_answer" instead.`
+- Do NOT use "word" type for English — use "short_answer" instead.
+- WORD BANK: If the Support tier instructions mention a word bank, you MUST include a "wordBank" field on that tier: "wordBank": ["word1", "word2", "word3", "word4", "word5"]. If you cannot provide a word bank, do NOT mention one in the instructions. Never reference a word bank that is not in the JSON.`
   }
 
   if (writingFrameMode) {
