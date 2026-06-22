@@ -2920,18 +2920,18 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const parts = rawQ.split(/_{3,}/)
-        const beforeText = parts[0] || ''
+        const beforeText = (parts[0] || '').trimEnd()
         const afterText  = parts[1] ? parts[1].trimStart() : ''
-        const beforeW    = doc.getTextWidth(beforeText.trimEnd())
-        const afterW     = afterText ? doc.getTextWidth(afterText) : 0
-        // If everything fits on one row: single line height
-        if (beforeW + 20 + afterW + 3 <= fullTextWForSizing) {
-          return Math.max(18, 14)
-        }
-        // Otherwise: before lines + answer line row + after lines
-        const beforeCount = Math.min(doc.splitTextToSize(beforeText.trimEnd(), fullTextWForSizing).length, 3)
-        const afterCount  = afterText ? Math.min(doc.splitTextToSize(afterText, fullTextWForSizing).length, 2) : 0
-        return Math.max(22, 7 + beforeCount * 4.5 + 6 + afterCount * 4.5 + 3)
+        const beforeLines = doc.splitTextToSize(beforeText, fullTextWForSizing)
+        const bSlice      = beforeLines.slice(0, 3)
+        const lastLineW   = doc.getTextWidth(bSlice[bSlice.length - 1] || '')
+        const spaceLeft   = fullTextWForSizing - lastLineW - 1.5
+        const afterW      = afterText ? doc.getTextWidth(afterText) : 0
+        const afterIsShort = afterW < spaceLeft - 20 - 2
+        // Height = all before lines + (line row if spaceLeft < 20) + (after row if not short)
+        const extraLineRow = spaceLeft < 20 ? 5 : 0
+        const afterRow     = (!afterIsShort && afterText) ? 5 : 0
+        return Math.max(16, 7 + bSlice.length * 4.5 + extraLineRow + afterRow + 3)
       }
       if (q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -3109,55 +3109,60 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const parts = rawQ.split(/_{3,}/)
-        const beforeText = parts[0] || ''
+        const beforeText = (parts[0] || '').trimEnd()
         const afterText  = parts[1] ? parts[1].trimStart() : ''
         const boxRight   = qx + colW - 4
-        const textY      = qy + 9
-
-        // Measure how much of beforeText fits on the first row
-        const beforeW = doc.getTextWidth(beforeText.trimEnd())
-        const afterW  = afterText ? doc.getTextWidth(afterText) : 0
-        const spaceAfterBefore = boxRight - textX - beforeW - 1.5 // remaining on first row
-
-        // Minimum blank = 20mm, maximum = remaining space on row (capped at 2/3 box width)
         const minBlank   = 20
-        const maxBlank   = Math.min(fullTextW * 0.67, spaceAfterBefore)
-        const afterFitsNext = afterW > 0 && afterW < fullTextW
 
-        if (beforeW + Math.max(minBlank, 0) + afterW + 3 <= fullTextW) {
-          // Everything fits on one row — line fills remaining space before after-text
-          doc.text(beforeText.trimEnd(), textX, textY)
-          const lineStart = textX + beforeW + 1.5
-          const lineEnd   = afterText
-            ? Math.max(lineStart + minBlank, boxRight - afterW - 3)
-            : Math.max(lineStart + minBlank, Math.min(lineStart + fullTextW * 0.5, boxRight))
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          doc.line(lineStart, textY + 0.8, lineEnd, textY + 0.8)
-          if (afterText) doc.text(afterText, lineEnd + 2, textY)
+        // Wrap the before-text to find what the last line looks like
+        const beforeLines = doc.splitTextToSize(beforeText, fullTextW)
+        const bSlice      = beforeLines.slice(0, 3)
+        const lastLine    = bSlice[bSlice.length - 1] || ''
+        const lastLineW   = doc.getTextWidth(lastLine)
+        const spaceLeft   = fullTextW - lastLineW - 1.5 // space remaining after last before-line
+
+        const afterW      = afterText ? doc.getTextWidth(afterText) : 0
+        const afterIsShort = afterW < spaceLeft - minBlank - 2 // after text fits same row as line
+
+        // Render before-text
+        doc.text(bSlice, textX, qy + 7)
+        const baseY = qy + 7 + (bSlice.length - 1) * 4.5 // y of the last before-text line
+
+        if (spaceLeft >= minBlank) {
+          // Line continues on the same row as the last before-text line
+          const lineStart = textX + lastLineW + 1.5
+          if (afterIsShort) {
+            // After text also fits on same row: line fills space between before and after
+            const lineEnd = boxRight - afterW - 2
+            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+            doc.line(lineStart, baseY + 0.8, Math.max(lineStart + minBlank, lineEnd), baseY + 0.8)
+            doc.text(afterText, Math.max(lineStart + minBlank, lineEnd) + 2, baseY)
+          } else {
+            // After text is long — line fills rest of this row, after text wraps below
+            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+            doc.line(lineStart, baseY + 0.8, boxRight, baseY + 0.8)
+            if (afterText) {
+              doc.setTextColor(44, 44, 42)
+              const afterLines = doc.splitTextToSize(afterText, fullTextW)
+              doc.text(afterLines.slice(0, 2), textX, baseY + 5)
+            }
+          }
         } else {
-          // Doesn't all fit — render before text (may wrap), then line on next row, then after text
-          const beforeLines = doc.splitTextToSize(beforeText.trimEnd(), fullTextW)
-          const bSlice = beforeLines.slice(0, 3)
-          doc.text(bSlice, textX, qy + 7)
-          // Measure how much of the last before-line is used
-          const lastLineW = doc.getTextWidth(bSlice[bSlice.length - 1] || '')
-          const lineY = qy + 7 + bSlice.length * 4.5 + 1
-          // Line fills remainder of last line row, min 20mm
-          const dynLineStart = textX + (bSlice.length === 1 ? lastLineW + 1.5 : 0)
-          const dynLineEnd   = afterText
-            ? Math.max(dynLineStart + minBlank, boxRight - afterW - 3)
+          // Before text fills the row — drop line to next row
+          const lineY = baseY + 5
+          const lineEnd = afterIsShort
+            ? boxRight - afterW - 2
             : boxRight
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          if (dynLineStart + minBlank < boxRight) {
-            doc.line(dynLineStart, lineY, Math.min(dynLineEnd, boxRight), lineY)
-          } else {
-            // Before text already fills row — line goes on next row
-            doc.line(textX, lineY, Math.min(textX + fullTextW * 0.6, boxRight), lineY)
-          }
+          doc.line(textX, lineY, Math.max(textX + minBlank, lineEnd), lineY)
           if (afterText) {
             doc.setTextColor(44, 44, 42)
-            const afterLines = doc.splitTextToSize(afterText, fullTextW)
-            doc.text(afterLines.slice(0, 2), textX, lineY + 5)
+            if (afterIsShort) {
+              doc.text(afterText, Math.max(textX + minBlank, lineEnd) + 2, lineY)
+            } else {
+              const afterLines = doc.splitTextToSize(afterText, fullTextW)
+              doc.text(afterLines.slice(0, 2), textX, lineY + 5)
+            }
           }
         }
 
