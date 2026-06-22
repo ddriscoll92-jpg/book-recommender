@@ -2967,8 +2967,8 @@ async function downloadWorksheetPdf(worksheet) {
     const leftQs  = allQs.slice(0, qPerCol)
     const rightQs = allQs.slice(qPerCol, qPerCol * 2)
 
-    // Scale down short_answer lines if total height would overflow the page
-    // Only applies to tiers that have short_answer questions — maths tiers are unaffected
+    // Scale down short_answer lines only if severely over — try reducing by 1 line first,
+    // only drop to 1 line if still overflowing. Never scale maths tiers.
     const hasShortAnswer = allQs.some(q => q.type === 'short_answer')
     if (hasShortAnswer) {
       const rawTotalH = Math.max(
@@ -2976,9 +2976,13 @@ async function downloadWorksheetPdf(worksheet) {
         rightQs.reduce((s, q) => s + getRowH(q), 0)
       )
       const challengeEstH = tier.challenge ? Math.max(18, 10 + Math.ceil(tier.challenge.length / 80) * 4.2) + 4 : 0
-      if (rawTotalH + challengeEstH > availableH) {
+      const overflow = rawTotalH + challengeEstH - availableH
+      if (overflow > 0) {
+        // Mild overflow (< 30mm): reduce lines by 1 — keeps some writing space
+        // Severe overflow (>= 30mm): reduce to 1 line — page break will handle the rest
+        const targetLines = overflow < 30 ? 2 : 1
         allQs.forEach(q => {
-          if (q.type === 'short_answer' && (q.lines || 2) > 1) q.lines = 1
+          if (q.type === 'short_answer' && (q.lines || 2) > targetLines) q.lines = targetLines
         })
       }
     }
