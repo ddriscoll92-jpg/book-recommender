@@ -2271,14 +2271,19 @@ async function downloadComprehensionPdf(comp) {
     })
 
     const availableH = pageBottom - y
-    const scale = estH > availableH ? Math.max(0.55, availableH / estH) : 1
+    const scale = 1  // always render at full size; add page breaks if needed
     const lineH = baseLineH * scale
     const qLineGap = 5.5 * scale
     const ansLineH = 10 * scale
 
+    function checkPageBreak(neededH = 20) {
+      if (y + neededH > pageBottom) { doc.addPage(); y = margin + 6 }
+    }
+
     // Passage
-    doc.setFontSize(11 * Math.min(1, scale + 0.15)); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+    doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
     passageLines.forEach(line => {
+      checkPageBreak(lineH)
       doc.text(line, margin, y)
       y += lineH
     })
@@ -2286,6 +2291,7 @@ async function downloadComprehensionPdf(comp) {
     y += 4 * scale
 
     // Dashed divider
+    checkPageBreak(10)
     doc.setDrawColor(100,100,100); doc.setLineWidth(0.3)
     const dashLen = 3; const gap = 2; let dx = margin
     while (dx < margin + contentW) {
@@ -2297,6 +2303,7 @@ async function downloadComprehensionPdf(comp) {
     // Questions
     ;(tier.questions || []).forEach((q, qi) => {
       const { qLines } = qMeasurements[qi]
+      checkPageBreak(20)
 
       if (q.type === 'multiple_choice') {
         // Question text
@@ -2361,6 +2368,7 @@ async function downloadComprehensionPdf(comp) {
 
         const numLines = q.lines || 3
         for (let li = 0; li < numLines; li++) {
+          checkPageBreak(ansLineH + 2)
           // Solid answer line
           doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
           doc.line(margin, y + 5 * scale, margin + contentW, y + 5 * scale)
