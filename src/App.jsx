@@ -2899,9 +2899,9 @@ async function downloadWorksheetPdf(worksheet) {
       if (q.type === 'number_line') return 24
       if (q.type === 'short_answer') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const lineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
+        const lineCount = Math.min(doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length, 5)
         const numLines = Math.min(Math.max(q.lines || 2, 1), 4)
-        return Math.max(28, 10 + lineCount * 4.5 + numLines * 6)
+        return Math.max(28, 7 + lineCount * 4.5 + numLines * 6)
       }
       if (q.type === 'multiple_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -2927,7 +2927,7 @@ async function downloadWorksheetPdf(worksheet) {
       }
       if (q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const lineCount = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length
+        const lineCount = Math.min(doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextWForSizing).length, 5)
         return Math.max(22, 7 + lineCount * 4.5 + 6)
       }
       if (q.type === 'equation' || q.type === 'missing' || !q.type) {
@@ -3087,9 +3087,10 @@ async function downloadWorksheetPdf(worksheet) {
         // Written response — question text + ruled answer lines
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), fullTextW)
-        doc.text(qLines.slice(0, 4), textX, qy + 7)
+        const qSlice = qLines.slice(0, 5)
+        doc.text(qSlice, textX, qy + 7)
         const numLines = Math.min(Math.max(q.lines || 2, 1), 4)
-        const lineStartY = qy + 7 + qLines.slice(0, 4).length * 4.5 + 3
+        const lineStartY = qy + 7 + qSlice.length * 4.5 + 3
         doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
         for (let li = 0; li < numLines; li++) {
           const ly = lineStartY + li * 6
@@ -3142,7 +3143,7 @@ async function downloadWorksheetPdf(worksheet) {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const rawQ = sanitizeForPdf(q.q || '')
         const wrappedLines = doc.splitTextToSize(rawQ, fullTextW)
-        doc.text(wrappedLines.slice(0, 6), textX, qy + 7)
+        doc.text(wrappedLines.slice(0, 5), textX, qy + 7)
 
       } else if (q.type === 'multiple_choice') {
         // Question + lettered options
@@ -9124,4 +9125,3 @@ export default function App() {
     </div>
   )
 }
-

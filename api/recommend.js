@@ -88,6 +88,8 @@ Use these types when the subject is English, History, Geography, RE, PSHE, or an
 
 == RULES FOR ENGLISH/HUMANITIES ONLY ==
 - Use "short_answer" for any question expecting a written sentence or paragraph. Set "lines" to 1 for a word/phrase, 2 for a sentence, 3-4 for a longer response.
+- CRITICAL — keep "short_answer" question text concise: no more than 2 sentences. If a question needs more context, shorten it. The PDF has limited space.
+- For complex short_answer questions requiring a paragraph response, set "lines": 4 to give pupils enough writing space.
 - Use "gap_fill" for sentence completion tasks. The "q" field MUST contain ___ to mark where the word goes.
 - Use "multiple_choice" for identify/select tasks with distinct options.
 - Use "word_choice" for tasks where pupils choose between 2-3 inline words.
