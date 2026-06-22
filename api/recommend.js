@@ -375,9 +375,9 @@ The JSON must have this exact structure:
       "emoji": "Red",
       "passage": "Short simple passage 4-6 sentences. Simple vocabulary. Short sentences. Large concepts broken down.",
       "questions": [
-        { "type": "retrieval", "q": "Simple retrieval question about the text?", "lines": 2 },
-        { "type": "retrieval", "q": "Another retrieval question?", "lines": 2 },
-        { "type": "retrieval", "q": "Third retrieval question?", "lines": 2 }
+        { "type": "retrieval", "q": "Simple retrieval question about the text?", "lines": 4 },
+        { "type": "retrieval", "q": "Another retrieval question?", "lines": 4 },
+        { "type": "retrieval", "q": "Third retrieval question?", "lines": 4 }
       ]
     },
     {
@@ -386,11 +386,11 @@ The JSON must have this exact structure:
       "emoji": "Amber",
       "passage": "Medium passage 7-10 sentences. Age-appropriate vocabulary. Mix of short and longer sentences.",
       "questions": [
-        { "type": "retrieval", "q": "Retrieval question?", "lines": 2 },
-        { "type": "retrieval", "q": "Retrieval question?", "lines": 2 },
-        { "type": "inference", "q": "Inference question requiring reading between the lines?", "lines": 3 },
+        { "type": "retrieval", "q": "Retrieval question?", "lines": 4 },
+        { "type": "retrieval", "q": "Retrieval question?", "lines": 4 },
+        { "type": "inference", "q": "Inference question requiring reading between the lines?", "lines": 4 },
         { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
-        { "type": "inference", "q": "Explain question?", "lines": 3 }
+        { "type": "inference", "q": "Explain question?", "lines": 4 }
       ]
     },
     {
@@ -399,13 +399,13 @@ The JSON must have this exact structure:
       "emoji": "Green",
       "passage": "Longer richer passage 10-14 sentences. Ambitious vocabulary. Varied sentence structures. Figurative language.",
       "questions": [
-        { "type": "retrieval", "q": "Retrieval question?", "lines": 2 },
+        { "type": "retrieval", "q": "Retrieval question?", "lines": 4 },
         { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
-        { "type": "inference", "q": "Inference question?", "lines": 3 },
-        { "type": "inference", "q": "Deeper inference question?", "lines": 3 },
+        { "type": "inference", "q": "Inference question?", "lines": 4 },
+        { "type": "inference", "q": "Deeper inference question?", "lines": 4 },
         { "type": "multiple_choice", "q": "Another multiple choice?", "options": ["Option A", "Option B", "Option C", "Option D"] },
-        { "type": "extended", "q": "Extended response question requiring a full paragraph answer?", "lines": 5 },
-        { "type": "vocabulary", "q": "Find the word in the passage that means [synonym]. What does it tell us?", "lines": 2 }
+        { "type": "extended", "q": "Extended response question requiring a full paragraph answer?", "lines": 6 },
+        { "type": "vocabulary", "q": "Find the word in the passage that means [synonym]. What does it tell us?", "lines": 4 }
       ]
     }
   ]
@@ -418,7 +418,8 @@ Rules:
 - Extension passage uses rich vocabulary, figurative language, complex sentences
 - Questions must be directly answerable from the passage provided in that tier
 - multiple_choice questions always have exactly 4 options, only one correct
-- lines indicates how many writing lines to draw (2 = short answer, 3 = medium, 5 = extended)
+- lines indicates how many writing lines to draw (3 = short answer, 4 = medium, 6 = extended)
+- For sequencing questions use type "sequencing" — provide an "events" array of 4-6 short event strings (each under 12 words) that pupils must number in the correct order. Do NOT use "lines" for sequencing questions. The renderer will draw a small numbered box next to each event automatically.
 - Align reading level to UK National Curriculum year group
 - Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
   }

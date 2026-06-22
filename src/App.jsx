@@ -2257,8 +2257,13 @@ async function downloadComprehensionPdf(comp) {
         const h = qLines.length * 5.5 + 4 + 26
         estH += h
         return { qLines, h, numLines: 0 }
+      } else if (q.type === 'sequencing') {
+        const events = q.events || []
+        const h = qLines.length * 5.5 + 3 + events.length * 9 + 4
+        estH += h
+        return { qLines, h, numLines: 0 }
       } else {
-        const numLines = q.lines || 2
+        const numLines = q.lines || 3
         const h = qLines.length * 5.5 + 3 + numLines * 10 + 4
         estH += h
         return { qLines, h, numLines }
@@ -2319,6 +2324,31 @@ async function downloadComprehensionPdf(comp) {
         }
         y += 26 * scale
 
+      } else if (q.type === 'sequencing') {
+        // Sequencing question — numbered box next to each event for pupils to fill in order
+        doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
+        doc.circle(margin + 4, y + 0.5, 4, 'FD')
+        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
+        doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
+        doc.setFontSize(10); doc.setFont('helvetica','bold')
+        doc.text(qLines, margin + 11, y + 2)
+        y += qLines.length * qLineGap + 3 * scale
+
+        const events = q.events || []
+        const boxSz = 7
+        events.forEach((event, ei) => {
+          // Small numbered-order box
+          doc.setFillColor(245, 244, 240)
+          doc.setDrawColor(44,44,42); doc.setLineWidth(0.4)
+          doc.roundedRect(margin, y, boxSz, boxSz, 1, 1, 'FD')
+          // Event text
+          doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
+          const evLines = doc.splitTextToSize(`- ${event}`, contentW - boxSz - 4)
+          doc.text(evLines.slice(0, 2), margin + boxSz + 3, y + 5)
+          y += Math.max(boxSz + 2, evLines.slice(0, 2).length * 4.5 + 1) * scale
+        })
+        y += 4 * scale
+
       } else {
         // Standard question with writing lines
         doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
@@ -2329,7 +2359,7 @@ async function downloadComprehensionPdf(comp) {
         doc.text(qLines, margin + 11, y + 2)
         y += qLines.length * qLineGap + 3 * scale
 
-        const numLines = q.lines || 2
+        const numLines = q.lines || 3
         for (let li = 0; li < numLines; li++) {
           // Solid answer line
           doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
@@ -2407,7 +2437,17 @@ function ComprehensionOutput({ comprehension: comp }) {
                       <div style={{ width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${ts.headerBg}`, color: ts.headerBg, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{qi + 1}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 12, color: TEXT, marginBottom: 6 }}>{q.q}</div>
-                        {q.type !== 'multiple_choice' && Array.from({ length: q.lines || 2 }).map((_, li) => (
+                        {q.type === 'sequencing' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
+                            {(q.events || []).map((event, ei) => (
+                              <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 22, height: 22, border: `1px solid ${BORDER}`, borderRadius: 4, flexShrink: 0, background: PAGE_BG }} />
+                                <span style={{ fontSize: 11, color: TEXT }}>- {event}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {q.type !== 'multiple_choice' && q.type !== 'sequencing' && Array.from({ length: q.lines || 3 }).map((_, li) => (
                           <div key={li} style={{ borderBottom: `1px solid ${BORDER}`, marginBottom: 8, height: 20 }} />
                         ))}
                         {q.type === 'multiple_choice' && (
