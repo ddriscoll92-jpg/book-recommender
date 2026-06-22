@@ -2928,10 +2928,10 @@ async function downloadWorksheetPdf(worksheet) {
         const spaceLeft   = fullTextWForSizing - lastLineW - 1.5
         const afterW      = afterText ? doc.getTextWidth(afterText) : 0
         const afterIsShort = afterW < spaceLeft - 20 - 2
-        // Height = all before lines + (line row if spaceLeft < 20) + (after row if not short)
-        const extraLineRow = spaceLeft < 20 ? 5 : 0
+        // Height = all before lines + gap (8mm) + (line row if spaceLeft < 20) + (after row if not short)
+        const extraLineRow = spaceLeft < 20 ? 8 : 0
         const afterRow     = (!afterIsShort && afterText) ? 5 : 0
-        return Math.max(16, 7 + bSlice.length * 4.5 + extraLineRow + afterRow + 3)
+        return Math.max(18, 7 + bSlice.length * 4.5 + extraLineRow + afterRow + 3)
       }
       if (q.type === 'word_choice') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
@@ -2968,16 +2968,19 @@ async function downloadWorksheetPdf(worksheet) {
     const rightQs = allQs.slice(qPerCol, qPerCol * 2)
 
     // Scale down short_answer lines if total height would overflow the page
-    const rawTotalH = Math.max(
-      leftQs.reduce((s, q) => s + getRowH(q), 0),
-      rightQs.reduce((s, q) => s + getRowH(q), 0)
-    )
-    const challengeEstH = tier.challenge ? Math.max(18, 10 + Math.ceil(tier.challenge.length / 80) * 4.2) + 4 : 0
-    if (rawTotalH + challengeEstH > availableH) {
-      // Reduce short_answer lines to 1 max to save space
-      allQs.forEach(q => {
-        if (q.type === 'short_answer' && (q.lines || 2) > 1) q.lines = 1
-      })
+    // Only applies to tiers that have short_answer questions — maths tiers are unaffected
+    const hasShortAnswer = allQs.some(q => q.type === 'short_answer')
+    if (hasShortAnswer) {
+      const rawTotalH = Math.max(
+        leftQs.reduce((s, q) => s + getRowH(q), 0),
+        rightQs.reduce((s, q) => s + getRowH(q), 0)
+      )
+      const challengeEstH = tier.challenge ? Math.max(18, 10 + Math.ceil(tier.challenge.length / 80) * 4.2) + 4 : 0
+      if (rawTotalH + challengeEstH > availableH) {
+        allQs.forEach(q => {
+          if (q.type === 'short_answer' && (q.lines || 2) > 1) q.lines = 1
+        })
+      }
     }
 
     const leftOffsets  = leftQs.reduce((acc, q, i)  => { acc.push(i === 0 ? 0 : acc[i-1] + getRowH(leftQs[i-1]));  return acc }, [])
@@ -3128,15 +3131,18 @@ async function downloadWorksheetPdf(worksheet) {
         doc.text(bSlice, textX, qy + 7)
         const baseY = qy + 7 + (bSlice.length - 1) * 4.5 // y of the last before-text line
 
+        // Punctuation-only after text (e.g. "." or ",") always stays inline regardless of space
+        const isPunctOnly = afterText.length <= 2 && /^[.,;:!?)\s]*$/.test(afterText)
+
         if (spaceLeft >= minBlank) {
           // Line continues on the same row as the last before-text line
           const lineStart = textX + lastLineW + 1.5
-          if (afterIsShort) {
-            // After text also fits on same row: line fills space between before and after
+          if (afterIsShort || isPunctOnly) {
+            // After text fits on same row: line fills space between before and after
             const lineEnd = boxRight - afterW - 2
             doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
             doc.line(lineStart, baseY + 0.8, Math.max(lineStart + minBlank, lineEnd), baseY + 0.8)
-            doc.text(afterText, Math.max(lineStart + minBlank, lineEnd) + 2, baseY)
+            if (afterText) doc.text(afterText, Math.max(lineStart + minBlank, lineEnd) + 2, baseY)
           } else {
             // After text is long — line fills rest of this row, after text wraps below
             doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
@@ -3144,24 +3150,27 @@ async function downloadWorksheetPdf(worksheet) {
             if (afterText) {
               doc.setTextColor(44, 44, 42)
               const afterLines = doc.splitTextToSize(afterText, fullTextW)
-              doc.text(afterLines.slice(0, 2), textX, baseY + 5)
+              doc.text(afterLines.slice(0, 2), textX, baseY + 8)
             }
           }
         } else {
           // Before text fills the row — drop line to next row
-          const lineY = baseY + 5
-          const lineEnd = afterIsShort
+          // textY is the text baseline; line is drawn 0.8mm below it
+          const dropTextY = baseY + 8
+          const dropLineY = dropTextY + 0.8
+          const lineEnd = (afterIsShort || isPunctOnly)
             ? boxRight - afterW - 2
             : boxRight
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          doc.line(textX, lineY, Math.max(textX + minBlank, lineEnd), lineY)
+          doc.line(textX, dropLineY, Math.max(textX + minBlank, lineEnd), dropLineY)
           if (afterText) {
             doc.setTextColor(44, 44, 42)
-            if (afterIsShort) {
-              doc.text(afterText, Math.max(textX + minBlank, lineEnd) + 2, lineY)
+            if (isPunctOnly || afterIsShort) {
+              // Short/punctuation text sits on the same row as the line
+              doc.text(afterText, Math.max(textX + minBlank, lineEnd) + 2, dropTextY)
             } else {
               const afterLines = doc.splitTextToSize(afterText, fullTextW)
-              doc.text(afterLines.slice(0, 2), textX, lineY + 5)
+              doc.text(afterLines.slice(0, 2), textX, dropTextY + 5)
             }
           }
         }
