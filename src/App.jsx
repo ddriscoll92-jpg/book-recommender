@@ -3111,10 +3111,18 @@ async function downloadWorksheetPdf(worksheet) {
             }
           })
         } else {
-          // Wraps to multiple lines — just render text, no trailing answer line
-          const displayText = rawQ.replace(/_{3,}/g, '______')
-          const wrappedLines = doc.splitTextToSize(displayText, fullTextW)
+          // Wraps — render question text without underscores, then draw a coloured answer line below
+          const cleanQ = parts[0].trimEnd() // text before the blank
+          const afterBlank = parts[1] ? parts[1].trimStart() : '' // text after (e.g. full stop)
+          const wrappedLines = doc.splitTextToSize(cleanQ, fullTextW)
           doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
+          const lineY = qy + 7 + wrappedLines.slice(0, 3).length * 4.5 + 1
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.7)
+          doc.line(textX, lineY, textX + blankLineW, lineY)
+          if (afterBlank) {
+            doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+            doc.text(afterBlank, textX + blankLineW + 1.5, lineY)
+          }
         }
 
       } else if (q.type === 'word_choice') {
