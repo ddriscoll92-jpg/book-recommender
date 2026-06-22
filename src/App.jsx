@@ -8767,9 +8767,8 @@ export default function App() {
     }
 
     const { data: { user } } = await supabase.auth.getUser()
-    // Atomic increment via Postgres RPC to prevent race conditions
-    const { data: newCount } = await supabase.rpc('increment_usage', { p_user_id: user.id, p_action: action })
-    const newUsage = { ...usage, [action]: newCount ?? count + 1 }
+    const newUsage = { ...usage, [action]: count + 1 }
+    await supabase.from('usage_counts').upsert({ user_id: user.id, ...newUsage })
     setTrialInfo(prev => ({ ...prev, usage: newUsage }))
 
     // Warn when approaching the premium soft cap (90%+)
