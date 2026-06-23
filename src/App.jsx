@@ -2968,9 +2968,19 @@ async function downloadWorksheetPdf(worksheet) {
           })
           const fitsOneRow = measuredW <= fullTextWForSizing
           if (!fitsOneRow) {
-            const displayText = rawQ.replace(/_{3,}/g, '______')
-            const lineCount = doc.splitTextToSize(displayText, fullTextWForSizing).length
-            return Math.max(20, 12 + Math.min(lineCount, 3) * 4.5 + 6)
+            // Use gap_fill style height: before lines + line row + optional after lines
+            const eParts = rawQ.split(/_{2,}/)
+            const eBefore = (eParts[0] || '').trimEnd()
+            const eAfter  = eParts[1] ? eParts[1].trimStart() : ''
+            const eBeforeLines = doc.splitTextToSize(eBefore, fullTextWForSizing)
+            const eSlice = eBeforeLines.slice(0, 3)
+            const eLastLineW = doc.getTextWidth(eSlice[eSlice.length - 1] || '')
+            const eSpaceLeft = fullTextWForSizing - eLastLineW - 1.5
+            const eAfterW = eAfter ? doc.getTextWidth(eAfter) : 0
+            const eAfterShort = eAfterW < eSpaceLeft - 14 - 2
+            const extraRow = eSpaceLeft < 14 ? 5 : 0
+            const afterRow = (!eAfterShort && eAfter) ? 5 : 0
+            return Math.max(18, 7 + eSlice.length * 4.5 + extraRow + afterRow + 3)
           }
         }
         // No blanks — ensure text and answer line don't overlap
@@ -3117,11 +3127,20 @@ async function downloadWorksheetPdf(worksheet) {
           doc.text(lSlice, textX, qy + 7)
           const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
           const ansY = qy + 7 + lSlice.length * 4.5 + 3
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+          doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
           const ansLabelW = ansLabel ? doc.getTextWidth(ansLabel) + 2 : 0
-          const ansLineEnd = qx + colW - 4 - ansLabelW
+          // Ensure line always has at least 20mm — if label is long, put it on next row
+          const boxRight = qx + colW - 4
+          const ansLineEnd = Math.max(textX + 20, boxRight - ansLabelW)
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
           doc.line(textX, ansY, ansLineEnd, ansY)
-          if (ansLabel) doc.text(ansLabel, ansLineEnd + 2, ansY)
+          if (ansLabel) {
+            if (ansLineEnd + ansLabelW <= boxRight) {
+              doc.text(ansLabel, ansLineEnd + 2, ansY)
+            } else {
+              doc.text(ansLabel, textX, ansY + 5)
+            }
+          }
         }
 
       } else if (q.type === 'number_line') {
@@ -3287,14 +3306,40 @@ async function downloadWorksheetPdf(worksheet) {
               }
             })
           } else {
-            // Too long for one row — wrap question text normally, then a drawn
-            // answer line on its own row beneath, same pattern as word problems.
-            const displayText = rawQ.replace(/_{3,}/g, '______')
-            const wrappedLines = doc.splitTextToSize(displayText, fullTextW)
-            doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
-            const ansY = qy + rowH - 4
+            // Too long for one row — use gap_fill style: before text, coloured line, after text
+            const eParts = rawQ.split(/_{2,}/)
+            const eBefore = (eParts[0] || '').trimEnd()
+            const eAfter  = eParts[1] ? eParts[1].trimStart() : ''
+            const eBeforeLines = doc.splitTextToSize(eBefore, fullTextW)
+            const eSlice = eBeforeLines.slice(0, 3)
+            doc.text(eSlice, textX, qy + 7)
+            const eLastLineW = doc.getTextWidth(eSlice[eSlice.length - 1] || '')
+            const eSpaceLeft = fullTextW - eLastLineW - 1.5
+            const eBaseY = qy + 7 + (eSlice.length - 1) * 4.5
+            const eBoxRight = qx + colW - 4
+            const eAfterW = eAfter ? doc.getTextWidth(eAfter) : 0
+            const eIsPunct = eAfter.length <= 2 && /^[.,;:!?)\s]*$/.test(eAfter)
+            const eAfterShort = eAfterW < eSpaceLeft - 14 - 2
             doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-            doc.line(textX, ansY, textX + fullTextW / 2, ansY)
+            if (eSpaceLeft >= 14) {
+              const eLineStart = textX + eLastLineW + 1.5
+              const eLineEnd = (eAfterShort || eIsPunct) ? eBoxRight - eAfterW - 2 : eBoxRight
+              doc.line(eLineStart, eBaseY + 0.8, Math.max(eLineStart + 14, eLineEnd), eBaseY + 0.8)
+              if (eAfter) {
+                doc.setTextColor(44, 44, 42)
+                if (eAfterShort || eIsPunct) doc.text(eAfter, Math.max(eLineStart + 14, eLineEnd) + 2, eBaseY)
+                else { const al = doc.splitTextToSize(eAfter, fullTextW); doc.text(al.slice(0,2), textX, eBaseY + 5) }
+              }
+            } else {
+              const eDropY = eBaseY + 5
+              const eLineEnd = (eAfterShort || eIsPunct) ? eBoxRight - eAfterW - 2 : eBoxRight
+              doc.line(textX, eDropY + 0.8, Math.max(textX + 14, eLineEnd), eDropY + 0.8)
+              if (eAfter) {
+                doc.setTextColor(44, 44, 42)
+                if (eAfterShort || eIsPunct) doc.text(eAfter, Math.max(textX + 14, eLineEnd) + 2, eDropY)
+                else { const al = doc.splitTextToSize(eAfter, fullTextW); doc.text(al.slice(0,2), textX, eDropY + 4) }
+              }
+            }
           }
         } else {
           const wrappedLines = doc.splitTextToSize(rawQ, fullTextW)
