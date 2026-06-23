@@ -12,134 +12,66 @@
 # Error details
 
 ```
-Test timeout of 30000ms exceeded.
-```
+Error: expect(locator).toBeVisible() failed
 
-```
-Error: locator.click: Test timeout of 30000ms exceeded.
+Locator: getByText(/Step 3 — Choose resource type/i)
+Expected: visible
+Timeout: 5000ms
+Error: element(s) not found
+
 Call log:
-  - waiting for getByText('Exploring Coastal Settings').or(locator('text=/^1s/')).first()
+  - Expect "toBeVisible" with timeout 5000ms
+  - waiting for getByText(/Step 3 — Choose resource type/i)
 
 ```
-
-# Page snapshot
 
 ```yaml
-- generic [ref=e3]:
-  - generic [ref=e5]:
-    - generic [ref=e6]:
-      - generic [ref=e7]: 📚
-      - generic [ref=e8]: LessonNest
-    - generic [ref=e9]:
-      - button "Book Recommender" [ref=e10] [cursor=pointer]
-      - button "My Books" [ref=e11] [cursor=pointer]
-      - button "My Units" [ref=e12] [cursor=pointer]
-      - button "My Resources" [ref=e13] [cursor=pointer]
-      - button "My PresentationsBeta" [ref=e14] [cursor=pointer]
-      - button "AI Assistant" [ref=e15] [cursor=pointer]
-    - generic [ref=e17] [cursor=pointer]:
-      - generic [ref=e18]: S
-      - generic [ref=e19]:
-        - generic [ref=e20]: simon
-        - generic [ref=e21]: Premium plan
-      - generic [ref=e22]: ▼
-  - generic [ref=e24]:
-    - generic [ref=e25]:
-      - generic [ref=e26]: 🛠️
-      - generic [ref=e27]:
-        - heading "My Resources" [level=1] [ref=e28]
-        - paragraph [ref=e29]: Generate and browse all your classroom resources
-    - generic [ref=e30]:
-      - generic [ref=e31]:
-        - button "⚡ Quick resource" [ref=e32] [cursor=pointer]
-        - button "📋 From a plan" [ref=e33] [cursor=pointer]
-        - button "📂 My catalogue" [ref=e34] [cursor=pointer]
-      - generic [ref=e36]:
-        - paragraph [ref=e37]: Select a plan, choose a lesson, then pick what type of resource to generate. The AI will use the full lesson context to create something tailored.
-        - generic [ref=e38]:
-          - generic [ref=e39]: Step 1 — Select a plan
-          - generic [ref=e40]:
-            - generic [ref=e41]:
-              - generic [ref=e42]: 🔍
-              - textbox "Search plans or books..." [ref=e43]
-            - combobox [ref=e44] [cursor=pointer]:
-              - option "All subjects" [selected]
-              - option "Art"
-              - option "Computing"
-              - option "DT"
-              - option "English"
-              - option "Geography"
-              - option "History"
-              - option "Maths"
-              - option "Music"
-              - option "PE"
-              - option "PSHE"
-              - option "RE"
-              - option "RSHE"
-              - option "Science"
-            - combobox [ref=e45] [cursor=pointer]:
-              - option "All years" [selected]
-              - option "Year 1"
-              - option "Year 3"
-              - option "Year 4"
-          - generic [ref=e46]:
-            - generic [ref=e47]: English
-            - generic [ref=e48]:
-              - generic [ref=e49]: Story Mapping and Retelling
-              - generic [ref=e50]: Escape from Pompeii · Year 3 · 6 lessons
-            - button "Change" [ref=e51] [cursor=pointer]
-        - generic [ref=e52]:
-          - generic [ref=e53]: Step 2 — Select a lesson
-          - generic [ref=e54]:
-            - generic [ref=e55] [cursor=pointer]:
-              - generic [ref=e56]: "1"
-              - generic [ref=e57]:
-                - generic [ref=e58]:
-                  - generic [ref=e59]: Exploring the Story World of Pompeii
-                  - generic [ref=e60]: explore
-                - generic [ref=e61]: "Learning intention: We are learning to identify the main characters, setting and key events in 'Escape from Pompeii'."
-            - generic [ref=e62] [cursor=pointer]:
-              - generic [ref=e63]: "2"
-              - generic [ref=e64]:
-                - generic [ref=e65]:
-                  - generic [ref=e66]: Sequencing the Story
-                  - generic [ref=e67]: analyse
-                - generic [ref=e68]: "Learning intention: We are learning to sequence the key events of the story and understand how the narrative is structured."
-            - generic [ref=e69] [cursor=pointer]:
-              - generic [ref=e70]: "3"
-              - generic [ref=e71]:
-                - generic [ref=e72]:
-                  - generic [ref=e73]: Creating an Illustrated Story Map
-                  - generic [ref=e74]: teach
-                - generic [ref=e75]: "Learning intention: We are learning to create an illustrated story map that shows the key events of the story in sequence."
-            - generic [ref=e76] [cursor=pointer]:
-              - generic [ref=e77]: "4"
-              - generic [ref=e78]:
-                - generic [ref=e79]:
-                  - generic [ref=e80]: Oral Retelling Using Story Maps
-                  - generic [ref=e81]: practise
-                - generic [ref=e82]: "Learning intention: We are learning to retell the story orally in sequence using our story maps as a guide."
-            - generic [ref=e83] [cursor=pointer]:
-              - generic [ref=e84]: "5"
-              - generic [ref=e85]:
-                - generic [ref=e86]:
-                  - generic [ref=e87]: Writing a Story Retelling
-                  - generic [ref=e88]: practise
-                - generic [ref=e89]: "Learning intention: We are learning to write a retelling of the story in sequence using descriptive language and time connectives."
-            - generic [ref=e90] [cursor=pointer]:
-              - generic [ref=e91]: "6"
-              - generic [ref=e92]:
-                - generic [ref=e93]:
-                  - generic [ref=e94]: Sharing and Celebrating Our Retellings
-                  - generic [ref=e95]: apply
-                - generic [ref=e96]: "Learning intention: We are learning to edit our writing for clarity and share our story retelling with an audience."
-    - generic [ref=e97]: LessonNest · For UK primary school teachers
+- text: 📚 LessonNest
+- button "Book Recommender"
+- button "My Books"
+- button "My Units"
+- button "My Resources"
+- button "My PresentationsBeta"
+- button "AI Assistant"
+- text: S simon Premium plan ▼ 📚
+- heading "Book Recommender" [level=1]
+- paragraph: Tailored reading suggestions for UK primary school teachers
+- text: Subject
+- combobox:
+  - option "Select subject..."
+  - option "Art"
+  - option "Computing"
+  - option "DT"
+  - option "Geography"
+  - option "History"
+  - option "Literacy"
+  - option "Maths" [selected]
+  - option "Music"
+  - option "PE"
+  - option "PSHE"
+  - option "RE"
+  - option "Science"
+- text: Topic
+- textbox "e.g. Romans"
+- text: Year group
+- combobox:
+  - option "Select..." [selected]
+  - option "Year 1"
+  - option "Year 2"
+  - option "Year 3"
+  - option "Year 4"
+  - option "Year 5"
+  - option "Year 6"
+- text: Specific focus — optional
+- textbox "Add any specific aspect of the topic..."
+- text: ⚡ ⚡ shared reading aloud ⚡ ⚡ independent reading ⚡ ⚡ inspires creative writing ⚡ ⚡ supports SEND learners ⚡ ⚡ guided reading ⚡ ⚡ class discussion ⚡ ⚡ supports EAL learners ⚙️ Refine results Filter by type, content and reading level ▼
+- button "✨ Find books"
+- text: LessonNest · For UK primary school teachers
 ```
 
 # Test source
 
 ```ts
-  11  |   if (await signInTab.isVisible()) await signInTab.click()
   12  |   await page.fill('input[type="email"]', EMAIL)
   13  |   await page.fill('input[type="password"]', PASSWORD)
   14  |   await page.getByRole('button', { name: /^sign in$/i }).last().click()
@@ -238,10 +170,10 @@ Call log:
   107 |     // Click the first plan's Select button
   108 |     await page.getByText('Select →').first().click()
   109 |     await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible({ timeout: 5_000 })
-  110 |     // Click the first lesson row to reveal Step 3
-> 111 |     await page.getByText('Exploring Coastal Settings').or(page.locator('text=/^1\s/')).first().click()
-      |                                                                                                ^ Error: locator.click: Test timeout of 30000ms exceeded.
-  112 |     await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible({ timeout: 5_000 })
+  110 |     // Click the first available lesson row to reveal Step 3
+  111 |     await page.locator('[style*="cursor: pointer"]').first().click()
+> 112 |     await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible({ timeout: 5_000 })
+      |                                                                    ^ Error: expect(locator).toBeVisible() failed
   113 |   })
   114 | 
   115 |   test('From a plan tab shows Step 1 plan picker', async ({ page }) => {

@@ -107,8 +107,8 @@ test.describe('My Resources page', () => {
     // Click the first plan's Select button
     await page.getByText('Select →').first().click()
     await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible({ timeout: 5_000 })
-    // Click the first available lesson row to reveal Step 3
-    await page.locator('[style*="cursor: pointer"]').first().click()
+    // Click the first lesson row — identified by the Learning intention label inside it
+    await page.locator('div').filter({ hasText: /Learning intention:/i }).first().click()
     await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible({ timeout: 5_000 })
   })
 
