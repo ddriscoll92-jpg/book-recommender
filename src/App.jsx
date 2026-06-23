@@ -2979,7 +2979,7 @@ async function downloadWorksheetPdf(worksheet) {
             const eAfterW = eAfter ? doc.getTextWidth(eAfter) : 0
             const eIsPunctH = eAfter.length <= 2 && /^[.,;:!?)]*$/.test(eAfter)
             const eLineStartW = eSpaceLeft >= 14 ? eLastLineW + 1.5 : 0
-            const eAfterFitsInline = eAfterW > 0 && (textX + eLineStartW + 14 + eAfterW + 2) <= (textX + fullTextWForSizing)
+            const eAfterFitsInline = eAfterW > 0 && (eLineStartW + 14 + eAfterW + 2) <= fullTextWForSizing
             const extraRow = eSpaceLeft < 14 ? 5 : 0
             const afterRow = (!eAfterFitsInline && !eIsPunctH && eAfter) ? 5 : 0
             return Math.max(18, 7 + eSlice.length * 4.5 + extraRow + afterRow + 3)
