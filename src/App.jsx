@@ -5585,7 +5585,7 @@ Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.auth
             else loadCatalogue()
           }
         } catch(e) { console.error('Knowledge org save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5621,7 +5621,7 @@ Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.auth
             else loadCatalogue()
           }
         } catch(e) { console.error('Vocab cards save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5659,7 +5659,7 @@ Use ${bingoTypeHint}.`
             else loadCatalogue()
           }
         } catch(e) { console.error('Bingo save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5695,7 +5695,7 @@ Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.auth
             else loadCatalogue()
           }
         } catch(e) { console.error('Wordsearch save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5731,7 +5731,7 @@ Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.auth
             else loadCatalogue()
           }
         } catch(e) { console.error('Exit ticket save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5769,7 +5769,7 @@ The base sentence and theme should be inspired by the book and lesson topic.`
             else loadCatalogue()
           }
         } catch(e) { console.error('Plan writing frame save error:', e) }
-      } catch(err) { console.error('generateFromPlan writing frame error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { console.error('generateFromPlan writing frame error:', err.message); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5806,7 +5806,7 @@ Generate 10 questions per tier (Support, Core, Extension) aligned to this lesson
             else loadCatalogue()
           }
         } catch (e) { console.error('Plan worksheet save error:', e) }
-      } catch (err) { console.error('generateFromPlan worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch (err) { console.error('generateFromPlan worksheet error:', err.message); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5858,7 +5858,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           else loadCatalogue()
         }
       } catch (e) { console.error('Plan resource save error:', JSON.stringify(e)) }
-    } catch (err) { console.error('generateFromPlan error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+    } catch (err) { console.error('generateFromPlan error:', err.message, err); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
     setGenerating(false)
   }
 
@@ -5896,7 +5896,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Knowledge org save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5929,7 +5929,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Vocab cards save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5962,7 +5962,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Bingo save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -5995,7 +5995,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Wordsearch save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -6028,7 +6028,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Exit ticket save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -6061,7 +6061,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Comprehension save error:', e?.message) }
-      } catch(err) { setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -6094,7 +6094,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch(e) { console.error('Writing frame save error:', e) }
-      } catch(err) { console.error('generateAdhoc writing frame error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch(err) { console.error('generateAdhoc writing frame error:', err.message); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -6132,7 +6132,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
             else loadCatalogue()
           }
         } catch (e) { console.error('Worksheet save error:', e?.message, JSON.stringify(e)) }
-      } catch (err) { console.error('generateAdhoc worksheet error:', err.message); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      } catch (err) { console.error('generateAdhoc worksheet error:', err.message); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
       setGenerating(false)
       return
     }
@@ -6177,7 +6177,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
           else loadCatalogue()
         }
       } catch (e) { console.error('Adhoc resource save error:', JSON.stringify(e)) }
-    } catch (err) { console.error('generateAdhoc error:', err.message, err); setError(`Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+    } catch (err) { console.error('generateAdhoc error:', err.message, err); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
     setGenerating(false)
   }
 
@@ -6585,7 +6585,14 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
 
         {/* Error */}
         {error && (
-          <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>{error}</div>
+          <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
+            {error.includes('status.claude.com') ? (
+              <>
+                {error.split('https://status.claude.com/')[0]}
+                <a href="https://status.claude.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#A32D2D', fontWeight: 600 }}>status.claude.com</a>
+              </>
+            ) : error}
+          </div>
         )}
 
         {/* Output */}
@@ -7197,7 +7204,14 @@ SEND adaptations - Extension: ${(lesson.send_adaptations?.higher || []).join('; 
 
         {/* Error */}
         {error && (
-          <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>{error}</div>
+          <div style={{ background: '#FCEBEB', color: '#A32D2D', borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, marginBottom: 12 }}>
+            {error.includes('status.claude.com') ? (
+              <>
+                {error.split('https://status.claude.com/')[0]}
+                <a href="https://status.claude.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#A32D2D', fontWeight: 600 }}>status.claude.com</a>
+              </>
+            ) : error}
+          </div>
         )}
 
         {/* Success message */}

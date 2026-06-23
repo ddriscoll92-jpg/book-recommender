@@ -33,40 +33,38 @@ Call log:
 - button "My Resources"
 - button "My PresentationsBeta"
 - button "AI Assistant"
-- text: S simon Premium plan ▼ 📚
-- heading "Book Recommender" [level=1]
-- paragraph: Tailored reading suggestions for UK primary school teachers
-- text: Subject
+- text: S simon Premium plan ▼ 🛠️
+- heading "My Resources" [level=1]
+- paragraph: Generate and browse all your classroom resources
+- button "⚡ Quick resource"
+- button "📋 From a plan"
+- button "📂 My catalogue"
+- paragraph: Select a plan, choose a lesson, then pick what type of resource to generate. The AI will use the full lesson context to create something tailored.
+- text: Step 1 — Select a plan 🔍
+- textbox "Search plans or books..."
 - combobox:
-  - option "Select subject..."
+  - option "All subjects" [selected]
   - option "Art"
   - option "Computing"
   - option "DT"
+  - option "English"
   - option "Geography"
   - option "History"
-  - option "Literacy"
-  - option "Maths" [selected]
+  - option "Maths"
   - option "Music"
   - option "PE"
   - option "PSHE"
   - option "RE"
+  - option "RSHE"
   - option "Science"
-- text: Topic
-- textbox "e.g. Romans"
-- text: Year group
 - combobox:
-  - option "Select..." [selected]
+  - option "All years" [selected]
   - option "Year 1"
-  - option "Year 2"
   - option "Year 3"
   - option "Year 4"
-  - option "Year 5"
-  - option "Year 6"
-- text: Specific focus — optional
-- textbox "Add any specific aspect of the topic..."
-- text: ⚡ ⚡ shared reading aloud ⚡ ⚡ independent reading ⚡ ⚡ inspires creative writing ⚡ ⚡ supports SEND learners ⚡ ⚡ guided reading ⚡ ⚡ class discussion ⚡ ⚡ supports EAL learners ⚙️ Refine results Filter by type, content and reading level ▼
-- button "✨ Find books"
-- text: LessonNest · For UK primary school teachers
+- text: English Story Mapping and Retelling Escape from Pompeii · Year 3 · 6 lessons
+- button "Change"
+- text: "Step 2 — Select a lesson 1 Exploring the Story World of Pompeii explore Learning intention: We are learning to identify the main characters, setting and key events in 'Escape from Pompeii'. 2 Sequencing the Story analyse Learning intention: We are learning to sequence the key events of the story and understand how the narrative is structured. 3 Creating an Illustrated Story Map teach Learning intention: We are learning to create an illustrated story map that shows the key events of the story in sequence. 4 Oral Retelling Using Story Maps practise Learning intention: We are learning to retell the story orally in sequence using our story maps as a guide. 5 Writing a Story Retelling practise Learning intention: We are learning to write a retelling of the story in sequence using descriptive language and time connectives. 6 Sharing and Celebrating Our Retellings apply Learning intention: We are learning to edit our writing for clarity and share our story retelling with an audience. LessonNest · For UK primary school teachers"
 ```
 
 # Test source
@@ -170,8 +168,8 @@ Call log:
   107 |     // Click the first plan's Select button
   108 |     await page.getByText('Select →').first().click()
   109 |     await expect(page.getByText(/Step 2 — Select a lesson/i)).toBeVisible({ timeout: 5_000 })
-  110 |     // Click the first available lesson row to reveal Step 3
-  111 |     await page.locator('[style*="cursor: pointer"]').first().click()
+  110 |     // Click the first lesson row — identified by the Learning intention label inside it
+  111 |     await page.locator('div').filter({ hasText: /Learning intention:/i }).first().click()
 > 112 |     await expect(page.getByText(/Step 3 — Choose resource type/i)).toBeVisible({ timeout: 5_000 })
       |                                                                    ^ Error: expect(locator).toBeVisible() failed
   113 |   })

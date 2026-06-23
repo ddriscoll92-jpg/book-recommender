@@ -497,6 +497,10 @@ Rules:
     const data = await response.json()
     if (!response.ok) {
       console.error('Anthropic API error:', data.error?.message, data.error?.type)
+      // 529 = Anthropic overloaded; surface a friendly message
+      if (response.status === 529 || data.error?.type === 'overloaded_error') {
+        return res.status(529).json({ error: 'Claude is very busy right now. Please wait a moment and try again.' })
+      }
       return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error' })
     }
 
