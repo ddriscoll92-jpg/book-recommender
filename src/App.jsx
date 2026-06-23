@@ -2908,10 +2908,9 @@ async function downloadWorksheetPdf(worksheet) {
           const afterRow = (!wAfterShort && wAfter) ? 5 : 0
           return Math.max(18, 7 + wSlice.length * 4.5 + extraLineRow + afterRow + 3)
         }
-        const lineCount = doc.splitTextToSize(wordText, fullTextWForSizing).length
-        const baseH = q._trimHeight ? 20 : 24
-        const lineExtra = q._trimHeight ? 4 : 4.5
-        return Math.max(baseH, 10 + Math.min(lineCount, q._trimHeight ? 3 : 6) * lineExtra + 8)
+        const lineCount = Math.min(doc.splitTextToSize(wordText, fullTextWForSizing).length, 5)
+        // Same formula as short_answer: 7 (top) + text lines + 3 (gap) + 6 (answer line) + 3 (bottom)
+        return Math.max(22, 7 + lineCount * 4.5 + 12)
       }
       if (q.type === 'column') return 26
       if (q.type === 'number_line') return 24
@@ -3112,18 +3111,15 @@ async function downloadWorksheetPdf(worksheet) {
             }
           }
         } else {
-          // No inline blank — render question text then draw answer line below text
+          // No inline blank — same layout as short_answer: text then answer line close beneath
           const lines = doc.splitTextToSize(wordText, fullTextW)
-          const lSlice = lines.slice(0, 6)
+          const lSlice = lines.slice(0, 5)
           doc.text(lSlice, textX, qy + 7)
           const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
-          // Position line 6mm below last text line, not pinned to box bottom
-          const ansY = qy + 7 + lSlice.length * 4.5 + 6
-          const halfLineW = fullTextW / 2
-          const lineEndX = textX + halfLineW
+          const ansY = qy + 7 + lSlice.length * 4.5 + 3
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          doc.line(textX, ansY, lineEndX, ansY)
-          if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
+          doc.line(textX, ansY, qx + colW - 4, ansY)
+          if (ansLabel) doc.text(ansLabel, qx + colW - 4 + 2, ansY)
         }
 
       } else if (q.type === 'number_line') {
