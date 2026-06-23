@@ -2869,7 +2869,7 @@ async function downloadWorksheetPdf(worksheet) {
       const wbLines = doc.splitTextToSize(wbText, contentW - 8)
       const wbH = Math.max(12, 6 + wbLines.length * 5)
       doc.setFillColor(245, 245, 245)
-      doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+      doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
       doc.roundedRect(margin, y, contentW, wbH, 2, 2, 'FD')
       doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(tc.r, tc.g, tc.b)
       doc.text(wbLines, margin + 4, y + 5)
@@ -3041,7 +3041,7 @@ async function downloadWorksheetPdf(worksheet) {
         doc.text(`${sanitizeForPdf(q.op) || '+'} ${sanitizeForPdf(q.bottom) || ''}`, colNumX, qy + 14, { align: 'right' })
         // Shaded answer box below operator line — no separate rule needed
         doc.setFillColor(240, 240, 240)
-        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+        doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
         doc.rect(textX, qy + 16, colNumX + 2 - textX, 7, 'FD')
 
       } else if (q.type === 'word') {
@@ -3064,7 +3064,7 @@ async function downloadWorksheetPdf(worksheet) {
             parts.forEach((part, pi) => {
               if (part) { doc.text(part, cx, textY); cx += doc.getTextWidth(part) + 1.5 }
               if (pi < parts.length - 1) {
-                doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+                doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
                 doc.line(cx, textY + 0.8, cx + blankLineW, textY + 0.8)
                 cx += blankLineW + 1.5
               }
@@ -3119,7 +3119,7 @@ async function downloadWorksheetPdf(worksheet) {
           const ansY = qy + rowH - 6
           const halfLineW = fullTextW / 2
           const lineEndX = textX + halfLineW
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
           doc.line(textX, ansY, lineEndX, ansY)
           if (ansLabel) doc.text(ansLabel, lineEndX + 2, ansY)
         }
@@ -3281,7 +3281,7 @@ async function downloadWorksheetPdf(worksheet) {
               }
               if (pi < parts.length - 1) {
                 const lineY = textY + 0.8
-                doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+                doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
                 doc.line(cx, lineY, cx + blankLineW, lineY)
                 cx += blankLineW + 1.5
               }
@@ -3293,7 +3293,7 @@ async function downloadWorksheetPdf(worksheet) {
             const wrappedLines = doc.splitTextToSize(displayText, fullTextW)
             doc.text(wrappedLines.slice(0, 3), textX, qy + 7)
             const ansY = qy + rowH - 4
-            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+            doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
             doc.line(textX, ansY, textX + fullTextW / 2, ansY)
           }
         } else {
@@ -3301,7 +3301,7 @@ async function downloadWorksheetPdf(worksheet) {
           doc.text(wrappedLines.slice(0, 2), textX, qy + 7)
           // Drawn answer line — spans most of the box width for a proper write-in space
           const ansY = qy + rowH - 4
-          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.5)
+          doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
           doc.line(textX, ansY, qx + colW - 4, ansY)
         }
       }
@@ -3357,6 +3357,11 @@ function WorksheetOutput({ worksheet }) {
 
   async function handleDownload() {
     setDownloading(true)
+    // DEBUG: log question types and text to diagnose double-line issue
+    console.log('WORKSHEET DEBUG:', JSON.stringify(worksheet.tiers.map(t => ({
+      level: t.level,
+      questions: t.questions.map(q => ({ type: q.type, text: q.text, q: q.q, answer: q.answer }))
+    })), null, 2))
     try { await downloadWorksheetPdf(worksheet) }
     catch (e) { console.error('Worksheet PDF error:', e) }
     setDownloading(false)
