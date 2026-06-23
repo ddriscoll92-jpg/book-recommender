@@ -55,6 +55,7 @@ The JSON must have this exact structure:
 Use these types when the subject is Maths or Science (numerical):
 - "equation"   : { "type": "equation", "q": "5 + 3 = ___" }
 - "missing"    : { "type": "missing", "q": "___ + 6 = 15" }
+  CRITICAL for "missing": the "q" field must be a simple equation only — a single line with one blank and numbers/operators. NEVER append a follow-up question or sentence after the equation (e.g. do NOT write "___ x 2 = 12 km. What was the map distance?" — that is two questions in one). If you need to ask a contextual question, use "word" type instead.
 - "column"     : { "type": "column", "top": "23", "op": "+", "bottom": "14" }
 - "word"       : { "type": "word", "text": "Sam has 12 apples. He picks 5 more. How many does he have?", "answer": "apples" }
 - "number_line": { "type": "number_line", "q": "Mark 7 on the number line below." }
