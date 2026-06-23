@@ -2977,9 +2977,11 @@ async function downloadWorksheetPdf(worksheet) {
             const eLastLineW = doc.getTextWidth(eSlice[eSlice.length - 1] || '')
             const eSpaceLeft = fullTextWForSizing - eLastLineW - 1.5
             const eAfterW = eAfter ? doc.getTextWidth(eAfter) : 0
-            const eAfterShort = eAfterW < eSpaceLeft - 14 - 2
+            const eIsPunctH = eAfter.length <= 2 && /^[.,;:!?)]*$/.test(eAfter)
+            const eLineStartW = eSpaceLeft >= 14 ? eLastLineW + 1.5 : 0
+            const eAfterFitsInline = eAfterW > 0 && (textX + eLineStartW + 14 + eAfterW + 2) <= (textX + fullTextWForSizing)
             const extraRow = eSpaceLeft < 14 ? 5 : 0
-            const afterRow = (!eAfterShort && eAfter) ? 5 : 0
+            const afterRow = (!eAfterFitsInline && !eIsPunctH && eAfter) ? 5 : 0
             return Math.max(18, 7 + eSlice.length * 4.5 + extraRow + afterRow + 3)
           }
         }
@@ -3319,25 +3321,20 @@ async function downloadWorksheetPdf(worksheet) {
             const eBoxRight = qx + colW - 4
             const eAfterW = eAfter ? doc.getTextWidth(eAfter) : 0
             const eIsPunct = eAfter.length <= 2 && /^[.,;:!?)\s]*$/.test(eAfter)
-            const eAfterShort = eAfterW < eSpaceLeft - 14 - 2
+            const eLineStart = eSpaceLeft >= 14 ? textX + eLastLineW + 1.5 : textX
+            const eBaseYAdj  = eSpaceLeft >= 14 ? eBaseY : eBaseY + 5
+            // After-text is inline if it fits on same row: lineStart + 14mm + afterW <= boxRight
+            const eAfterFitsInline = eAfterW > 0 && (eLineStart + 14 + eAfterW + 2) <= eBoxRight
+            const eLineEnd = (eAfterFitsInline || eIsPunct) ? eBoxRight - eAfterW - 2 : eBoxRight
             doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-            if (eSpaceLeft >= 14) {
-              const eLineStart = textX + eLastLineW + 1.5
-              const eLineEnd = (eAfterShort || eIsPunct) ? eBoxRight - eAfterW - 2 : eBoxRight
-              doc.line(eLineStart, eBaseY + 0.8, Math.max(eLineStart + 14, eLineEnd), eBaseY + 0.8)
-              if (eAfter) {
-                doc.setTextColor(44, 44, 42)
-                if (eAfterShort || eIsPunct) doc.text(eAfter, Math.max(eLineStart + 14, eLineEnd) + 2, eBaseY)
-                else { const al = doc.splitTextToSize(eAfter, fullTextW); doc.text(al.slice(0,2), textX, eBaseY + 5) }
-              }
-            } else {
-              const eDropY = eBaseY + 5
-              const eLineEnd = (eAfterShort || eIsPunct) ? eBoxRight - eAfterW - 2 : eBoxRight
-              doc.line(textX, eDropY + 0.8, Math.max(textX + 14, eLineEnd), eDropY + 0.8)
-              if (eAfter) {
-                doc.setTextColor(44, 44, 42)
-                if (eAfterShort || eIsPunct) doc.text(eAfter, Math.max(textX + 14, eLineEnd) + 2, eDropY)
-                else { const al = doc.splitTextToSize(eAfter, fullTextW); doc.text(al.slice(0,2), textX, eDropY + 4) }
+            doc.line(eLineStart, eBaseYAdj + 0.8, Math.max(eLineStart + 14, eLineEnd), eBaseYAdj + 0.8)
+            if (eAfter) {
+              doc.setTextColor(44, 44, 42)
+              if (eAfterFitsInline || eIsPunct) {
+                doc.text(eAfter, Math.max(eLineStart + 14, eLineEnd) + 2, eBaseYAdj)
+              } else {
+                const al = doc.splitTextToSize(eAfter, fullTextW)
+                doc.text(al.slice(0, 2), textX, eBaseYAdj + 5)
               }
             }
           }
