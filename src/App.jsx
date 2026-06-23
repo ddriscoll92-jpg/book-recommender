@@ -3007,10 +3007,21 @@ async function downloadWorksheetPdf(worksheet) {
       const hasShortAnswer = allQs.some(q => q.type === 'short_answer')
       if (hasShortAnswer) {
         // English: reduce short_answer lines proportionally
-        const targetLines = overflow < 30 ? 2 : 1
+        // Try reducing by 1 line first, then to 1 if still overflowing after reduction
+        const targetLines = overflow < 20 ? 2 : 1
         allQs.forEach(q => {
           if (q.type === 'short_answer' && (q.lines || 2) > targetLines) q.lines = targetLines
         })
+        // Recalculate after reduction — if still overflowing, force all to 1 line
+        const newTotalH = Math.max(
+          leftQs.reduce((s, q) => s + getRowH(q), 0),
+          rightQs.reduce((s, q) => s + getRowH(q), 0)
+        )
+        if (newTotalH + challengeEstH > availableH) {
+          allQs.forEach(q => {
+            if (q.type === 'short_answer') q.lines = 1
+          })
+        }
       } else {
         // Maths: mark tier as overflowing so word question heights are trimmed
         allQs.forEach(q => { q._trimHeight = true })
