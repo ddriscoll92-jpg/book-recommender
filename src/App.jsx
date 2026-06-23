@@ -3118,8 +3118,10 @@ async function downloadWorksheetPdf(worksheet) {
           const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
           const ansY = qy + 7 + lSlice.length * 4.5 + 3
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
-          doc.line(textX, ansY, qx + colW - 4, ansY)
-          if (ansLabel) doc.text(ansLabel, qx + colW - 4 + 2, ansY)
+          const ansLabelW = ansLabel ? doc.getTextWidth(ansLabel) + 2 : 0
+          const ansLineEnd = qx + colW - 4 - ansLabelW
+          doc.line(textX, ansY, ansLineEnd, ansY)
+          if (ansLabel) doc.text(ansLabel, ansLineEnd + 2, ansY)
         }
 
       } else if (q.type === 'number_line') {
