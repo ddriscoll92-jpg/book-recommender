@@ -2909,9 +2909,9 @@ async function downloadWorksheetPdf(worksheet) {
           return Math.max(18, 7 + wSlice.length * 4.5 + extraLineRow + afterRow + 3)
         }
         const lineCount = doc.splitTextToSize(wordText, fullTextWForSizing).length
-        const baseH = q._trimHeight ? 24 : 32
+        const baseH = q._trimHeight ? 20 : 24
         const lineExtra = q._trimHeight ? 4 : 4.5
-        return Math.max(baseH, 14 + Math.min(lineCount, q._trimHeight ? 3 : 6) * lineExtra)
+        return Math.max(baseH, 10 + Math.min(lineCount, q._trimHeight ? 3 : 6) * lineExtra + 8)
       }
       if (q.type === 'column') return 26
       if (q.type === 'number_line') return 24
@@ -3112,11 +3112,13 @@ async function downloadWorksheetPdf(worksheet) {
             }
           }
         } else {
-          // No inline blank — render question text then draw answer line at bottom
+          // No inline blank — render question text then draw answer line below text
           const lines = doc.splitTextToSize(wordText, fullTextW)
-          doc.text(lines.slice(0, 6), textX, qy + 7)
+          const lSlice = lines.slice(0, 6)
+          doc.text(lSlice, textX, qy + 7)
           const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
-          const ansY = qy + rowH - 6
+          // Position line 6mm below last text line, not pinned to box bottom
+          const ansY = qy + 7 + lSlice.length * 4.5 + 6
           const halfLineW = fullTextW / 2
           const lineEndX = textX + halfLineW
           doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
@@ -3357,11 +3359,6 @@ function WorksheetOutput({ worksheet }) {
 
   async function handleDownload() {
     setDownloading(true)
-    // DEBUG: log question types and text to diagnose double-line issue
-    console.log('WORKSHEET DEBUG:', JSON.stringify(worksheet.tiers.map(t => ({
-      level: t.level,
-      questions: t.questions.map(q => ({ type: q.type, text: q.text, q: q.q, answer: q.answer }))
-    })), null, 2))
     try { await downloadWorksheetPdf(worksheet) }
     catch (e) { console.error('Worksheet PDF error:', e) }
     setDownloading(false)
