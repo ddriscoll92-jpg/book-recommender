@@ -2893,9 +2893,9 @@ async function downloadWorksheetPdf(worksheet) {
       if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const wordText = sanitizeForPdf(q.text) || ''
-        if (wordText.includes('___')) {
+        if (/_{2,}/.test(wordText)) {
           // Inline blank — measure before + after text to estimate height
-          const wParts = wordText.split(/_{3,}/)
+          const wParts = wordText.split(/_{2,}/)
           const wBefore = (wParts[0] || '').trimEnd()
           const wBeforeLines = doc.splitTextToSize(wBefore, fullTextWForSizing)
           const wSlice = wBeforeLines.slice(0, 3)
@@ -3047,10 +3047,10 @@ async function downloadWorksheetPdf(worksheet) {
       } else if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
         const wordText = sanitizeForPdf(q.text) || ''
-        const hasInlineBlank = wordText.includes('___')
+        const hasInlineBlank = /_{2,}/.test(wordText)
         if (hasInlineBlank) {
           // Question already has an inline blank — render like equation with blanks, no extra line
-          const parts = wordText.split(/_{3,}/)
+          const parts = wordText.split(/_{2,}/)
           const blankLineW = 26
           const boxRightEdge = qx + colW - 3
           let measuredW = 0
@@ -3074,7 +3074,7 @@ async function downloadWorksheetPdf(worksheet) {
             if (ansLabel) { doc.text(ansLabel, cx, textY) }
           } else {
             // Wraps — use same gap_fill style: render before-text, then coloured line, then after-text
-            const wParts = wordText.split(/_{3,}/)
+            const wParts = wordText.split(/_{2,}/)
             const wBefore = (wParts[0] || '').trimEnd()
             const wAfter  = wParts[1] ? wParts[1].trimStart() : ''
             const wBeforeLines = doc.splitTextToSize(wBefore, fullTextW)
