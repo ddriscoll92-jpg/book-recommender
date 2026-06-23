@@ -2892,8 +2892,26 @@ async function downloadWorksheetPdf(worksheet) {
     function getRowH(q) {
       if (q.type === 'word') {
         doc.setFontSize(9.5); doc.setFont('helvetica', 'normal')
-        const lineCount = doc.splitTextToSize(sanitizeForPdf(q.text) || '', fullTextWForSizing).length
-        return Math.max(32, 18 + Math.min(lineCount, 6) * 4.5)
+        const wordText = sanitizeForPdf(q.text) || ''
+        if (wordText.includes('___')) {
+          // Inline blank — measure before + after text to estimate height
+          const wParts = wordText.split(/_{3,}/)
+          const wBefore = (wParts[0] || '').trimEnd()
+          const wBeforeLines = doc.splitTextToSize(wBefore, fullTextWForSizing)
+          const wSlice = wBeforeLines.slice(0, 3)
+          const wLastLineW = doc.getTextWidth(wSlice[wSlice.length - 1] || '')
+          const wSpaceLeft = fullTextWForSizing - wLastLineW - 1.5
+          const wAfter = wParts[1] ? wParts[1].trimStart() : ''
+          const wAfterW = wAfter ? doc.getTextWidth(wAfter) : 0
+          const wAfterShort = wAfterW < wSpaceLeft - 26 - 2
+          const extraLineRow = wSpaceLeft < 26 ? 8 : 0
+          const afterRow = (!wAfterShort && wAfter) ? 5 : 0
+          return Math.max(18, 7 + wSlice.length * 4.5 + extraLineRow + afterRow + 3)
+        }
+        const lineCount = doc.splitTextToSize(wordText, fullTextWForSizing).length
+        const baseH = q._trimHeight ? 24 : 32
+        const lineExtra = q._trimHeight ? 4 : 4.5
+        return Math.max(baseH, 14 + Math.min(lineCount, q._trimHeight ? 3 : 6) * lineExtra)
       }
       if (q.type === 'column') return 26
       if (q.type === 'number_line') return 24
@@ -2967,23 +2985,24 @@ async function downloadWorksheetPdf(worksheet) {
     const leftQs  = allQs.slice(0, qPerCol)
     const rightQs = allQs.slice(qPerCol, qPerCol * 2)
 
-    // Scale down short_answer lines only if severely over — try reducing by 1 line first,
-    // only drop to 1 line if still overflowing. Never scale maths tiers.
-    const hasShortAnswer = allQs.some(q => q.type === 'short_answer')
-    if (hasShortAnswer) {
-      const rawTotalH = Math.max(
-        leftQs.reduce((s, q) => s + getRowH(q), 0),
-        rightQs.reduce((s, q) => s + getRowH(q), 0)
-      )
-      const challengeEstH = tier.challenge ? Math.max(18, 10 + Math.ceil(tier.challenge.length / 80) * 4.2) + 4 : 0
-      const overflow = rawTotalH + challengeEstH - availableH
-      if (overflow > 0) {
-        // Mild overflow (< 30mm): reduce lines by 1 — keeps some writing space
-        // Severe overflow (>= 30mm): reduce to 1 line — page break will handle the rest
+    // Scale down if content would overflow the page
+    const rawTotalH = Math.max(
+      leftQs.reduce((s, q) => s + getRowH(q), 0),
+      rightQs.reduce((s, q) => s + getRowH(q), 0)
+    )
+    const challengeEstH = tier.challenge ? Math.max(18, 10 + Math.ceil(tier.challenge.length / 80) * 4.2) + 4 : 0
+    const overflow = rawTotalH + challengeEstH - availableH
+    if (overflow > 0) {
+      const hasShortAnswer = allQs.some(q => q.type === 'short_answer')
+      if (hasShortAnswer) {
+        // English: reduce short_answer lines proportionally
         const targetLines = overflow < 30 ? 2 : 1
         allQs.forEach(q => {
           if (q.type === 'short_answer' && (q.lines || 2) > targetLines) q.lines = targetLines
         })
+      } else {
+        // Maths: mark tier as overflowing so word question heights are trimmed
+        allQs.forEach(q => { q._trimHeight = true })
       }
     }
 
@@ -3054,16 +3073,42 @@ async function downloadWorksheetPdf(worksheet) {
             const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
             if (ansLabel) { doc.text(ansLabel, cx, textY) }
           } else {
-            // Wraps to multiple lines — render with underscores visible, no extra bottom line
-            // since the ___ in the text already makes the answer space clear
-            const wrappedLines = doc.splitTextToSize(wordText.replace(/_{3,}/g, '______'), fullTextW)
-            doc.text(wrappedLines.slice(0, 4), textX, qy + 7)
+            // Wraps — use same gap_fill style: render before-text, then coloured line, then after-text
+            const wParts = wordText.split(/_{3,}/)
+            const wBefore = (wParts[0] || '').trimEnd()
+            const wAfter  = wParts[1] ? wParts[1].trimStart() : ''
+            const wBeforeLines = doc.splitTextToSize(wBefore, fullTextW)
+            const wSlice = wBeforeLines.slice(0, 3)
+            doc.text(wSlice, textX, qy + 9)
+            const wLastLineW = doc.getTextWidth(wSlice[wSlice.length - 1] || '')
+            const wSpaceLeft = fullTextW - wLastLineW - 1.5
+            const wBaseY = qy + 9 + (wSlice.length - 1) * 4.5
+            const wBoxRight = qx + colW - 4
             const ansLabel = sanitizeForPdf(q.answer || '').replace(/_{2,}/g, '').replace(/^\d[\d\s.,]*/, '').trim()
-            if (ansLabel) {
-              const ansY = qy + rowH - 6
-              doc.setTextColor(tc.r, tc.g, tc.b)
-              doc.text(ansLabel, textX, ansY)
-              doc.setTextColor(44, 44, 42)
+            const wAfterText = (wAfter + (ansLabel ? ' ' + ansLabel : '')).trim()
+            const wAfterW = wAfterText ? doc.getTextWidth(wAfterText) : 0
+            const wIsPunct = wAfterText.length <= 2 && /^[.,;:!?)\s]*$/.test(wAfterText)
+            const wAfterShort = wAfterW < wSpaceLeft - 26 - 2
+            if (wSpaceLeft >= 26) {
+              const wLineStart = textX + wLastLineW + 1.5
+              const wLineEnd = (wAfterShort || wIsPunct) ? wBoxRight - wAfterW - 2 : wBoxRight
+              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+              doc.line(wLineStart, wBaseY + 0.8, Math.max(wLineStart + 20, wLineEnd), wBaseY + 0.8)
+              if (wAfterText) {
+                doc.setTextColor(44, 44, 42)
+                if (wAfterShort || wIsPunct) doc.text(wAfterText, Math.max(wLineStart + 20, wLineEnd) + 2, wBaseY)
+                else { const al = doc.splitTextToSize(wAfterText, fullTextW); doc.text(al.slice(0,2), textX, wBaseY + 5) }
+              }
+            } else {
+              const wDropTextY = wBaseY + 8
+              doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
+              const wLineEnd = (wAfterShort || wIsPunct) ? wBoxRight - wAfterW - 2 : wBoxRight
+              doc.line(textX, wDropTextY + 0.8, Math.max(textX + 20, wLineEnd), wDropTextY + 0.8)
+              if (wAfterText) {
+                doc.setTextColor(44, 44, 42)
+                if (wAfterShort || wIsPunct) doc.text(wAfterText, Math.max(textX + 20, wLineEnd) + 2, wDropTextY)
+                else { const al = doc.splitTextToSize(wAfterText, fullTextW); doc.text(al.slice(0,2), textX, wDropTextY + 4) }
+              }
             }
           }
         } else {
