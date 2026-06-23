@@ -3325,7 +3325,11 @@ async function downloadWorksheetPdf(worksheet) {
             const eBaseYAdj  = eSpaceLeft >= 14 ? eBaseY : eBaseY + 5
             // After-text is inline if it fits on same row: lineStart + 14mm + afterW <= boxRight
             const eAfterFitsInline = eAfterW > 0 && (eLineStart + 14 + eAfterW + 2) <= eBoxRight
-            const eLineEnd = (eAfterFitsInline || eIsPunct) ? eBoxRight - eAfterW - 2 : eBoxRight
+            // If blank is at the start (very short before-text), cap line at half box width
+            const eMaxLineW = eLastLineW < 10 ? fullTextW * 0.5 : fullTextW
+            const eLineEnd = (eAfterFitsInline || eIsPunct)
+              ? Math.min(eBoxRight - eAfterW - 2, eLineStart + eMaxLineW)
+              : Math.min(eBoxRight, eLineStart + eMaxLineW)
             doc.setDrawColor(tc.r, tc.g, tc.b); doc.setLineWidth(0.4)
             doc.line(eLineStart, eBaseYAdj + 0.8, Math.max(eLineStart + 14, eLineEnd), eBaseYAdj + 0.8)
             if (eAfter) {
