@@ -395,62 +395,87 @@ The JSON must have this exact structure:
   "subject": "English",
   "yearGroup": "Year 3",
   "skill": "Reading comprehension — retrieval and inference",
+  "vocabulary": [
+    { "term": "word or phrase", "definition": "short pupil-friendly definition under 12 words" },
+    { "term": "word or phrase", "definition": "short pupil-friendly definition under 12 words" }
+  ],
+  "teacherNotes": "2-3 sentences introducing the resource and how to use it in the classroom.",
   "tiers": [
     {
       "level": "Support",
       "colour": "#DC2626",
       "emoji": "Red",
-      "passage": "Short simple passage 4-6 sentences. Simple vocabulary. Short sentences. Large concepts broken down.",
+      "passage": "Short simple passage 4-6 sentences.",
       "questions": [
-        { "type": "retrieval", "q": "Simple retrieval question about the text?", "lines": 4 },
+        { "type": "retrieval", "q": "Simple retrieval question?", "lines": 4 },
         { "type": "retrieval", "q": "Another retrieval question?", "lines": 4 },
         { "type": "retrieval", "q": "Third retrieval question?", "lines": 4 }
+      ],
+      "answers": [
+        { "q": 1, "a": "Suggested answer for question 1." },
+        { "q": 2, "a": "Suggested answer for question 2." },
+        { "q": 3, "a": "Suggested answer for question 3." }
       ]
     },
     {
       "level": "Core",
       "colour": "#D97706",
       "emoji": "Amber",
-      "passage": "Medium passage 7-10 sentences. Age-appropriate vocabulary. Mix of short and longer sentences.",
+      "passage": "Medium passage 7-10 sentences.",
       "questions": [
         { "type": "retrieval", "q": "Retrieval question?", "lines": 4 },
         { "type": "retrieval", "q": "Retrieval question?", "lines": 4 },
-        { "type": "inference", "q": "Inference question requiring reading between the lines?", "lines": 4 },
+        { "type": "inference", "q": "Inference question?", "lines": 4 },
         { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
         { "type": "inference", "q": "Explain question?", "lines": 4 }
+      ],
+      "answers": [
+        { "q": 1, "a": "Suggested answer." },
+        { "q": 2, "a": "Suggested answer." },
+        { "q": 3, "a": "Suggested answer." },
+        { "q": 4, "a": "Correct option and brief explanation." },
+        { "q": 5, "a": "Suggested answer." }
       ]
     },
     {
       "level": "Extension",
       "colour": "#16A34A",
       "emoji": "Green",
-      "passage": "Longer richer passage 10-14 sentences. Ambitious vocabulary. Varied sentence structures. Figurative language.",
+      "passage": "Longer richer passage 10-14 sentences.",
       "questions": [
         { "type": "retrieval", "q": "Retrieval question?", "lines": 4 },
         { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
         { "type": "inference", "q": "Inference question?", "lines": 4 },
         { "type": "inference", "q": "Deeper inference question?", "lines": 4 },
         { "type": "multiple_choice", "q": "Another multiple choice?", "options": ["Option A", "Option B", "Option C", "Option D"] },
-        { "type": "extended", "q": "Extended response question requiring a full paragraph answer?", "lines": 6 },
-        { "type": "vocabulary", "q": "Find the word in the passage that means [synonym]. What does it tell us?", "lines": 4 }
+        { "type": "extended", "q": "Extended response question?", "lines": 6 },
+        { "type": "vocabulary", "q": "Find the word that means [synonym]. What does it tell us?", "lines": 4 }
+      ],
+      "answers": [
+        { "q": 1, "a": "Suggested answer." },
+        { "q": 2, "a": "Correct option and explanation." },
+        { "q": 3, "a": "Suggested answer." },
+        { "q": 4, "a": "Suggested answer." },
+        { "q": 5, "a": "Correct option and explanation." },
+        { "q": 6, "a": "Suggested extended answer." },
+        { "q": 7, "a": "Suggested vocabulary answer." }
       ]
     }
   ]
 }
 Rules:
 - The passage must be completely original, not copied from any published work
-- Each tier's passage covers the same topic/story but at different complexity levels
-- Support passage uses only simple common words, short sentences, basic concepts
-- Core passage uses age-appropriate vocabulary, some inference opportunities
-- Extension passage uses rich vocabulary, figurative language, complex sentences
+- Each tier covers the same topic at different complexity levels
 - Questions must be directly answerable from the passage provided in that tier
 - multiple_choice questions always have exactly 4 options, only one correct
-- lines indicates how many writing lines to draw (3 = short answer, 4 = medium, 6 = extended)
-- For sequencing questions use type "sequencing" — provide an "events" array of 4-6 short event strings (each under 12 words) that pupils must number in the correct order. Do NOT use "lines" for sequencing questions. The renderer will draw a small numbered box next to each event automatically.
+- lines indicates how many writing lines to draw (3 = short, 4 = medium, 6 = extended)
+- For sequencing questions: type "sequencing", provide an "events" array of 4-6 short strings (under 12 words each). Do NOT use "lines" for sequencing questions.
+- vocabulary: 4-6 key terms from the passage, pupil-friendly definitions under 12 words. Same across all tiers.
+- teacherNotes: 2-3 sentences max of practical classroom guidance.
+- answers: one suggested answer per question matching question number.
 - Align reading level to UK National Curriculum year group
-- Colour MUST be: Support tier = #DC2626 (red), Core tier = #D97706 (amber), Extension tier = #16A34A (green). Always use these exact colours for these exact levels.`
+- Colour MUST be: Support = #DC2626, Core = #D97706, Extension = #16A34A.`
   }
-
   if (assistantMode) {
     try {
       const messages = (history || [{ role: 'user', content: prompt }])

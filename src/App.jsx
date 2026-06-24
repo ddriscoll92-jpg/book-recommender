@@ -2213,191 +2213,256 @@ async function downloadComprehensionPdf(comp) {
     return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
   }
 
-  comp.tiers.forEach((tier, ti) => {
-    if (ti > 0) doc.addPage()
-    const [tr,tg,tb] = hexToRgb(tier.colour)
+  function checkPageBreak(y, neededH, pageBottom) {
+    if (y + neededH > pageBottom) { doc.addPage(); return margin + 6 }
+    return y
+  }
+
+  // ── Teacher Notes page (first page) ──────────────────────────────────────
+  if (comp.teacherNotes || comp.vocabulary?.length) {
     let y = margin
 
-    // Outer border
-    doc.setDrawColor(40,40,40); doc.setLineWidth(0.8)
-    doc.rect(margin - 4, margin - 4, contentW + 8, pageH - margin * 2 + 8)
+    // Header bar
+    doc.setFillColor(44, 44, 42)
+    doc.rect(0, 0, pageW, 22, 'F')
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+    doc.text(sanitizeForPdf(comp.title), margin, 10)
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+    doc.text('Teacher Notes — Not for Pupils', margin, 17)
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold')
+    doc.text('LessonNest', pageW - margin, 10, { align: 'right' })
+    y = 30
 
-    // Tier badge top left
-    doc.setFillColor(tr,tg,tb)
-    doc.roundedRect(margin, y, 28, 7, 1.5, 1.5, 'F')
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255)
-    doc.text(tier.level, margin + 14, y + 4.8, { align: 'center' })
-
-    // Name field top right
-    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-    doc.text('Name:', pageW - margin - 52, y + 5)
-    doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
-    doc.line(pageW - margin - 40, y + 5.5, pageW - margin, y + 5.5)
-
-    y += 12
-
-    // Title centred underlined
-    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-    const titleW = doc.getTextWidth(comp.title)
-    doc.text(comp.title, pageW / 2, y, { align: 'center' })
-    doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
-    doc.line(pageW/2 - titleW/2, y + 1.5, pageW/2 + titleW/2, y + 1.5)
-    y += 10
-
-    // ── Two-pass: measure total content height at default sizes, then scale down
-    // line heights / spacing if needed so everything fits on one page ──
-    const pageBottom = pageH - margin - 10
-    const baseLineH = 7.5
-    doc.setFontSize(11); doc.setFont('helvetica','normal')
-    const passageLines = doc.splitTextToSize(tier.passage || '', contentW)
-    let estH = passageLines.length * baseLineH + 4 + 6  // passage + gap + divider gap
-
-    doc.setFontSize(10); doc.setFont('helvetica','bold')
-    const qMeasurements = (tier.questions || []).map(q => {
-      const qLines = doc.splitTextToSize(q.q || '', contentW - 12)
-      if (q.type === 'multiple_choice') {
-        const h = qLines.length * 5.5 + 4 + 26
-        estH += h
-        return { qLines, h, numLines: 0 }
-      } else if (q.type === 'sequencing') {
-        const events = q.events || []
-        const h = qLines.length * 5.5 + 3 + events.length * 9 + 4
-        estH += h
-        return { qLines, h, numLines: 0 }
-      } else {
-        const numLines = q.lines || 3
-        const h = qLines.length * 5.5 + 3 + numLines * 10 + 4
-        estH += h
-        return { qLines, h, numLines }
-      }
-    })
-
-    const availableH = pageBottom - y
-    const scale = 1  // always render at full size; add page breaks if needed
-    const lineH = baseLineH * scale
-    const qLineGap = 5.5 * scale
-    const ansLineH = 10 * scale
-
-    function checkPageBreak(neededH = 20) {
-      if (y + neededH > pageBottom) { doc.addPage(); y = margin + 6 }
+    // Teacher notes box
+    if (comp.teacherNotes) {
+      const noteLines = doc.splitTextToSize(sanitizeForPdf(comp.teacherNotes), contentW - 8)
+      const noteH = Math.max(20, 8 + noteLines.length * 5)
+      doc.setFillColor(248, 248, 248); doc.setDrawColor(44, 44, 42); doc.setLineWidth(0.4)
+      doc.roundedRect(margin, y, contentW, noteH, 2, 2, 'FD')
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
+      doc.text('About this resource', margin + 4, y + 6)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5)
+      doc.text(noteLines, margin + 4, y + 12)
+      y += noteH + 8
     }
 
-    // Passage
-    doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-    passageLines.forEach(line => {
-      checkPageBreak(lineH)
-      doc.text(line, margin, y)
-      y += lineH
-    })
-
-    y += 4 * scale
-
-    // Dashed divider
-    checkPageBreak(10)
-    doc.setDrawColor(100,100,100); doc.setLineWidth(0.3)
-    const dashLen = 3; const gap = 2; let dx = margin
-    while (dx < margin + contentW) {
-      doc.line(dx, y, Math.min(dx + dashLen, margin + contentW), y)
-      dx += dashLen + gap
+    // Vocabulary table
+    if (comp.vocabulary?.length) {
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
+      doc.text('Key Vocabulary', margin, y + 5)
+      y += 10
+      const colTermW = 52; const colDefW = contentW - colTermW - 2
+      // Header row
+      doc.setFillColor(44, 44, 42)
+      doc.rect(margin, y, contentW, 7, 'F')
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+      doc.text('Term', margin + 3, y + 5)
+      doc.text('Definition', margin + colTermW + 3, y + 5)
+      y += 7
+      comp.vocabulary.forEach((v, vi) => {
+        const defLines = doc.splitTextToSize(sanitizeForPdf(v.definition || ''), colDefW - 4)
+        const rowH = Math.max(8, defLines.length * 4.5 + 3)
+        doc.setFillColor(vi % 2 === 0 ? 250 : 244, vi % 2 === 0 ? 250 : 244, vi % 2 === 0 ? 250 : 244)
+        doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2)
+        doc.rect(margin, y, contentW, rowH, 'FD')
+        doc.line(margin + colTermW, y, margin + colTermW, y + rowH)
+        doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
+        doc.text(sanitizeForPdf(v.term || ''), margin + 3, y + rowH / 2 + 1.5)
+        doc.setFont('helvetica', 'normal')
+        doc.text(defLines, margin + colTermW + 3, y + 4)
+        y += rowH
+      })
+      y += 10
     }
-    y += 6
 
-    // Questions
-    ;(tier.questions || []).forEach((q, qi) => {
-      const { qLines } = qMeasurements[qi]
-      checkPageBreak(20)
+    // Suggested answers per tier
+    comp.tiers.forEach((tier, ti) => {
+      if (!tier.answers?.length) return
+      const [tr, tg, tb] = hexToRgb(tier.colour)
+      y = checkPageBreak(y, 20, pageH - margin - 10)
 
-      if (q.type === 'multiple_choice') {
-        // Question text
-        doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-        // Circled number
-        doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
-        doc.circle(margin + 4, y + 0.5, 4, 'FD')
-        doc.setFontSize(8); doc.setFont('helvetica','bold')
-        doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
-        doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-        doc.text(qLines, margin + 11, y + 2)
-        y += qLines.length * qLineGap + 4 * scale
+      // Tier label
+      doc.setFillColor(tr, tg, tb)
+      doc.roundedRect(margin, y, 32, 7, 1.5, 1.5, 'F')
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+      doc.text(`${tier.level} — Answers`, margin + 16, y + 5, { align: 'center' })
+      y += 10
 
-        // 2x2 options grid
-        const opts = q.options || []
-        const boxSize = 6; const colW2 = contentW / 2
-        for (let oi = 0; oi < 4; oi++) {
-          const col = oi % 2; const row = Math.floor(oi / 2)
-          const ox = margin + col * colW2 + 4
-          const oy = y + row * 10 * scale
-          doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.4)
-          doc.rect(ox, oy - boxSize + 1, boxSize, boxSize)
-          doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-          doc.text(opts[oi] || '', ox + boxSize + 2, oy)
-        }
-        y += 26 * scale
-
-      } else if (q.type === 'sequencing') {
-        // Sequencing question — numbered box next to each event for pupils to fill in order
-        doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
-        doc.circle(margin + 4, y + 0.5, 4, 'FD')
-        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-        doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
-        doc.setFontSize(10); doc.setFont('helvetica','bold')
-        doc.text(qLines, margin + 11, y + 2)
-        y += qLines.length * qLineGap + 3 * scale
-
-        const events = q.events || []
-        const boxSz = 7
-        events.forEach((event, ei) => {
-          // Small numbered-order box
-          doc.setFillColor(245, 244, 240)
-          doc.setDrawColor(44,44,42); doc.setLineWidth(0.4)
-          doc.roundedRect(margin, y, boxSz, boxSz, 1, 1, 'FD')
-          // Event text
-          doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(44,44,42)
-          const evLines = doc.splitTextToSize(`- ${event}`, contentW - boxSz - 4)
-          doc.text(evLines.slice(0, 2), margin + boxSz + 3, y + 5)
-          y += Math.max(boxSz + 2, evLines.slice(0, 2).length * 4.5 + 1) * scale
-        })
-        y += 4 * scale
-
-      } else {
-        // Standard question with writing lines
-        doc.setFillColor(255,255,255); doc.setDrawColor(44,44,42); doc.setLineWidth(0.5)
-        doc.circle(margin + 4, y + 0.5, 4, 'FD')
-        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(44,44,42)
-        doc.text(String(qi + 1), margin + 4, y + 1.8, { align: 'center' })
-        doc.setFontSize(10); doc.setFont('helvetica','bold')
-        doc.text(qLines, margin + 11, y + 2)
-        y += qLines.length * qLineGap + 3 * scale
-
-        const numLines = q.lines || 3
-        for (let li = 0; li < numLines; li++) {
-          checkPageBreak(ansLineH + 2)
-          // Solid answer line
-          doc.setDrawColor(44,44,42); doc.setLineWidth(0.3)
-          doc.line(margin, y + 5 * scale, margin + contentW, y + 5 * scale)
-          // Dashed guide line
-          doc.setDrawColor(160,160,160); doc.setLineWidth(0.2)
-          let ddx = margin
-          while (ddx < margin + contentW) {
-            doc.line(ddx, y + 9 * scale, Math.min(ddx + 2, margin + contentW), y + 9 * scale)
-            ddx += 4
-          }
-          y += ansLineH
-        }
-        y += 4 * scale
-      }
+      tier.answers.forEach((ans, ai) => {
+        const aLines = doc.splitTextToSize(`${ans.q}. ${sanitizeForPdf(ans.a || '')}`, contentW - 8)
+        const rowH = Math.max(8, aLines.length * 4.5 + 3)
+        y = checkPageBreak(y, rowH + 2, pageH - margin - 10)
+        doc.setFillColor(ai % 2 === 0 ? 252 : 246, ai % 2 === 0 ? 252 : 246, ai % 2 === 0 ? 252 : 246)
+        doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.2)
+        doc.rect(margin, y, contentW, rowH, 'FD')
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+        doc.text(aLines, margin + 3, y + 4)
+        y += rowH
+      })
+      y += 6
     })
 
     // Footer
-    doc.setFillColor(tr,tg,tb)
+    doc.setFillColor(44, 44, 42)
     doc.rect(0, pageH - 10, pageW, 10, 'F')
-    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(255,255,255)
-    doc.text(`LessonNest  |  ${comp.title}  |  ${tier.level}`, margin, pageH - 4)
-    doc.text(`Page ${ti + 1} of ${comp.tiers.length}`, pageW - margin, pageH - 4, { align: 'right' })
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(255, 255, 255)
+    doc.text(`LessonNest  |  ${sanitizeForPdf(comp.title)}  |  Teacher Notes`, pageW / 2, pageH - 4, { align: 'center' })
+  }
+
+  // ── Pupil pages — one per tier ────────────────────────────────────────────
+  comp.tiers.forEach((tier, ti) => {
+    doc.addPage()
+    const [tr, tg, tb] = hexToRgb(tier.colour)
+    let y = 0
+    const pageBottom = pageH - 14
+
+    // ── Header bar ──
+    doc.setFillColor(tr, tg, tb)
+    doc.rect(0, 0, pageW, 22, 'F')
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+    doc.text(sanitizeForPdf(comp.title), margin, 10)
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+    doc.text(`${tier.level}  |  ${comp.yearGroup}  |  ${comp.subject}`, margin, 17)
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold')
+    doc.text('LessonNest', pageW - margin, 10, { align: 'right' })
+
+    // ── Name / Date / Class row ──
+    y = 26
+    doc.setFillColor(248, 248, 248); doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3)
+    doc.roundedRect(margin, y, contentW, 10, 2, 2, 'FD')
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60)
+    const nameFields = [['Name:', 0], ['Date:', 0.35], ['Class:', 0.68]]
+    nameFields.forEach(([label, pct]) => {
+      const fx = margin + contentW * pct + 3
+      doc.text(label, fx, y + 6.5)
+      doc.setFont('helvetica', 'normal')
+      doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3)
+      doc.line(fx + doc.getTextWidth(label) + 2, y + 7, fx + contentW * 0.28, y + 7)
+      doc.setFont('helvetica', 'bold')
+    })
+    y += 14
+
+    // ── Vocabulary strip (same for all tiers) ──
+    if (comp.vocabulary?.length) {
+      const vocabH = 14
+      doc.setFillColor(245, 245, 245); doc.setDrawColor(tr, tg, tb); doc.setLineWidth(0.4)
+      doc.roundedRect(margin, y, contentW, vocabH, 2, 2, 'FD')
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(tr, tg, tb)
+      doc.text('Key Words:', margin + 3, y + 5.5)
+      const termW = doc.getTextWidth('Key Words:') + 4
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+      const terms = comp.vocabulary.map(v => sanitizeForPdf(v.term)).join('  |  ')
+      const termLines = doc.splitTextToSize(terms, contentW - termW - 6)
+      doc.text(termLines.slice(0, 2), margin + termW + 2, y + 5.5)
+      y += vocabH + 4
+    }
+
+    // ── Passage box ──
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+    const passageLines = doc.splitTextToSize(sanitizeForPdf(tier.passage || ''), contentW - 8)
+    const passageH = Math.max(24, passageLines.length * 5.5 + 8)
+    doc.setFillColor(250, 250, 248); doc.setDrawColor(tr, tg, tb); doc.setLineWidth(0.5)
+    doc.roundedRect(margin, y, contentW, passageH, 3, 3, 'FD')
+    // Left accent bar
+    doc.setFillColor(tr, tg, tb)
+    doc.roundedRect(margin, y, 3, passageH, 1.5, 1.5, 'F')
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+    doc.text(passageLines, margin + 7, y + 7)
+    y += passageH + 6
+
+    // ── Questions ──
+    ;(tier.questions || []).forEach((q, qi) => {
+      const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), contentW - 14)
+
+      // Estimate question box height
+      let qBoxH
+      if (q.type === 'multiple_choice') {
+        qBoxH = qLines.length * 5.5 + 6 + 26
+      } else if (q.type === 'sequencing') {
+        qBoxH = qLines.length * 5.5 + 6 + (q.events || []).length * 10
+      } else {
+        const numLines = q.lines || 3
+        qBoxH = qLines.length * 5.5 + 6 + numLines * 9
+      }
+
+      y = checkPageBreak(y, qBoxH + 3, pageBottom)
+
+      // Question box
+      doc.setFillColor(255, 255, 255); doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3)
+      doc.roundedRect(margin, y, contentW, qBoxH, 2, 2, 'FD')
+
+      // Number badge
+      doc.setFillColor(tr, tg, tb)
+      doc.circle(margin + 5.5, y + 5.5, 4.5, 'F')
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+      doc.text(String(qi + 1), margin + 5.5, y + 7.2, { align: 'center' })
+
+      // Question type label
+      const typeLabel = q.type === 'multiple_choice' ? 'Multiple choice' :
+                        q.type === 'sequencing' ? 'Sequencing' :
+                        q.type === 'inference' ? 'Inference' :
+                        q.type === 'extended' ? 'Extended response' :
+                        q.type === 'vocabulary' ? 'Vocabulary' : 'Retrieval'
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(tr, tg, tb)
+      doc.text(typeLabel.toUpperCase(), pageW - margin - 3, y + 4, { align: 'right' })
+
+      // Question text
+      doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
+      doc.text(qLines, margin + 13, y + 6)
+      let qy = y + qLines.length * 5.5 + 7
+
+      if (q.type === 'multiple_choice') {
+        const opts = q.options || []
+        const optLabels = ['A', 'B', 'C', 'D']
+        const colW2 = contentW / 2
+        for (let oi = 0; oi < Math.min(opts.length, 4); oi++) {
+          const col = oi % 2; const row = Math.floor(oi / 2)
+          const ox = margin + 4 + col * colW2
+          const oy = qy + row * 10
+          // Circle
+          doc.setFillColor(255, 255, 255); doc.setDrawColor(tr, tg, tb); doc.setLineWidth(0.4)
+          doc.circle(ox + 3, oy + 2, 3, 'FD')
+          doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(tr, tg, tb)
+          doc.text(optLabels[oi], ox + 3, oy + 3.5, { align: 'center' })
+          doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+          doc.text(sanitizeForPdf(opts[oi] || ''), ox + 8, oy + 3.5)
+        }
+
+      } else if (q.type === 'sequencing') {
+        const events = q.events || []
+        events.forEach((event, ei) => {
+          const boxSz = 7
+          doc.setFillColor(245, 244, 240); doc.setDrawColor(tr, tg, tb); doc.setLineWidth(0.35)
+          doc.roundedRect(margin + 4, qy, boxSz, boxSz, 1, 1, 'FD')
+          doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
+          const evLines = doc.splitTextToSize(sanitizeForPdf(`${event}`), contentW - boxSz - 10)
+          doc.text(evLines.slice(0, 2), margin + boxSz + 8, qy + 5)
+          qy += Math.max(boxSz + 2, evLines.slice(0, 2).length * 4.5 + 1)
+        })
+
+      } else {
+        // Standard — ruled answer lines in tier colour
+        const numLines = q.lines || 3
+        for (let li = 0; li < numLines; li++) {
+          const ly = qy + li * 8.5
+          doc.setDrawColor(tr, tg, tb); doc.setLineWidth(0.35)
+          doc.line(margin + 4, ly, margin + contentW - 4, ly)
+        }
+      }
+
+      y += qBoxH + 4
+    })
+
+    // ── Footer ──
+    doc.setFillColor(tr, tg, tb)
+    doc.rect(0, pageH - 10, pageW, 10, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(255, 255, 255)
+    doc.text(`LessonNest  |  ${sanitizeForPdf(comp.title)}  |  ${tier.level}`, margin, pageH - 4)
+    doc.text(`Page ${ti + 2} of ${comp.tiers.length + 1}`, pageW - margin, pageH - 4, { align: 'right' })
   })
 
-  doc.save(`${comp.title.replace(/[^a-z0-9]/gi,'_')}_comprehension.pdf`)
+  doc.save(`${sanitizeForPdf(comp.title).replace(/[^a-z0-9]/gi,'_')}_comprehension.pdf`)
 }
-
 // ── Comprehension Output Component ───────────────────────────────────────────
 
 function ComprehensionOutput({ comprehension: comp }) {
