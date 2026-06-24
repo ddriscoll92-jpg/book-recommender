@@ -3546,20 +3546,8 @@ function WorksheetOutput({ worksheet }) {
 
 function ResourceOutput({ resource }) {
   const [downloading, setDownloading] = useState(null)
-  const [editing, setEditing] = useState(false)
-  const [editedTitle, setEditedTitle] = useState(resource.title)
-  const [editedMeta, setEditedMeta] = useState(resource.meta || '')
-  const [editedSections, setEditedSections] = useState((resource.sections || []).map(sec => ({ ...sec })))
-
-  // current values: edited if in/after edit mode, otherwise original
-  const current = { title: editedTitle, meta: editedMeta, sections: editedSections }
-
-  function updateSection(i, field, value) {
-    setEditedSections(prev => prev.map((sec, idx) => idx === i ? { ...sec, [field]: value } : sec))
-  }
-
   async function handleDownload(format) {
-    const resourceToUse = current
+    const resourceToUse = resource
     setDownloading(format)
     try {
       if (format === 'txt') {
@@ -3661,31 +3649,10 @@ function ResourceOutput({ resource }) {
       {/* Resource header */}
       <div style={{ background: NAVY, borderRadius: "12px 12px 0 0", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 180 }}>
-          {editing ? (
-            <>
-              <input
-                value={editedTitle}
-                onChange={e => setEditedTitle(e.target.value)}
-                style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: "#FFFFFF", marginBottom: 3, background: 'rgba(255,255,255,0.08)', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 6, padding: '4px 8px', width: '100%', outline: 'none' }}
-              />
-              <input
-                value={editedMeta}
-                onChange={e => setEditedMeta(e.target.value)}
-                style={{ fontSize: 12, color: NAVY_MUTED, marginTop: 4, background: 'rgba(255,255,255,0.08)', border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 6, padding: '3px 8px', width: '100%', outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-              />
-            </>
-          ) : (
-            <>
-              <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: "#FFFFFF", marginBottom: 3 }}>{editedTitle}</div>
-              <div style={{ fontSize: 12, color: NAVY_MUTED }}>{editedMeta}</div>
-            </>
-          )}
+          <div style={{ fontFamily: "'Lora', serif", fontSize: 17, fontWeight: 500, color: "#FFFFFF", marginBottom: 3 }}>{resource.title}</div>
+          <div style={{ fontSize: 12, color: NAVY_MUTED }}>{resource.meta}</div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => setEditing(e => !e)}
-            style={{ height: 30, padding: "0 10px", background: editing ? GREEN : "transparent", border: `0.5px solid ${editing ? GREEN : NAVY_LIGHT}`, borderRadius: 7, fontSize: 11, color: editing ? LIGHT_GREEN : NAVY_MUTED, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-            {editing ? '✓ Done' : '✏️ Edit'}
-          </button>
           {formats.map(f => (
             <button key={f.id} onClick={() => handleDownload(f.id)} disabled={!!downloading}
               style={{ height: 30, padding: "0 10px", background: downloading === f.id ? NAVY_LIGHT : "transparent", border: `0.5px solid ${NAVY_LIGHT}`, borderRadius: 7, fontSize: 11, color: downloading === f.id ? "#fff" : NAVY_MUTED, cursor: downloading ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
@@ -3696,27 +3663,10 @@ function ResourceOutput({ resource }) {
       </div>
       {/* Sections */}
       <div style={{ border: `0.5px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
-        {editedSections.map((sec, i) => (
+        {(resource.sections || []).map((sec, i) => (
           <div key={i} style={{ borderTop: i > 0 ? `0.5px solid ${BORDER}` : "none" }}>
-            {editing ? (
-              <>
-                <input
-                  value={sec.heading}
-                  onChange={e => updateSection(i, 'heading', e.target.value)}
-                  style={{ width: '100%', background: LIGHT_GREEN, padding: "8px 16px", fontSize: 11, fontWeight: 600, color: "#085041", textTransform: "uppercase", letterSpacing: "0.06em", border: 'none', outline: 'none', borderBottom: `0.5px solid ${GREEN}`, fontFamily: "'DM Sans', sans-serif" }}
-                />
-                <textarea
-                  value={sec.content}
-                  onChange={e => updateSection(i, 'content', e.target.value)}
-                  style={{ width: '100%', minHeight: 100, padding: "12px 16px", background: BG, fontSize: 14, color: TEXT, lineHeight: 1.7, border: 'none', outline: 'none', resize: 'vertical', fontFamily: "'DM Sans', sans-serif" }}
-                />
-              </>
-            ) : (
-              <>
-                <div style={{ background: LIGHT_GREEN, padding: "8px 16px", fontSize: 11, fontWeight: 600, color: "#085041", textTransform: "uppercase", letterSpacing: "0.06em" }}>{sec.heading}</div>
-                <div style={{ padding: "12px 16px", background: BG, fontSize: 14, color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{sec.content}</div>
-              </>
-            )}
+            <div style={{ background: LIGHT_GREEN, padding: "8px 16px", fontSize: 11, fontWeight: 600, color: "#085041", textTransform: "uppercase", letterSpacing: "0.06em" }}>{sec.heading}</div>
+            <div style={{ padding: "12px 16px", background: BG, fontSize: 14, color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{sec.content}</div>
           </div>
         ))}
       </div>
