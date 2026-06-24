@@ -2372,7 +2372,9 @@ async function downloadComprehensionPdf(comp) {
 
     // ── Questions ──
     ;(tier.questions || []).forEach((q, qi) => {
-      const qTextW = contentW - 16  // leave room for number badge + right margin
+      // Text starts at margin+13 (after badge), ends at margin+contentW-4
+      // So available width = contentW - 13 - 4 = contentW - 17
+      const qTextW = contentW - 17
       const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), qTextW)
 
       // Estimate question box height
