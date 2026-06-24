@@ -2359,30 +2359,32 @@ async function downloadComprehensionPdf(comp) {
 
     // ── Passage box ──
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
-    const passageLines = doc.splitTextToSize(sanitizeForPdf(tier.passage || ''), contentW - 8)
-    const passageH = Math.max(24, passageLines.length * 5.5 + 8)
+    const passageLines = doc.splitTextToSize(sanitizeForPdf(tier.passage || ''), contentW - 12)
+    const passageH = passageLines.length * 5.5 + 10
     doc.setFillColor(250, 250, 248); doc.setDrawColor(tr, tg, tb); doc.setLineWidth(0.5)
     doc.roundedRect(margin, y, contentW, passageH, 3, 3, 'FD')
     // Left accent bar
     doc.setFillColor(tr, tg, tb)
     doc.roundedRect(margin, y, 3, passageH, 1.5, 1.5, 'F')
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(44, 44, 42)
-    doc.text(passageLines, margin + 7, y + 7)
+    doc.text(passageLines, margin + 8, y + 7)
     y += passageH + 6
 
     // ── Questions ──
     ;(tier.questions || []).forEach((q, qi) => {
-      const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), contentW - 14)
+      const qTextW = contentW - 16  // leave room for number badge + right margin
+      const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), qTextW)
 
       // Estimate question box height
       let qBoxH
       if (q.type === 'multiple_choice') {
-        qBoxH = qLines.length * 5.5 + 6 + 26
+        const numOpts = (q.options || []).length
+        qBoxH = qLines.length * 5.5 + 8 + numOpts * 7
       } else if (q.type === 'sequencing') {
-        qBoxH = qLines.length * 5.5 + 6 + (q.events || []).length * 10
+        qBoxH = qLines.length * 5.5 + 8 + (q.events || []).length * 10
       } else {
         const numLines = q.lines || 3
-        qBoxH = qLines.length * 5.5 + 6 + numLines * 9
+        qBoxH = qLines.length * 5.5 + 8 + numLines * 9
       }
 
       y = checkPageBreak(y, qBoxH + 3, pageBottom)
@@ -2397,19 +2399,10 @@ async function downloadComprehensionPdf(comp) {
       doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
       doc.text(String(qi + 1), margin + 5.5, y + 7.2, { align: 'center' })
 
-      // Question type label
-      const typeLabel = q.type === 'multiple_choice' ? 'Multiple choice' :
-                        q.type === 'sequencing' ? 'Sequencing' :
-                        q.type === 'inference' ? 'Inference' :
-                        q.type === 'extended' ? 'Extended response' :
-                        q.type === 'vocabulary' ? 'Vocabulary' : 'Retrieval'
-      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(tr, tg, tb)
-      doc.text(typeLabel.toUpperCase(), pageW - margin - 3, y + 4, { align: 'right' })
-
       // Question text
       doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
-      doc.text(qLines, margin + 13, y + 6)
-      let qy = y + qLines.length * 5.5 + 7
+      doc.text(qLines, margin + 13, y + 7)
+      let qy = y + qLines.length * 5.5 + 9
 
       if (q.type === 'multiple_choice') {
         const opts = q.options || []
