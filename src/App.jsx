@@ -2372,8 +2372,9 @@ async function downloadComprehensionPdf(comp) {
 
     // ── Questions ──
     ;(tier.questions || []).forEach((q, qi) => {
-      // Text starts at margin+13 (after badge), ends at margin+contentW-4
-      // So available width = contentW - 13 - 4 = contentW - 17
+      // Text starts at margin+13, right edge at margin+contentW-4
+      // Available width = contentW - 13 - 4 = contentW - 17
+      doc.setFontSize(9.5); doc.setFont('helvetica', 'bold')
       const qTextW = contentW - 17
       const qLines = doc.splitTextToSize(sanitizeForPdf(q.q || ''), qTextW)
 
@@ -2389,6 +2390,9 @@ async function downloadComprehensionPdf(comp) {
         qBoxH = qLines.length * 5.5 + 8 + numLines * 9
       }
 
+      // 2-page limit: if we're already past page 2 worth of content, stop rendering
+      if (y > pageH + (pageH - 28)) return
+
       y = checkPageBreak(y, qBoxH + 3, pageBottom)
 
       // Question box
@@ -2401,7 +2405,7 @@ async function downloadComprehensionPdf(comp) {
       doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
       doc.text(String(qi + 1), margin + 5.5, y + 7.2, { align: 'center' })
 
-      // Question text
+      // Question text — font already set above
       doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(44, 44, 42)
       doc.text(qLines, margin + 13, y + 7)
       let qy = y + qLines.length * 5.5 + 9

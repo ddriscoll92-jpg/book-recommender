@@ -447,7 +447,6 @@ The JSON must have this exact structure:
         { "type": "multiple_choice", "q": "Multiple choice question?", "options": ["Option A", "Option B", "Option C", "Option D"] },
         { "type": "inference", "q": "Inference question?", "lines": 4 },
         { "type": "inference", "q": "Deeper inference question?", "lines": 4 },
-        { "type": "multiple_choice", "q": "Another multiple choice?", "options": ["Option A", "Option B", "Option C", "Option D"] },
         { "type": "extended", "q": "Extended response question?", "lines": 6 },
         { "type": "vocabulary", "q": "Find the word that means [synonym]. What does it tell us?", "lines": 4 }
       ],
@@ -456,9 +455,8 @@ The JSON must have this exact structure:
         { "q": 2, "a": "Correct option and explanation." },
         { "q": 3, "a": "Suggested answer." },
         { "q": 4, "a": "Suggested answer." },
-        { "q": 5, "a": "Correct option and explanation." },
-        { "q": 6, "a": "Suggested extended answer." },
-        { "q": 7, "a": "Suggested vocabulary answer." }
+        { "q": 5, "a": "Suggested extended answer." },
+        { "q": 6, "a": "Suggested vocabulary answer." }
       ]
     }
   ]
