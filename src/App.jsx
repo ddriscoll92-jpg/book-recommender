@@ -5876,6 +5876,43 @@ Generate 10 questions per tier (Support, Core, Extension) aligned to this lesson
       return
     }
 
+    // Route comprehension type to structured comprehension generator
+    if (selectedResourceType === 'comprehension') {
+      const compPrompt = `Create a differentiated reading comprehension for ${selectedPlanGroup.yearGroup} ${selectedPlan.subject}.
+Topic: ${selectedLesson.title}
+Learning intention: ${selectedLesson.learningIntention || ''}
+Book context: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
+Generate three differentiated tiers (Support, Core, Extension) with a reading passage and questions for each.`
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: compPrompt, comprehensionMode: true }),
+        })
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `API error ${res.status}`) }
+        const data = await res.json()
+        const comprehension = data.comprehension
+        setResource({ ...comprehension, _type: 'comprehension' })
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: _saveErr } = await supabase.from('resources').insert({
+              user_id: user.id, plan_id: selectedPlan?.id || null,
+              title: comprehension.title,
+              meta: `${comprehension.yearGroup} · ${comprehension.subject} · ${comprehension.skill}`,
+              resource_type: 'comprehension',
+              sections: comprehension.tiers.map(t => ({ heading: t.level, content: t.passage?.slice(0, 500) || '' })),
+              prompt: (compPrompt || '').slice(0, 2000),
+            })
+            if (_saveErr) console.error('Comprehension save error:', _saveErr.message)
+            else loadCatalogue()
+          }
+        } catch (e) { console.error('Plan comprehension save error:', e) }
+      } catch (err) { console.error('generateFromPlan comprehension error:', err.message); setError(err.message?.includes('busy') || err.message?.includes('overloaded') ? '⏳ Claude is very busy right now — please wait a moment and try again. Check https://status.claude.com/ for updates.' : `Failed: ${err.message || 'Something went wrong. Please try again.'}`) }
+      setGenerating(false)
+      return
+    }
+
     const apiPrompt = `You are an expert UK primary school teacher creating a classroom resource.
 
 Book: "${selectedPlanGroup.book.title}" by ${selectedPlanGroup.book.author}
