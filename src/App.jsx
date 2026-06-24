@@ -5215,6 +5215,19 @@ function ResourceDownloadButton({ resource }) {
           bingo: (data) => downloadBingoPdf(data.bingo),
         }
         if (modeKey && downloadFnMap[resource.resource_type]) {
+          // For comprehensions, check if full JSON was saved — use it directly (no API call)
+          if (resource.resource_type === 'comprehension') {
+            const stored = (resource.sections || []).find(s => s.heading === '__comprehension__')
+            if (stored?.content) {
+              try {
+                const comprehension = JSON.parse(stored.content)
+                await downloadComprehensionPdf(comprehension)
+                setDownloading(null)
+                return
+              } catch(e) { console.warn('Stored comprehension parse failed, falling back to API', e) }
+            }
+          }
+          // For all other structured types (or comprehension fallback), re-call the API
           const apiRes = await fetch('/api/recommend', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -5850,7 +5863,7 @@ Generate three differentiated tiers (Support, Core, Extension) with a reading pa
               title: comprehension.title,
               meta: `${comprehension.yearGroup} · ${comprehension.subject} · ${comprehension.skill}`,
               resource_type: 'comprehension',
-              sections: comprehension.tiers.map(t => ({ heading: t.level, content: t.passage?.slice(0, 500) || '' })),
+              sections: [{ heading: '__comprehension__', content: JSON.stringify(comprehension) }],
               prompt: (compPrompt || '').slice(0, 2000),
             })
             if (_saveErr) console.error('Comprehension save error:', _saveErr.message)
@@ -6105,7 +6118,7 @@ CRITICAL FORMATTING RULES — the content will be rendered as a PDF using a basi
               title: comprehension.title,
               meta: `${comprehension.yearGroup} · ${comprehension.subject} · ${comprehension.skill}`,
               resource_type: 'comprehension',
-              sections: comprehension.tiers.map(t => ({ heading: t.level, content: t.passage?.slice(0, 500) || '' })),
+              sections: [{ heading: '__comprehension__', content: JSON.stringify(comprehension) }],
               prompt: (prompt || '').slice(0, 2000),
             })
             if (_saveErr) console.error('Comprehension save error:', _saveErr.message)
